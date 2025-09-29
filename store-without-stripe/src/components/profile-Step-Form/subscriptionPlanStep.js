@@ -159,7 +159,7 @@ const SubscriptionPlanStep = ({
   // Custom start dates for each plan
   const [customStartDates, setCustomStartDates] = useState({});
   const [plans, setPlans] = useState([]);
-  const [selectedPlan, setSelectedPlan] = useState("1");
+  const [selectedPlan, setSelectedPlan] = useState("");
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [errors, setErrors] = useState({
@@ -172,6 +172,8 @@ const SubscriptionPlanStep = ({
   const [hideMessage, setHideMessage] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [agreedError, setAgreedError] = useState(false);
+  const [planError, setPlanError] = useState(false);
+
 
   useEffect(() => {
     const computedPlans = calculatePlans(holidays, numberOfChildren);
@@ -218,17 +220,19 @@ const SubscriptionPlanStep = ({
           setEndDate(selectedPlanObj.endDate);
         }
       }
-    } else if (computedPlans.length > 0) {
-      setSelectedPlan(computedPlans[0].id.toString());
-      setStartDate(computedPlans[0].startDate);
-      setEndDate(computedPlans[0].endDate);
-    }
+    } 
+    // else if (computedPlans.length > 0) {
+    //   setSelectedPlan(computedPlans[0].id.toString());
+    //   setStartDate(computedPlans[0].startDate);
+    //   setEndDate(computedPlans[0].endDate);
+    // }
   }, [holidays, numberOfChildren, initialSubscriptionPlan]);
 
 
   const handlePlanChange = (e) => {
     const newPlanId = e.target.value;
     setSelectedPlan(newPlanId);
+    setPlanError(false);
     setErrors({ startDate: false, endDate: false, dateOrder: false });
     onSubscriptionPlanChange({ planId: newPlanId });
 
@@ -305,6 +309,11 @@ const SubscriptionPlanStep = ({
       : null;
 
   const handleNext = async () => {
+    if (!selectedPlan) {
+      setPlanError(true);
+      return;
+    }
+    setPlanError(false);
     if (!agreed) {
       setAgreedError(true);
       return;
@@ -394,6 +403,7 @@ const SubscriptionPlanStep = ({
             className="radiogroub eachplansboxs"
           >
             {/* Render Standard Plans */}
+            <FormControlLabel value="" control={<Radio sx={{ display: "none" }} />} label="" />
             {plans.map((plan) => (
               <Paper  className="eachplansradios"
                 key={plan.id}
@@ -608,6 +618,11 @@ const SubscriptionPlanStep = ({
                 You must agree to the terms and conditions to proceed.
               </FormHelperText>
             )}
+
+            {planError && (
+              <FormHelperText error>Please select a subscription plan to proceed.</FormHelperText>
+            )}
+
           </Box>
 
           <Box className="subbtnrow" sx={{ mt: 4, display: "flex", gap: 3 }}>
