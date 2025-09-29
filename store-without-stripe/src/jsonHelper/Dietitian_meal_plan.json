@@ -1,0 +1,128 @@
+{
+    "meal_plan": [
+        {
+            "day": "Day 1",
+            "meal": "Phulka Channa Masala"
+        },
+        {
+            "day": "Day 2",
+            "meal": "Veg Fried Rice – Veg in Black Bean Sauce"
+        },
+        {
+            "day": "Day 3",
+            "meal": "Paneer Bao & Butter Garlic Veg"
+        },
+        {
+            "day": "Day 4",
+            "meal": "Steamed Momos & Hot Garlic Sauce"
+        },
+        {
+            "day": "Day 5",
+            "meal": "Veg Pulav & Raita"
+        },
+        {
+            "day": "Day 6",
+            "meal": "Veg Fried Rice – Veg in Black Bean Sauce"
+        },
+        {
+            "day": "Day 7",
+            "meal": "Paneer Shashlik & Butter Garlic Rice"
+        },
+        {
+            "day": "Day 8",
+            "meal": "Thai Green Curry with Butter Garlic Rice"
+        },
+        {
+            "day": "Day 9",
+            "meal": "Veg Noodles & Veg Manchurian Gravy"
+        },
+        {
+            "day": "Day 10",
+            "meal": "Sambar Rice & Coined Baby Potato Fry"
+        },
+        {
+            "day": "Day 11",
+            "meal": "Veg Biryani – Raita"
+        },
+        {
+            "day": "Day 12",
+            "meal": "Steamy Rice – Dal Makhani"
+        },
+        {
+            "day": "Day 13",
+            "meal": "Paneer Kati Roll – Khatta Meeta Sauce"
+        },
+        {
+            "day": "Day 14",
+            "meal": "Saffron & Nuts Rice with Kadai Veg"
+        },
+        {
+            "day": "Day 15",
+            "meal": "Phulka Aloo Mutter"
+        },
+        {
+            "day": "Day 16",
+            "meal": "Dal Khichidi & Baby Potato Fry"
+        },
+        {
+            "day": "Day 17",
+            "meal": "Veg Noodles & Veg Manchurian Gravy"
+        },
+        {
+            "day": "Day 18",
+            "meal": "Veg Stroganoff with Butter Garlic Rice"
+        },
+        {
+            "day": "Day 19",
+            "meal": "Veg Alfredo Pasta – Garlic Bread"
+        },
+        {
+            "day": "Day 20",
+            "meal": "Coconut Rice & Brown Chana Poriyal"
+        },
+        {
+            "day": "Day 21",
+            "meal": "Veg Kati Roll – Khatta Meeta Sauce"
+        },
+        {
+            "day": "Day 22",
+            "meal": "Veg Fried Rice – Veg in Black Bean Sauce"
+        },
+        {
+            "day": "Day 23",
+            "meal": "Mint Paratha with Kashmiri Kofta"
+        },
+        {
+            "day": "Day 24",
+            "meal": "Veg Pizza"
+        },
+        {
+            "day": "Day 25",
+            "meal": "Jeera Rice with Aloo Mutter"
+        },
+        {
+            "day": "Day 26",
+            "meal": "Phulka Channa Masala"
+        },
+        {
+            "day": "Day 27",
+            "meal": "Phulka Paneer Butter Masala"
+        },
+        {
+            "day": "Day 28",
+            "meal": "Steamed Momos & Hot Garlic Sauce"
+        },
+        {
+            "day": "Day 29",
+            "meal": "Creamy Curd Rice with Potato Roast"
+        },
+        {
+            "day": "Day 30",
+            "meal": "Coconut Pulav with Crispy Peanut & Bhindi Fry"
+        },
+        {
+            "day": "Day 31",
+            "meal": "Lemon Rice & Sliced Potato Fry"
+        }
+    ]
+}
