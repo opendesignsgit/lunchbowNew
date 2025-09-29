@@ -249,7 +249,7 @@ const PlanPricingPage = () => {
                                       <strong>10</strong><small>% <br/>OFF</small>
                                   </div>
                                 </div>
-                                <div className='ppriceitem customitem'>
+                  {/*<div className='ppriceitem customitem'>
                                   <div className='ppricetbox'>
                                     <h4>Popular</h4>
                                     <h2>Custom</h2>
@@ -271,7 +271,7 @@ const PlanPricingPage = () => {
                                     <button onClick={handleGetStartedClick}>Get Started</button>
                                   </div>
                     )}
-                                </div>
+                                </div>*/}
                             </div>
                         </div>
                     </div>

@@ -968,7 +968,7 @@ body .compopups .fieldbox input:hover {  border: none;  outline: none;  box-shad
 
 .ppricesec .comtilte h4 strong{font-weight: 500;display: block;color:#4AB238;}
 .ppricebox {}
-.ppricebox .ppriceitem{padding: 40px 28px;border: 1px solid rgb(0 0 0 / 7%);border-radius: 20px;margin-inline: 10px;display: -webkit-box;display: -ms-flexbox;display: flex;-webkit-box-orient: vertical;-webkit-box-direction: normal;-ms-flex-direction: column;flex-direction: column;background: #ffffff;position: relative;overflow: hidden;}
+.ppricebox .ppriceitem{padding: 40px 28px;border: 1px solid rgb(0 0 0 / 7%);border-radius: 20px;margin-inline: 10px;display: -webkit-box;display: -ms-flexbox;display: flex;-webkit-box-orient: vertical;-webkit-box-direction: normal;-ms-flex-direction: column;flex-direction: column;background: #ffffff;position: relative;overflow: hidden;width: calc(33.33% - 20px);}
 .ppricebox .ppricetbox{}
 .ppricebox .ppricetbox h4{color: #000000;font-weight: 700;font-size: 1vw;}
 .ppricebox .ppricetbox h4 del{color: #888888;}
@@ -1275,6 +1275,7 @@ html body .MuiPopover-root{z-index: 99999;}
   .inputbox select, .inputbox input {font-size: 13px;line-height: 36px;}
   .formbox .inputbox textarea {font-size: 13px;}
   .ppriceinrow {padding-inline: 0px;}
+  .ppricesec{padding-inline: 20px;}
 }
 @media screen and (max-width:880px){
   .progroupitem {width: calc(50% - 20px);}
@@ -1689,6 +1690,8 @@ html body .MuiPopover-root{z-index: 99999;}
   .resendbtn {width: 100%;}
   .resendbtn button::after{width: 12px;margin-left: 6px;}
   .pagebansec{height: 580px;}
+  .MuiPopover-root ul[aria-labelledby="school-select-label"]{}
+  .MuiPopover-root ul[aria-labelledby="school-select-label"] li{white-space: break-spaces;}
 }
 
 @media screen and (max-width:500px){
