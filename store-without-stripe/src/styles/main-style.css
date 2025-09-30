@@ -1018,7 +1018,9 @@ html body .MuiPopover-root{z-index: 99999;}
 
 .mainwhatsapbox{position: fixed;width: 60px;bottom: 50px;right:50px;z-index: 9999;}
 .mainwhatsapbox a {}
-.mainwhatsapbox a img{}
+.mainwhatsapbox a.webwhatsapplink {display: block;}
+.mainwhatsapbox a.mobwhatsapplink {display: none;}
+.mainwhatsapbox a img{display: block;width: 100%;}
 
 
 @media (min-width: 1100px) {
@@ -1682,6 +1684,9 @@ html body .MuiPopover-root{z-index: 99999;}
   .fixdatesboxwarrow .datearrow  button.arrowprew{left:0}
   .fixdatesboxwarrow .datearrow  button.arrownext{right: 0;}
   html body .holidaypaysec {z-index: 99999;}
+  .mainwhatsapbox {width: 40px;bottom: 30px;right: 20px;z-index: 9999;}
+  .mainwhatsapbox a.webwhatsapplink {display: none;}
+  .mainwhatsapbox a.mobwhatsapplink {display: block;}
 }
 @media screen and (min-width:501px) and (max-width:650px){ 
    .produtMobView {width: 80%;margin-inline: auto;}
