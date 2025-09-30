@@ -420,7 +420,6 @@ const RightPanel = ({
                         py={0.5}
                       >
                         <Select
-                          className="menuddlist"
                           value={menuSelections[formatDate(selectedDate)]?.[child.id] || ""}
                           onChange={(e) => {
                             childIndex === 0
@@ -431,17 +430,35 @@ const RightPanel = ({
                           fullWidth
                           variant="standard"
                           disableUnderline
-                          MenuProps={{
-                            PaperProps: { style: { maxHeight: 48 * 4.5 } },
-                          }}
+                          MenuProps={{ PaperProps: { style: { maxHeight: 48 * 4.5 } } }}
                         >
                           <MenuItem value="">Select Dish</MenuItem>
+
+                          {/* ✅ Always include saved dish (paid holiday meal) */}
+                          {(() => {
+                            const savedDish =
+                              menuSelections[formatDate(selectedDate)]?.[child.id];
+                            if (
+                              savedDish &&
+                              !getDayMenu(selectedDate).includes(savedDish)
+                            ) {
+                              return (
+                                <MenuItem key="saved" value={savedDish}>
+                                  {savedDish} (Paid)
+                                </MenuItem>
+                              );
+                            }
+                            return null;
+                          })()}
+
+                          {/* Normal day menus */}
                           {getDayMenu(selectedDate).map((menu, i) => (
                             <MenuItem key={i} value={menu}>
                               {menu}
                             </MenuItem>
                           ))}
                         </Select>
+
                       </Box>
 
                       {isSelectedHoliday && !isSunday && (
