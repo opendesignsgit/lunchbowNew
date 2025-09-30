@@ -153,15 +153,37 @@ const RightPanel = ({
 
 
   const handlePlanChange = (childId, planId) => {
+    const dateObj = dayjs(formatDate(selectedDate));
+
+    // Block within 48 hours
     if (isWithin48Hours) return;
+
+    // ✅ Only apply inside subscription period
+    if (
+      dateObj.isBefore(dayjs(subscriptionStart), "day") ||
+      dateObj.isAfter(dayjs(subscriptionEnd), "day")
+    ) {
+      console.log("❌ Selected date outside subscription range, skipping");
+      return;
+    }
+
     setSelectedPlans((prev) => ({ ...prev, [childId]: planId }));
+
     const childIndex = dummyChildren.findIndex((child) => child.id === childId);
     if (childIndex !== -1) setActiveChild(childIndex);
-    if (applyMealPlan) applyMealPlan(planId, childId);
+
+    // 🔎 Apply Meal Plan but filter by subscription range
+    if (applyMealPlan) {
+      applyMealPlan(planId, childId, subscriptionStart, subscriptionEnd);
+    }
+
     if (typeof onMealPlanChange === "function") {
       onMealPlanChange(planId);
     }
   };
+
+
+
 
   const handleApplyToAllChange = (e) => {
     if (isWithin48Hours) return;
@@ -420,7 +442,6 @@ const RightPanel = ({
                         py={0.5}
                       >
                         <Select
-                          className="menuddlist"
                           value={menuSelections[formatDate(selectedDate)]?.[child.id] || ""}
                           onChange={(e) => {
                             childIndex === 0
@@ -431,17 +452,35 @@ const RightPanel = ({
                           fullWidth
                           variant="standard"
                           disableUnderline
-                          MenuProps={{
-                            PaperProps: { style: { maxHeight: 48 * 4.5 } },
-                          }}
+                          MenuProps={{ PaperProps: { style: { maxHeight: 48 * 4.5 } } }}
                         >
                           <MenuItem value="">Select Dish</MenuItem>
+
+                          {/* ✅ Always include saved dish (paid holiday meal) */}
+                          {(() => {
+                            const savedDish =
+                              menuSelections[formatDate(selectedDate)]?.[child.id];
+                            if (
+                              savedDish &&
+                              !getDayMenu(selectedDate).includes(savedDish)
+                            ) {
+                              return (
+                                <MenuItem key="saved" value={savedDish}>
+                                  {savedDish} (Paid)
+                                </MenuItem>
+                              );
+                            }
+                            return null;
+                          })()}
+
+                          {/* Normal day menus */}
                           {getDayMenu(selectedDate).map((menu, i) => (
                             <MenuItem key={i} value={menu}>
                               {menu}
                             </MenuItem>
                           ))}
                         </Select>
+
                       </Box>
 
                       {isSelectedHoliday && !isSunday && (

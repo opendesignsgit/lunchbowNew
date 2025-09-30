@@ -90,7 +90,7 @@ const MenuCalendar = () => {
       console.error("Error fetching paid holidays:", error);
     }
   };
-  console.log("Paid holidays:", paidHolidays);
+  // console.log("Paid holidays:", paidHolidays);
 
   useEffect(() => {
     if (data && Array.isArray(data) && subscriptionStart && subscriptionEnd) {
@@ -408,10 +408,10 @@ const MenuCalendar = () => {
     let selectedPlanMeals;
 
     if (planId === 1) {
-      // Use dietitian meals to apply
-      selectedPlanMeals = dietitianMealPlanData.meal_plan.map(day => day.meal);
+      // ✅ Use dietitian meals
+      selectedPlanMeals = dietitianMealPlanData.meal_plan.map((day) => day.meal);
     } else {
-      // Fallback or another plan — example reverse of menus array
+      // Example fallback (reverse menus)
       selectedPlanMeals = [...menus].reverse();
     }
 
@@ -420,15 +420,30 @@ const MenuCalendar = () => {
     const daysInMonth = firstDayOfMonth.daysInMonth();
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const currentDate = dayjs(`${currentYear}-${currentMonth + 1}-${String(day).padStart(2, "0")}`);
-      if (!isHoliday(day, currentMonth, currentYear)) {
-        const mealDate = currentDate.format("YYYY-MM-DD");
-        const meal = selectedPlanMeals[(day - 1) % selectedPlanMeals.length];
-        updates[mealDate] = {
-          ...(menuSelections[mealDate] || {}),
-          [childId]: meal,
-        };
+      const currentDate = dayjs(
+        `${currentYear}-${currentMonth + 1}-${String(day).padStart(2, "0")}`
+      );
+
+      // ⛔ Skip outside subscription window
+      if (
+        currentDate.isBefore(subscriptionStart, "day") ||
+        currentDate.isAfter(subscriptionEnd, "day")
+      ) {
+        continue;
       }
+
+      // ⛔ Skip holidays
+      if (isHoliday(day, currentMonth, currentYear)) {
+        continue;
+      }
+
+      const mealDate = currentDate.format("YYYY-MM-DD");
+      const meal = selectedPlanMeals[(day - 1) % selectedPlanMeals.length];
+
+      updates[mealDate] = {
+        ...(menuSelections[mealDate] || {}),
+        [childId]: meal,
+      };
     }
 
     setMenuSelections((prev) => ({
@@ -436,6 +451,7 @@ const MenuCalendar = () => {
       ...updates,
     }));
   };
+
 
 
   const calendarDates = getCalendarGridDates();
