@@ -290,7 +290,7 @@ exports.holiydayPayment = async (req, res) => {
               childId: child.childId,
               mealDate: finalMealDate,
               mealName: child.dish,
-              amount: 199,
+              amount: 200,
               paymentStatus: "Paid",
               transactionDetails: { tracking_id, ...responseData },
             });

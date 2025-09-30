@@ -612,7 +612,7 @@ const talkNutrition = async (req, res) => {
   // Compose the admin/team email
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "csivarex.odi@gmail.com, maniyarasanodi20@gmail.com",
+    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
     subject: "New Nutrition Enquiry Received",
     html: `
       <h2>Nutrition Enquiry Details</h2>
@@ -712,7 +712,7 @@ const freeTrialEnquiry = async (req, res) => {
   // Compose admin notification email
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "shivarex.c@gmail.com, maniyarasanodi20@gmail.com",
+    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
     subject: "New Free Trial Enquiry",
     html: `
       <h2>Free Trial Enquiry Received</h2>
@@ -807,7 +807,7 @@ const getInTouch = async (req, res) => {
   // Compose the email
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "csivarex.odi@gmail.com, maniyarasanodi20@gmail.com", // Change to your desired recipient
+    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com", // Change to your desired recipient
     subject: "New General Enquiry Received",
     html: `
       <h2>General Enquiry Details</h2>
@@ -864,7 +864,7 @@ const contactUs = async (req, res) => {
   // Email to admins
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "csivarex.odi@gmail.com, maniyarasanodi20@gmail.com",
+    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
     subject: "New Contact Us Enquiry",
     html: `
       <h2>Contact Us Enquiry Details</h2>
@@ -941,7 +941,7 @@ const schoolServiceEnquiry = async (req, res) => {
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "csivarex.odi@gmail.com, maniyarasanodi20@gmail.com",
+    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
     subject: "New School Service Enquiry Received",
     html: `
       <h2>School Service Enquiry Details</h2>

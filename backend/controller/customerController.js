@@ -654,7 +654,7 @@ const sendOtp = async (req, res) => {
 
     try {
       const smsResult = await sendSMS(mobile, "OTP", [otp]);
-      console.log("OTP SMS Result:", smsResult);
+      // console.log("OTP SMS Result:", smsResult);
 
       const smsLog = new SmsLog({
         mobile,

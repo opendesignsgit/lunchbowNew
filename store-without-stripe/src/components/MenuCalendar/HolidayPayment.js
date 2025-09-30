@@ -90,7 +90,7 @@ const HolidayPayment = ({
       const paymentData = {
         merchant_id: ccavenueConfig.merchant_id,
         order_id: orderId,
-        amount: 1, // totalAmount.toFixed(2),
+        amount: totalAmount.toFixed(2),
         currency: ccavenueConfig.currency,
         redirect_url: ccavenueConfig.redirect_url,
         cancel_url: ccavenueConfig.cancel_url,
