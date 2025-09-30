@@ -153,15 +153,37 @@ const RightPanel = ({
 
 
   const handlePlanChange = (childId, planId) => {
+    const dateObj = dayjs(formatDate(selectedDate));
+
+    // Block within 48 hours
     if (isWithin48Hours) return;
+
+    // ✅ Only apply inside subscription period
+    if (
+      dateObj.isBefore(dayjs(subscriptionStart), "day") ||
+      dateObj.isAfter(dayjs(subscriptionEnd), "day")
+    ) {
+      console.log("❌ Selected date outside subscription range, skipping");
+      return;
+    }
+
     setSelectedPlans((prev) => ({ ...prev, [childId]: planId }));
+
     const childIndex = dummyChildren.findIndex((child) => child.id === childId);
     if (childIndex !== -1) setActiveChild(childIndex);
-    if (applyMealPlan) applyMealPlan(planId, childId);
+
+    // 🔎 Apply Meal Plan but filter by subscription range
+    if (applyMealPlan) {
+      applyMealPlan(planId, childId, subscriptionStart, subscriptionEnd);
+    }
+
     if (typeof onMealPlanChange === "function") {
       onMealPlanChange(planId);
     }
   };
+
+
+
 
   const handleApplyToAllChange = (e) => {
     if (isWithin48Hours) return;
