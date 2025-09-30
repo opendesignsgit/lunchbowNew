@@ -149,7 +149,8 @@ const Mainfooter = () => {
       )}
         <GetinTouch open={open} onClose={handleCloseDialog}/>
         <div className='mainwhatsapbox'>
-        <a href="https://web.whatsapp.com/send?phone=919176917602&amp;text=" target='_blank'><Image src={whatsapp} alt="Whatsapp"/></a>
+        <a href="https://web.whatsapp.com/send?phone=919176917602&amp;text=" target='_blank' className="webwhatsapplink"><Image src={whatsapp} alt="Whatsapp" /></a>
+        <a href="https://api.whatsapp.com/send?phone=919176917602&amp;text=" target='_blank' className="mobwhatsapplink"><Image src={whatsapp} alt="Whatsapp" /></a>
       </div>
     </>
   )
