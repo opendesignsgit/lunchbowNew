@@ -70,26 +70,6 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <>
-      <Head>
-        {storeSetting?.google_analytic_status && storeSetting?.google_analytic_key && (
-          <>
-            <script
-              async
-              src={`https://www.googletagmanager.com/gtag/js?id=${storeSetting.google_analytic_key}`}
-            ></script>
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${storeSetting.google_analytic_key}');
-                `,
-              }}
-            />
-          </>
-        )}
-      </Head>
       {/* Render TawkMessengerReact only if tawk_chat_status is enabled */}
       {storeSetting?.tawk_chat_status && (
         <TawkMessengerReact
