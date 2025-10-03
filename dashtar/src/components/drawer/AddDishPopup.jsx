@@ -63,7 +63,7 @@ const AddDishPopup = ({
         const imageUrl = productData.image.startsWith("http")
           ? productData.image
           : productData.image.startsWith("/")
-          ? `${config.BASE_URL}${productData.image}`
+            ? `https://api.lunchbowl.co.in/${productData.image}`
           : productData.image;
         setImagePreview(imageUrl);
       }
@@ -72,7 +72,7 @@ const AddDishPopup = ({
         const imageUrl2 = productData.dishImage2.startsWith("http")
           ? productData.dishImage2
           : productData.dishImage2.startsWith("/")
-          ? `${config.BASE_URL}${productData.dishImage2}`
+            ? `https://api.lunchbowl.co.in/${productData.dishImage2}`
           : productData.dishImage2;
         setDishImage2Preview(imageUrl2);
       }
