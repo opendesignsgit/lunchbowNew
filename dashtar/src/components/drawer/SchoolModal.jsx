@@ -71,13 +71,13 @@ const SchoolModal = ({ isOpen, onClose, school, onSuccess  }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalHeader>
-        {school ? t("UpdateSchool") : t("AddSchool")}
+        {school ? t("Update School") : t("Add School")}
       </ModalHeader>
       <form onSubmit={handleSubmit}>
         <ModalBody>
           <div className="grid gap-4">
             <Label>
-              <span>{t("SchoolName")} *</span>
+              <span>{t("School Name")} *</span>
               <Input
                 className="mt-1"
                 name="name"
@@ -101,7 +101,7 @@ const SchoolModal = ({ isOpen, onClose, school, onSuccess  }) => {
             </Label>
 
             <Label>
-              <span>{t("LunchTime")} *</span>
+              <span>{t("Lunch Time")} *</span>
               <div className="flex items-center mt-1">
                 <Input
                   type="time"

@@ -100,7 +100,7 @@ const School = () => {
               className="rounded-md"
               iconLeft={FiPlus}
             >
-              {t("AddSchool")}
+              {t("Add School")}
             </Button>
           </div>
         </CardBody>
