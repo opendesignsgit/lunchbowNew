@@ -94,6 +94,7 @@ const Products = () => {
     setCategory("");
     setSortedField("");
     searchRef.current.value = "";
+    handleSubmitForAll({ preventDefault: () => { } });
   };
 
   // console.log('productss',products)

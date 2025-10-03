@@ -236,155 +236,163 @@ const Dashboard = () => {
   }, [dashboardOrderAmount]);
 
   return (
-    <>
-      <PageTitle>{t("DashboardOverview")}</PageTitle>
+    // <>
+    //   <PageTitle>{t("DashboardOverview")}</PageTitle>
 
-      <AnimatedContent>
-        <div className="grid gap-2 mb-8 xl:grid-cols-5 md:grid-cols-2">
-          <CardItemTwo
-            mode={mode}
-            title="Today Order"
-            title2="TodayOrder"
-            Icon={ImStack}
-            cash={todayCashPayment || 0}
-            card={todayCardPayment || 0}
-            credit={todayCreditPayment || 0}
-            price={todayOrderAmount || 0}
-            className="text-white dark:text-emerald-100 bg-teal-600"
-            loading={loadingOrderAmount}
-          />
+    //   <AnimatedContent>
+    //     <div className="grid gap-2 mb-8 xl:grid-cols-5 md:grid-cols-2">
+    //       <CardItemTwo
+    //         mode={mode}
+    //         title="Today Order"
+    //         title2="TodayOrder"
+    //         Icon={ImStack}
+    //         cash={todayCashPayment || 0}
+    //         card={todayCardPayment || 0}
+    //         credit={todayCreditPayment || 0}
+    //         price={todayOrderAmount || 0}
+    //         className="text-white dark:text-emerald-100 bg-teal-600"
+    //         loading={loadingOrderAmount}
+    //       />
 
-          <CardItemTwo
-            mode={mode}
-            title="Yesterday Order"
-            title2="YesterdayOrder"
-            Icon={ImStack}
-            cash={yesterdayCashPayment || 0}
-            card={yesterdayCardPayment || 0}
-            credit={yesterdayCreditPayment || 0}
-            price={yesterdayOrderAmount || 0}
-            className="text-white dark:text-orange-100 bg-orange-400"
-            loading={loadingOrderAmount}
-          />
+    //       <CardItemTwo
+    //         mode={mode}
+    //         title="Yesterday Order"
+    //         title2="YesterdayOrder"
+    //         Icon={ImStack}
+    //         cash={yesterdayCashPayment || 0}
+    //         card={yesterdayCardPayment || 0}
+    //         credit={yesterdayCreditPayment || 0}
+    //         price={yesterdayOrderAmount || 0}
+    //         className="text-white dark:text-orange-100 bg-orange-400"
+    //         loading={loadingOrderAmount}
+    //       />
 
-          <CardItemTwo
-            mode={mode}
-            title2="ThisMonth"
-            Icon={FiShoppingCart}
-            price={dashboardOrderAmount?.thisMonthlyOrderAmount || 0}
-            className="text-white dark:text-emerald-100 bg-blue-500"
-            loading={loadingOrderAmount}
-          />
+    //       <CardItemTwo
+    //         mode={mode}
+    //         title2="ThisMonth"
+    //         Icon={FiShoppingCart}
+    //         price={dashboardOrderAmount?.thisMonthlyOrderAmount || 0}
+    //         className="text-white dark:text-emerald-100 bg-blue-500"
+    //         loading={loadingOrderAmount}
+    //       />
 
-          <CardItemTwo
-            mode={mode}
-            title2="LastMonth"
-            Icon={ImCreditCard}
-            loading={loadingOrderAmount}
-            price={dashboardOrderAmount?.lastMonthOrderAmount || 0}
-            className="text-white dark:text-teal-100 bg-cyan-600"
-          />
+    //       <CardItemTwo
+    //         mode={mode}
+    //         title2="LastMonth"
+    //         Icon={ImCreditCard}
+    //         loading={loadingOrderAmount}
+    //         price={dashboardOrderAmount?.lastMonthOrderAmount || 0}
+    //         className="text-white dark:text-teal-100 bg-cyan-600"
+    //       />
 
-          <CardItemTwo
-            mode={mode}
-            title2="AllTimeSales"
-            Icon={ImCreditCard}
-            price={dashboardOrderAmount?.totalAmount || 0}
-            className="text-white dark:text-emerald-100 bg-emerald-600"
-            loading={loadingOrderAmount}
-          />
-        </div>
+    //       <CardItemTwo
+    //         mode={mode}
+    //         title2="AllTimeSales"
+    //         Icon={ImCreditCard}
+    //         price={dashboardOrderAmount?.totalAmount || 0}
+    //         className="text-white dark:text-emerald-100 bg-emerald-600"
+    //         loading={loadingOrderAmount}
+    //       />
+    //     </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <CardItem
-            title="Total Order"
-            Icon={FiShoppingCart}
-            loading={loadingOrderCount}
-            quantity={dashboardOrderCount?.totalOrder || 0}
-            className="text-orange-600 dark:text-orange-100 bg-orange-100 dark:bg-orange-500"
-          />
-          <CardItem
-            title={t("OrderPending")}
-            Icon={FiRefreshCw}
-            loading={loadingOrderCount}
-            quantity={dashboardOrderCount?.totalPendingOrder?.count || 0}
-            amount={dashboardOrderCount?.totalPendingOrder?.total || 0}
-            className="text-blue-600 dark:text-blue-100 bg-blue-100 dark:bg-blue-500"
-          />
-          <CardItem
-            title={t("OrderProcessing")}
-            Icon={FiTruck}
-            loading={loadingOrderCount}
-            quantity={dashboardOrderCount?.totalProcessingOrder || 0}
-            className="text-teal-600 dark:text-teal-100 bg-teal-100 dark:bg-teal-500"
-          />
-          <CardItem
-            title={t("OrderDelivered")}
-            Icon={FiCheck}
-            loading={loadingOrderCount}
-            quantity={dashboardOrderCount?.totalDeliveredOrder || 0}
-            className="text-emerald-600 dark:text-emerald-100 bg-emerald-100 dark:bg-emerald-500"
-          />
-        </div>
+    //     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    //       <CardItem
+    //         title="Total Order"
+    //         Icon={FiShoppingCart}
+    //         loading={loadingOrderCount}
+    //         quantity={dashboardOrderCount?.totalOrder || 0}
+    //         className="text-orange-600 dark:text-orange-100 bg-orange-100 dark:bg-orange-500"
+    //       />
+    //       <CardItem
+    //         title={t("OrderPending")}
+    //         Icon={FiRefreshCw}
+    //         loading={loadingOrderCount}
+    //         quantity={dashboardOrderCount?.totalPendingOrder?.count || 0}
+    //         amount={dashboardOrderCount?.totalPendingOrder?.total || 0}
+    //         className="text-blue-600 dark:text-blue-100 bg-blue-100 dark:bg-blue-500"
+    //       />
+    //       <CardItem
+    //         title={t("OrderProcessing")}
+    //         Icon={FiTruck}
+    //         loading={loadingOrderCount}
+    //         quantity={dashboardOrderCount?.totalProcessingOrder || 0}
+    //         className="text-teal-600 dark:text-teal-100 bg-teal-100 dark:bg-teal-500"
+    //       />
+    //       <CardItem
+    //         title={t("OrderDelivered")}
+    //         Icon={FiCheck}
+    //         loading={loadingOrderCount}
+    //         quantity={dashboardOrderCount?.totalDeliveredOrder || 0}
+    //         className="text-emerald-600 dark:text-emerald-100 bg-emerald-100 dark:bg-emerald-500"
+    //       />
+    //     </div>
 
-        <div className="grid gap-4 md:grid-cols-2 my-8">
-          <ChartCard
-            mode={mode}
-            loading={loadingOrderAmount}
-            title={t("WeeklySales")}
-          >
-            <LineChart salesReport={salesReport} />
-          </ChartCard>
+    //     <div className="grid gap-4 md:grid-cols-2 my-8">
+    //       <ChartCard
+    //         mode={mode}
+    //         loading={loadingOrderAmount}
+    //         title={t("WeeklySales")}
+    //       >
+    //         <LineChart salesReport={salesReport} />
+    //       </ChartCard>
 
-          <ChartCard
-            mode={mode}
-            loading={loadingBestSellerProduct}
-            title={t("BestSellingProducts")}
-          >
-            <PieChart data={bestSellerProductChart} />
-          </ChartCard>
-        </div>
-      </AnimatedContent>
+    //       <ChartCard
+    //         mode={mode}
+    //         loading={loadingBestSellerProduct}
+    //         title={t("BestSellingProducts")}
+    //       >
+    //         <PieChart data={bestSellerProductChart} />
+    //       </ChartCard>
+    //     </div>
+    //   </AnimatedContent>
 
-      <PageTitle>{t("RecentOrder")}</PageTitle>
+    //   <PageTitle>{t("RecentOrder")}</PageTitle>
 
-      {/* <Loading loading={loading} /> */}
+    //   {/* <Loading loading={loading} /> */}
 
-      {loadingRecentOrder ? (
-        <TableLoading row={5} col={4} />
-      ) : error ? (
-        <span className="text-center mx-auto text-red-500">{error}</span>
-      ) : serviceData?.length !== 0 ? (
-        <TableContainer className="mb-8">
-          <Table>
-            <TableHeader>
-              <tr>
-                <TableCell>{t("InvoiceNo")}</TableCell>
-                <TableCell>{t("TimeTbl")}</TableCell>
-                <TableCell>{t("CustomerName")} </TableCell>
-                <TableCell> {t("MethodTbl")} </TableCell>
-                <TableCell> {t("AmountTbl")} </TableCell>
-                <TableCell>{t("OderStatusTbl")}</TableCell>
-                <TableCell>{t("ActionTbl")}</TableCell>
-                <TableCell className="text-right">{t("InvoiceTbl")}</TableCell>
-              </tr>
-            </TableHeader>
+    //   {loadingRecentOrder ? (
+    //     <TableLoading row={5} col={4} />
+    //   ) : error ? (
+    //     <span className="text-center mx-auto text-red-500">{error}</span>
+    //   ) : serviceData?.length !== 0 ? (
+    //     <TableContainer className="mb-8">
+    //       <Table>
+    //         <TableHeader>
+    //           <tr>
+    //             <TableCell>{t("InvoiceNo")}</TableCell>
+    //             <TableCell>{t("TimeTbl")}</TableCell>
+    //             <TableCell>{t("CustomerName")} </TableCell>
+    //             <TableCell> {t("MethodTbl")} </TableCell>
+    //             <TableCell> {t("AmountTbl")} </TableCell>
+    //             <TableCell>{t("OderStatusTbl")}</TableCell>
+    //             <TableCell>{t("ActionTbl")}</TableCell>
+    //             <TableCell className="text-right">{t("InvoiceTbl")}</TableCell>
+    //           </tr>
+    //         </TableHeader>
 
-            <OrderTable orders={dataTable} />
-          </Table>
-          <TableFooter>
-            <Pagination
-              totalResults={dashboardRecentOrder?.totalOrder}
-              resultsPerPage={8}
-              onChange={handleChangePage}
-              label="Table navigation"
-            />
-          </TableFooter>
-        </TableContainer>
-      ) : (
-        <NotFound title="Sorry, There are no orders right now." />
-      )}
-    </>
+    //         <OrderTable orders={dataTable} />
+    //       </Table>
+    //       <TableFooter>
+    //         <Pagination
+    //           totalResults={dashboardRecentOrder?.totalOrder}
+    //           resultsPerPage={8}
+    //           onChange={handleChangePage}
+    //           label="Table navigation"
+    //         />
+    //       </TableFooter>
+    //     </TableContainer>
+    //   ) : (
+    //     <NotFound title="Sorry, There are no orders right now." />
+    //   )}
+    // </>
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <h1 className="text-3xl font-semibold text-gray-600 dark:text-gray-200 mt-20 mb-4">
+        Page is under construction
+      </h1>
+      <p className="text-lg text-gray-500 dark:text-gray-400">
+        Check back later for updates.
+      </p>
+    </div>
   );
 };
 

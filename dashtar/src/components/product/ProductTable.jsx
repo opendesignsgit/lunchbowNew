@@ -6,7 +6,7 @@ const ProductTable = ({ products = [], setIsCheck, onEdit }) => {
     if (!imagePath) return "";
     return imagePath.startsWith("http")
       ? imagePath
-      : `http://localhost:5055${imagePath}`;
+      : `https://api.lunchbowl.co.in/${imagePath}`;
   };
 
   console.log("====================================");

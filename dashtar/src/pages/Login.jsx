@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@windmill/react-ui";
 import { ImFacebook, ImGoogle } from "react-icons/im";
 import { useTranslation } from "react-i18next";
-
+import { FiEye, FiEyeOff } from "react-icons/fi";
 //internal import
 import Error from "@/components/form/others/Error";
 import LabelArea from "@/components/form/selectOption/LabelArea";
@@ -15,6 +15,7 @@ import CMButton from "@/components/form/button/CMButton";
 
 const Login = () => {
   const { t } = useTranslation();
+  const [showPassword, setShowPassword] = useState(false); 
   const { onSubmit, register, handleSubmit, errors, loading } =
     useLoginSubmit();
 
@@ -47,7 +48,7 @@ const Login = () => {
                   <InputArea
                     required={true}
                     register={register}
-                    defaultValue="admin@gmail.com"
+                    //defaultValue="admin@gmail.com"
                     label="Email"
                     name="email"
                     type="email"
@@ -55,18 +56,35 @@ const Login = () => {
                     placeholder="john@doe.com"
                   />
                   <Error errorName={errors.email} />
-                  <div className="mt-6"></div>
-                  <LabelArea label="Password" />
-                  <InputArea
-                    required={true}
-                    register={register}
-                    defaultValue="12345678"
-                    label="Password"
-                    name="password"
-                    type="password"
-                    autocomplete="current-password"
-                    placeholder="***************"
-                  />
+                  {/* Password with eye toggle */}
+                  <div style={{ marginTop: "24px", position: "relative" }}>
+                    <LabelArea label="Password" />
+                    <InputArea
+                      required
+                      register={register}
+                      //defaultValue="12345678"
+                      label="Password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      placeholder="***************"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: "absolute",
+                        right: "12px",
+                        top: "42px",
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#6b7280",
+                      }}
+                    >
+                      {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                    </button>
+                  </div>
                   <Error errorName={errors.password} />
 
                   {loading ? (
@@ -86,8 +104,8 @@ const Login = () => {
                       {t("LoginTitle")}
                     </Button>
                   )}
-                  <hr className="my-10" />
-                  <button
+                  {/* <hr className="my-10" /> */}
+                  {/* <button
                     disabled
                     className="text-sm inline-flex items-center cursor-pointer transition ease-in-out duration-300 font-semibold font-serif text-center justify-center rounded-md focus:outline-none text-gray-700 bg-gray-100 shadow-sm my-2 md:px-2 lg:px-3 py-4 md:py-3.5 lg:py-4 hover:text-white hover:bg-blue-600 h-11 md:h-12 w-full mr-2"
                   >
@@ -100,25 +118,25 @@ const Login = () => {
                   >
                     <ImGoogle className="w-4 h-4 mr-2" />{" "}
                     <span className="ml-2">{t("LoginWithGoogle")}</span>
-                  </button>
+                  </button> */}
                 </form>
 
-                <p className="mt-4">
+                {/* <p className="mt-4">
                   <Link
                     className="text-sm font-medium text-emerald-500 dark:text-emerald-400 hover:underline"
                     to="/forgot-password"
                   >
                     {t("ForgotPassword")}
                   </Link>
-                </p>
-                <p className="mt-1">
+                </p> */}
+                {/* <p className="mt-1">
                   <Link
                     className="text-sm font-medium text-emerald-500 dark:text-emerald-400 hover:underline"
                     to="/signup"
                   >
                     {t("CreateAccountTitle")}
                   </Link>
-                </p>
+                </p> */}
               </div>
             </main>
           </div>
