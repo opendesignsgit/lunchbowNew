@@ -14,10 +14,11 @@ import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import CloseIcon from "@mui/icons-material/Close";
-import stepTwo from "../../../public/profileStepImages/stepTwo.png";
 import useRegistration from "@hooks/useRegistration";
 import CategoryServices from "@services/CategoryServices";
 import useAsync from "@hooks/useAsync";
+import stepTwo from "../../../public/profileStepImages/stepTwo.png";
+// import stepTwo from "../../../public/profileStepImages/s"
 
 const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
@@ -34,10 +35,9 @@ const schema = yup.object().shape({
   dob: yup
     .date()
     .nullable()
-    .transform((value, originalValue) => {
-      // If the value is an empty string, set to null
-      return originalValue === "" ? null : value;
-    })
+    .transform((value, originalValue) =>
+      originalValue === "" ? null : value
+    )
     .required("Date of Birth is required"),
   lunchTime: yup.string().required("Lunch time is required"),
   school: yup.string().required("School is required"),
@@ -52,7 +52,7 @@ const lunchTimeOptions = [
   "12:00 PM - 01:00 PM",
 ];
 
-const ChildDetailsStep = ({
+const RenewChildDetailsStep = ({
   formData,
   setFormData,
   nextStep,
@@ -65,46 +65,51 @@ const ChildDetailsStep = ({
     formData.children.length > 0
       ? formData.children
       : [
-        {
-          childFirstName: "",
-          childLastName: "",
-          dob: null,
-          lunchTime: "",
-          school: "",
-          location: "",
-          childClass: "",
-          section: "",
-          allergies: "",
-        },
-      ]
+          {
+            childFirstName: "",
+            childLastName: "",
+            dob: null,
+            lunchTime: "",
+            school: "",
+            location: "",
+            childClass: "",
+            section: "",
+            allergies: "",
+          },
+        ]
   );
-  const { submitHandler, loading } = useRegistration();
 
-  // Fetch schools data
-  const { data: schools, loading: schoolsLoading } = useAsync(
-    CategoryServices.getAllSchools
-  );
+  const { submitHandler, loading } = useRegistration();
 
   const { data: fetchedChildren = [], loading: childrenLoading } = useAsync(() =>
     CategoryServices.getChildren(_id)
   );
 
   useEffect(() => {
-    console.log("fetchedChildren--->", fetchedChildren.children);
-    if (fetchedChildren && fetchedChildren.children && fetchedChildren.children.length > 0) {
-      setChildren(fetchedChildren.children);
-      setFormData((prev) => ({ ...prev, children: fetchedChildren.children }));
-      setChildCount(fetchedChildren.children.length);
+    if (fetchedChildren?.children?.length > 0) {
+      // Mark existing children with isExisting: true
+      const existingKids = fetchedChildren.children.map((child) => ({
+        ...child,
+        isExisting: true,
+      }));
+      setChildren(existingKids);
+      setFormData((prev) => ({ ...prev, children: existingKids }));
+      setChildCount(existingKids.length);
     }
   }, [fetchedChildren, setFormData, setChildCount]);
 
-  // State for filtered locations
+  // Fetch schools list
+  const { data: schools, loading: schoolsLoading } = useAsync(
+    CategoryServices.getAllSchools
+  );
+
+  // Filtered locations for selected school
   const [filteredLocations, setFilteredLocations] = useState([]);
 
   const getYesterdayDateString = () => {
     const now = new Date();
-    now.setDate(now.getDate() - 1); // Move one day back
-    return now.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+    now.setDate(now.getDate() - 1);
+    return now.toISOString().slice(0, 10);
   };
 
   const {
@@ -129,11 +134,9 @@ const ChildDetailsStep = ({
     mode: "onTouched",
   });
 
-  // Watch school and location changes 
+  // Watch school and location form fields
   const watchSchool = watch("school");
-  const watchLocation = watch("location");
 
-  // Ensure dropdowns and date field correctly reflect DB data on mount/tab change
   useEffect(() => {
     if (children.length > 0 && children[activeTab]) {
       const child = {
@@ -144,8 +147,8 @@ const ChildDetailsStep = ({
             : ""
           : "",
       };
-      // Preserve form errors/touched/dirty so validation messages don't flash
-      reset(child, { keepErrors: true, keepDirty: true, keepTouched: true });
+      // Preserve error/touched/dirty state so UI errors don't disappear
+      reset(child, { keepErrors: true, keepDirty: true, keepTouched: true }); // <-- fix
     }
   }, [children, activeTab, reset]);
 
@@ -166,7 +169,6 @@ const ChildDetailsStep = ({
       const uniqueLocations = [...new Set(schoolLocations)];
       setFilteredLocations(uniqueLocations);
 
-      // Only reset location if non-matching and schools are LOADED
       const currentLocation = watch("location");
       if (
         currentLocation &&
@@ -178,27 +180,25 @@ const ChildDetailsStep = ({
         currentLocation &&
         uniqueLocations.includes(currentLocation)
       ) {
-        // Ensure react-hook-form knows to keep user's value
         setValue("location", currentLocation);
       }
-    } else if (watchSchool) {
-      // If schools not loaded yet, let location persist (do NOT clear)
-      setFilteredLocations([]);
     } else {
-      // If school not selected at all, clear location
       setFilteredLocations([]);
       setValue("location", "");
     }
   }, [watchSchool, schools, setValue, watch]);
 
-  // Sync form with children state
+  // Sync form changes to children state
   useEffect(() => {
     const subscription = watch((values) => {
-      setChildren((prevChildren) => {
-        const updated = [...prevChildren];
-        updated[activeTab] = { ...updated[activeTab], ...values };
-        return updated;
-      });
+      clearTimeout(window.__childUpdateTimer);
+      window.__childUpdateTimer = setTimeout(() => {
+        setChildren((prev) => {
+          const updated = [...prev];
+          updated[activeTab] = { ...updated[activeTab], ...values };
+          return updated;
+        });
+      }, 300); // update after 300ms pause
     });
     return () => subscription.unsubscribe();
   }, [watch, activeTab]);
@@ -219,6 +219,7 @@ const ChildDetailsStep = ({
         childClass: "",
         section: "",
         allergies: "",
+        isExisting: false, // mark new child as not existing
       };
       setChildren([...children, newChild]);
       setActiveTab(children.length);
@@ -238,7 +239,7 @@ const ChildDetailsStep = ({
 
   const onSubmit = async () => {
     try {
-      // Validate all children first
+      // Validate all children at once
       await Promise.all(
         children.map((child) => schema.validate(child, { abortEarly: false }))
       );
@@ -256,7 +257,6 @@ const ChildDetailsStep = ({
         nextStep();
       }
     } catch (err) {
-      console.log("Validation errors:", err.inner);
       if (err.name === "ValidationError") {
         const invalidIndex = children.findIndex((child) => {
           try {
@@ -268,27 +268,21 @@ const ChildDetailsStep = ({
         });
         if (invalidIndex >= 0) {
           setActiveTab(invalidIndex);
-          if (err.inner && Array.isArray(err.inner)) {
-            err.inner.forEach((validationError) => {
-              setError(validationError.path, {
-                type: "manual",
-                message: validationError.message,
-              });
+          err.inner.forEach((validationError) => {
+            setError(validationError.path, {
+              type: "manual",
+              message: validationError.message,
             });
-          }
+          });
         }
       }
     }
   };
 
-  // Generate unique schools list
-  const uniqueSchools = schools
-    ? [...new Set(schools.map((school) => school.name))]
-    : [];
+  const uniqueSchools = schools ? [...new Set(schools.map((s) => s.name))] : [];
 
   return (
     <Box
-      className="subplnBoxss"
       component="form"
       onSubmit={handleSubmit(onSubmit)}
       sx={{
@@ -299,7 +293,6 @@ const ChildDetailsStep = ({
     >
       {/* Image Side */}
       <Box
-        className="spboximg"
         sx={{
           width: { xs: "100%", md: "45%" },
           backgroundImage: `url(${stepTwo.src})`,
@@ -311,75 +304,65 @@ const ChildDetailsStep = ({
       />
 
       {/* Form Side */}
-      <Box className="spboxCont" sx={{ width: { xs: "100%", md: "55%" } }}>
-        <div className="steptitles">
-          <Typography variant="h5">CHILD DETAILS :</Typography>
-          {/* Tabs */}
-          <Box
-            sx={{ display: "flex", alignItems: "center", mb: 2 }}
-            className="adchildnav"
+      <Box sx={{ width: { xs: "100%", md: "55%" } }}>
+        <Typography variant="h5" mb={2}>
+          CHILD DETAILS :
+        </Typography>
+
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
           >
-            <Tabs
-              value={activeTab}
-              onChange={handleTabChange}
-              variant="scrollable"
-              scrollButtons="auto"
-              className="adchildul"
-            >
-              {children.map((child, index) => (
-                <Tab
-                  key={index}
-                  label={
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <Typography>CHILD {index + 1}</Typography>
-                      {children.length > 1 && (
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeChild(index);
-                          }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  }
-                  sx={{
-                    bgcolor: activeTab === index ? "#FF6A00" : "transparent",
-                    color: activeTab === index ? "#fff" : "inherit",
-                  }}
-                />
-              ))} 
-            </Tabs>
-            {children.length < 3 && (
+            {children.map((child, index) => (
+              <Tab
+                key={index}
+                label={
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <Typography>CHILD {index + 1}</Typography>
+                    {!child.isExisting && children.length > 1 && (
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeChild(index);
+                        }}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
+                }
+                sx={{
+                  bgcolor: activeTab === index ? "#FF6A00" : "transparent",
+                  color: activeTab === index ? "#fff" : "inherit",
+                }}
+              />
+            ))}
+          </Tabs>
+
+          {children.length < 3 && (
             <Button
               variant="outlined"
               onClick={addChild}
-              className="addanochildbtn"
-                disabled={children.length >= 3}
+              disabled={children.length >= 3}
+              sx={{ ml: 2 }}
             >
               Add Another Child
             </Button>
-            )}
-          </Box>
-        </div>
+          )}
+        </Box>
 
-        <Grid container className="formboxrow">
-          {/* Child First/Last Name */}
+        <Grid container spacing={2}>
+          {/* Child First & Last Name */}
           {[
-            [
-              "CHILD'S FIRST NAME*",
-              "childFirstName",
-              "Enter Child's First Name",
-            ],
+            ["CHILD'S FIRST NAME*", "childFirstName", "Enter Child's First Name"],
             ["CHILD'S LAST NAME*", "childLastName", "Enter Child's Last Name"],
           ].map(([label, name, placeholder]) => (
-            <Grid item className="formboxcol" key={name}>
-              <Typography
-                variant="subtitle2"
-                sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
-              >
+            <Grid item xs={12} md={6} key={name}>
+              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
                 {label}
               </Typography>
               <TextField
@@ -388,17 +371,13 @@ const ChildDetailsStep = ({
                 {...register(name)}
                 error={!!errors[name]}
                 helperText={errors[name]?.message}
-                sx={{ width: "300px", minWidth: "300px" }}
               />
             </Grid>
           ))}
 
           {/* Date Picker */}
-          <Grid item className="formboxcol" key="dob">
-            <Typography
-              variant="subtitle2"
-              sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
-            >
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
               DATE OF BIRTH*
             </Typography>
             <Controller
@@ -412,7 +391,6 @@ const ChildDetailsStep = ({
                   InputLabelProps={{ shrink: true }}
                   error={!!errors.dob}
                   helperText={errors.dob?.message}
-                  sx={{ width: "300px", minWidth: "300px" }}
                   value={
                     field.value
                       ? typeof field.value === "string"
@@ -430,12 +408,9 @@ const ChildDetailsStep = ({
             />
           </Grid>
 
-          {/* School Dropdown */}
-          <Grid item className="formboxcol" key="school">
-            <Typography
-              variant="subtitle2"
-              sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
-            >
+          {/* School */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
               SCHOOL*
             </Typography>
             <Controller
@@ -449,14 +424,13 @@ const ChildDetailsStep = ({
                   {...field}
                   error={!!errors.school}
                   helperText={errors.school?.message}
-                  sx={{ width: "300px", minWidth: "300px" }}
                   disabled={schoolsLoading}
                 >
                   <MenuItem value="" disabled>
                     {schoolsLoading ? "Loading schools..." : "Select School"}
                   </MenuItem>
                   {uniqueSchools.map((school) => (
-                    <MenuItem key={school} value={school}>
+                    <MenuItem value={school} key={school}>
                       {school}
                     </MenuItem>
                   ))}
@@ -465,12 +439,9 @@ const ChildDetailsStep = ({
             />
           </Grid>
 
-          {/* Location Dropdown */}
-          <Grid item className="formboxcol" key="location">
-            <Typography
-              variant="subtitle2"
-              sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
-            >
+          {/* Location */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
               LOCATION*
             </Typography>
             <Controller
@@ -484,15 +455,14 @@ const ChildDetailsStep = ({
                   {...field}
                   error={!!errors.location}
                   helperText={errors.location?.message}
-                  sx={{ width: "300px", minWidth: "300px" }}
                   disabled={!watchSchool || filteredLocations.length === 0}
                 >
                   <MenuItem value="" disabled>
                     {!watchSchool
                       ? "Select a school first"
                       : filteredLocations.length === 0
-                        ? "No locations available"
-                        : "Select Location"}
+                      ? "No locations available"
+                      : "Select Location"}
                   </MenuItem>
                   {filteredLocations.map((location) => (
                     <MenuItem key={location} value={location}>
@@ -504,12 +474,9 @@ const ChildDetailsStep = ({
             />
           </Grid>
 
-          {/* Lunch Time Dropdown (STATIC & mapped with DB values) */}
-          <Grid item className="formboxcol" key="lunchTime">
-            <Typography
-              variant="subtitle2"
-              sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
-            >
+          {/* Lunch Time */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
               CHILD'S LUNCH TIME*
             </Typography>
             <Controller
@@ -523,7 +490,6 @@ const ChildDetailsStep = ({
                   {...field}
                   error={!!errors.lunchTime}
                   helperText={errors.lunchTime?.message}
-                  sx={{ width: "300px", minWidth: "300px" }}
                 >
                   <MenuItem value="" disabled>
                     Select Lunch Time
@@ -538,12 +504,9 @@ const ChildDetailsStep = ({
             />
           </Grid>
 
-          {/* Class Dropdown */}
-          <Grid item className="formboxcol" key="childClass">
-            <Typography
-              variant="subtitle2"
-              sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
-            >
+          {/* Class */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
               CHILD CLASS*
             </Typography>
             <Controller
@@ -557,7 +520,6 @@ const ChildDetailsStep = ({
                   {...field}
                   error={!!errors.childClass}
                   helperText={errors.childClass?.message}
-                  sx={{ width: "300px", minWidth: "300px" }}
                 >
                   <MenuItem value="" disabled>
                     Select Class
@@ -587,12 +549,9 @@ const ChildDetailsStep = ({
             />
           </Grid>
 
-          {/* Section Dropdown */}
-          <Grid item className="formboxcol" key="section">
-            <Typography
-              variant="subtitle2"
-              sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
-            >
+          {/* Section */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
               CHILD SECTION*
             </Typography>
             <Controller
@@ -606,7 +565,6 @@ const ChildDetailsStep = ({
                   {...field}
                   error={!!errors.section}
                   helperText={errors.section?.message}
-                  sx={{ width: "300px", minWidth: "300px" }}
                 >
                   <MenuItem value="" disabled>
                     Select Section
@@ -622,11 +580,8 @@ const ChildDetailsStep = ({
           </Grid>
 
           {/* Allergies */}
-          <Grid item className="formboxcol">
-            <Typography
-              variant="subtitle2"
-              sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
-            >
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
               DOES THE CHILD HAVE ANY ALLERGIES?
             </Typography>
             <TextField
@@ -637,22 +592,17 @@ const ChildDetailsStep = ({
               {...register("allergies")}
               error={!!errors.allergies}
               helperText={errors.allergies?.message}
-              sx={{ width: "625px", minWidth: "625px" }}
             />
           </Grid>
         </Grid>
 
-        <Box className="subbtnrow" sx={{ mt: 4, display: "flex", gap: 3 }}>
-          <Button variant="outlined" onClick={prevStep} className="backbtn">
-            <span className="nextspan">Back</span>
+        {/* Buttons */}
+        <Box sx={{ mt: 4, display: "flex", gap: 3 }}>
+          <Button variant="outlined" onClick={prevStep}>
+            Back
           </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            className="nextbtn"
-            disabled={loading}
-          >
-            {loading ? "Processing..." : <span className="nextspan">Next</span>}
+          <Button type="submit" variant="contained" disabled={loading}>
+            {loading ? "Processing..." : "Next"}
           </Button>
         </Box>
       </Box>
@@ -660,4 +610,4 @@ const ChildDetailsStep = ({
   );
 };
 
-export default ChildDetailsStep;
+export default RenewChildDetailsStep;

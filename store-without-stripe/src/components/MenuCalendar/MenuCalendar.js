@@ -6,6 +6,8 @@ import {
   useTheme,
   Dialog,
   CircularProgress,
+  Tabs,
+  Tab
 } from "@mui/material";
 import LeftPanel from "./LeftPanel";
 import CenterPanel from "./CenterPanel";
@@ -20,7 +22,6 @@ import { useSession } from "next-auth/react";
 import dietitianMealPlanData from "../../jsonHelper/Dietitian_meal_plan.json";
 import { set } from "local-storage";
 
-
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 
@@ -30,11 +31,18 @@ const MenuCalendar = () => {
   const today = dayjs();
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
-  const {
-    data,
+  const { data, reload } = useAsync(AttributeServices.getAllHolidays);
 
-    reload,
-  } = useAsync(AttributeServices.getAllHolidays);
+  // New for multi-plan support
+  const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+  const [selectedPlanIndex, setSelectedPlanIndex] = useState(0);
+
+  // Plan-dependent state
+  const [children, setChildren] = useState([]);
+  const [subscriptionStart, setSubscriptionStart] = useState(dayjs());
+  const [subscriptionEnd, setSubscriptionEnd] = useState(dayjs());
+
+  // All your existing state preserved below
   const [currentMonth, setCurrentMonth] = useState(today.month());
   const [currentYear, setCurrentYear] = useState(today.year());
   const [selectedDate, setSelectedDate] = useState(today.date());
@@ -47,11 +55,8 @@ const MenuCalendar = () => {
     startDate: null,
   });
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [children, setChildren] = useState([]);
   const [menus, setMenus] = useState([]);
   const [holidays, setHolidays] = useState([]);
-  const [subscriptionStart, setSubscriptionStart] = useState(dayjs());
-  const [subscriptionEnd, setSubscriptionEnd] = useState(dayjs());
   const [menuData, setMenuData] = useState([]);
   const [useMealPlan, setUseMealPlan] = useState(false);
   const [selectedPlans, setSelectedPlans] = useState({});
@@ -59,18 +64,12 @@ const MenuCalendar = () => {
   const [canPay, setCanPay] = useState(false);
   const [paidHolidays, setPaidHolidays] = useState([]);
 
-
-
   const _id = session?.user?.id;
-
   const { submitHandler, loading } = useRegistration();
 
   useEffect(() => {
-    if (_id) {
-      fetchPaidHolidays();
-    }
+    if (_id) fetchPaidHolidays();
   }, [_id]);
-
 
   const fetchPaidHolidays = async () => {
     try {
@@ -78,19 +77,12 @@ const MenuCalendar = () => {
         _id: _id,
         path: "get-paid-holidays",
       });
-      console.log("Paid holidays response:", res);
-
-      if (res.success) {
-        setPaidHolidays(res.data); // Set paid holidays state
-
-      } else {
-        console.error("Failed to fetch paid holidays:", res.message);
-      }
+      if (res.success) setPaidHolidays(res.data);
+      else console.error("Failed to fetch paid holidays:", res.message);
     } catch (error) {
       console.error("Error fetching paid holidays:", error);
     }
   };
-  // console.log("Paid holidays:", paidHolidays);
 
   useEffect(() => {
     if (data && Array.isArray(data) && subscriptionStart && subscriptionEnd) {
@@ -109,95 +101,103 @@ const MenuCalendar = () => {
   }, [data, subscriptionStart, subscriptionEnd]);
 
   const fetchSavedMealPlans = async () => {
+    const currentPlanId = subscriptionPlans[selectedPlanIndex]?.id;
+
     try {
       const res = await submitHandler({
-        _id: _id,
+        _id,
         path: "get-saved-meals",
+        planId: currentPlanId,
       });
 
       if (res.success && res.data) {
-        const { menuSelections, holidays } = res.data;
+        // The backend returns: { [planId]: { [date]: { childId: mealName } } }
+        // So we want the object for just the selected/current planId
+        const savedMealsForCurrentPlan = res.data[currentPlanId] || {};
 
-        // Update menu selections state
-        setMenuSelections((prev) => ({
-          ...prev,
-          ...menuSelections,
-        }));
+        setMenuSelections(savedMealsForCurrentPlan);
 
-        // Update holidays if needed
-        setHolidays((prev) => [...prev, ...(holidays || [])]);
+        // If your backend supports returning holidays, you could do this here too:
+        // setHolidays((prev) => [...prev, ...(res.data.holidays || [])]);
 
-        if (!menuSelections || Object.keys(menuSelections).length === 0) {
-          setCanPay(true);
-        } else {
-          setCanPay(false);
-        }
-
-        console.log("Saved meals loaded successfully");
+        setCanPay(
+          !savedMealsForCurrentPlan ||
+          Object.keys(savedMealsForCurrentPlan).length === 0
+        );
       }
     } catch (error) {
       console.error("Error loading saved meals:", error);
       setCanPay(true);
-
     } finally {
       setInitialLoadComplete(true);
     }
   };
 
+  useEffect(() => {
+    fetchSavedMealPlans();
+  }, [selectedPlanIndex, subscriptionPlans]);
+
+
+  // Fetch all plans on mount
   const fetchInitialData = async () => {
     try {
       const res = await submitHandler({
         _id: _id,
         path: "get-Menu-Calendar",
       });
-
-      if (res.success) {
-        const childrenWithNames =
-          res.data.children?.map((child, index) => ({
-            id: `child-${index}`, // Create an ID if not provided
-            name: `${child.firstName} ${child.lastName}`.trim(), // Combine first and last name
-            ...child,
-          })) || [];
-
-        setChildren(childrenWithNames);
-        setMenus([
-          "Veg Biriyani",
-          "Phulka + Chole",
-          "Pav Bhaji",
-          "5 Spice Fried Rice",
-          "Veg Noodles",
-          "Alfredo Pasta",
-          "Mac and Cheese",
-          "Aloo Paratha",
-          "Hummus and Pita",
-          "Creamy Curry Rice",
-          "Ghee Rice and Dal",
-        ]);
-
-        setSubscriptionStart(dayjs(res.data.startDate));
-        setSubscriptionEnd(dayjs(res.data.endDate));
-        setCurrentMonth(dayjs(res.data.startDate).month());
-        setCurrentYear(dayjs(res.data.startDate).year());
-        setSelectedDate(dayjs(res.data.startDate).date());
+      if (res.success && Array.isArray(res.data.plans)) {
+        setSubscriptionPlans(res.data.plans);
+        // Select active plan on first load
+        const activeIndex = res.data.plans.findIndex((p) => p.status === "active");
+        setSelectedPlanIndex(activeIndex !== -1 ? activeIndex : 0);
       }
+      setMenus([
+        "Veg Biriyani",
+        "Phulka + Chole",
+        "Pav Bhaji",
+        "5 Spice Fried Rice",
+        "Veg Noodles",
+        "Alfredo Pasta",
+        "Mac and Cheese",
+        "Aloo Paratha",
+        "Hummus and Pita",
+        "Creamy Curry Rice",
+        "Ghee Rice and Dal",
+      ]);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
 
   useEffect(() => {
+    // Always fetch all plans and saved meals
     const fetchAllData = async () => {
       try {
         await fetchInitialData();
-
         await fetchSavedMealPlans();
       } catch (error) {
         console.error("Error in initial data loading:", error);
       }
     };
-
     fetchAllData();
   }, []);
+
+  // --- Plan tab change: map children/calendar date range for selected plan
+  useEffect(() => {
+    if (!subscriptionPlans.length) return;
+    const plan = subscriptionPlans[selectedPlanIndex];
+    if (!plan) return;
+    setChildren((plan.children || []).map((child, idx) => ({
+      ...child,
+      id: child.id || `child-${idx}`,
+      name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
+    })));
+    setSubscriptionStart(dayjs(plan.startDate));
+    setSubscriptionEnd(dayjs(plan.endDate));
+    setCurrentMonth(dayjs(plan.startDate).month());
+    setCurrentYear(dayjs(plan.startDate).year());
+    setSelectedDate(dayjs(plan.startDate).date());
+  }, [selectedPlanIndex, subscriptionPlans]);
 
   const handleMenuDataChange = (data) => {
     setMenuData(data);
@@ -275,20 +275,22 @@ const MenuCalendar = () => {
 
   const saveSelectedMeals = async () => {
     const allMenuData = getAllMenuData();
-    console.log("All menu data to save:----->", allMenuData);
+
+    // Use selected plan's planId
+    const currentPlanId = subscriptionPlans[selectedPlanIndex]?.id;
 
     const payload = {
       userId: _id,
+      planId: currentPlanId,
       children: allMenuData.map((child) => ({
         childId: child.childId,
         meals: child.meals,
       })),
     };
-    console.log("Payload to save:----->", payload);
 
     try {
       const res = await submitHandler({
-        _id: _id,
+        _id,
         path: "save-meals",
         data: payload,
       });
@@ -525,6 +527,22 @@ const MenuCalendar = () => {
   }
 
   return (
+    <>
+      {/* Plan Tabs */}
+      <Tabs
+        value={selectedPlanIndex}
+        onChange={(e, val) => setSelectedPlanIndex(val)}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{ mb: 2, bgcolor: "#fafbfc" }}
+      >
+        {subscriptionPlans.map((plan, i) => (
+          <Tab
+            key={i}
+            label={`${dayjs(plan.startDate).format("DD MMM")} - ${dayjs(plan.endDate).format("DD MMM")}(${plan.status})`}
+          />
+        ))}
+      </Tabs>
     <Box
       className="MCMainPanel"
       display="flex"
@@ -708,6 +726,7 @@ const MenuCalendar = () => {
         planId={mealPlanDialog.plan} // Pass the selected plan ID
       />
     </Box>
+    </>
   );
 };
 

@@ -325,6 +325,7 @@ const MultiStepForm = () => {
                 numberOfChildren={childCount}
                 initialSubscriptionPlan={formData.subscriptionPlan}
                 onSubscriptionPlanChange={handleSubscriptionPlanChange}
+                childrenData={formData.children} 
               />
             )}
 

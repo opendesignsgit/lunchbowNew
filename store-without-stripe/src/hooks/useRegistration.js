@@ -21,7 +21,8 @@ const useRegistration = () => {
       if (
         path == "step-Form-ParentDetails" ||
         path == "step-Form-ChildDetails" ||
-        path == "step-Form-SubscriptionPlan"
+        path == "step-Form-SubscriptionPlan" ||
+        path == "step-Form-Renew-SubscriptionPlan"
       ) {
         const res = await CustomerServices.stepFormRegister({
           formData,

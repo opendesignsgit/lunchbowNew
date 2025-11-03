@@ -24,6 +24,7 @@ import { useRouter } from "next/router";
 import useRegistration from "@hooks/useRegistration";
 import AttributeServices from "../../services/AttributeServices";
 import useAsync from "../../hooks/useAsync";
+import CategoryServices from "../../services/CategoryServices";
 
 const BASE_PRICE_PER_DAY = 200;
 
@@ -145,9 +146,10 @@ const SubscriptionPlanStep = ({
   nextStep,
   prevStep,
   _id,
-  numberOfChildren = 1,
+  // numberOfChildren = 1,
   initialSubscriptionPlan = {},
   onSubscriptionPlanChange,
+  childrenData = [],
 }) => {
   const router = useRouter();
   const { holidays, holidaysLoading } = useHolidays();
@@ -155,6 +157,14 @@ const SubscriptionPlanStep = ({
     (date) => isWorkingDay(date, holidays),
     [holidays]
   );
+
+  const [selectedChildren, setSelectedChildren] = useState([]);
+
+
+  // ---- CHANGE START: use dynamic child count everywhere ----
+  const numberOfChildren = selectedChildren.length > 0 ? selectedChildren.length : 1;
+  // ---- CHANGE END ----
+
 
   // Custom start dates for each plan
   const [customStartDates, setCustomStartDates] = useState({});
@@ -175,8 +185,40 @@ const SubscriptionPlanStep = ({
   const [planError, setPlanError] = useState(false);
 
 
+  // -- NEW: fetch children for subscription selection
+  const { data: childrenList = [], loading: childrenLoading } = useAsync(() => CategoryServices.getChildren(_id));
+
+
+
+
+  const [childError, setChildError] = useState(false);
+
   useEffect(() => {
-    const computedPlans = calculatePlans(holidays, numberOfChildren);
+    if (childrenList && childrenList?.length > 0) {
+      // Select the first child by default
+      setSelectedChildren([childrenList[0]._id]);
+    }
+  }, [childrenList]);
+
+  const handleChildCheckbox = (childId) => {
+    setSelectedChildren((prev) => {
+      const isSelected = prev.includes(childId);
+      if (isSelected) {
+        // Prevent unchecking if only one child is selected
+        if (prev.length === 1) {
+          return prev; // Do not uncheck the last selected child
+        }
+        return prev.filter((id) => id !== childId);
+      } else {
+        return [...prev, childId];
+      }
+    });
+  };
+
+
+  useEffect(() => {
+    // ---- CHANGE START: recalc plans based on selected children ----
+    const computedPlans = calculatePlans(holidays, numberOfChildren, customStartDates);
 
     // Initialize customStartDates from initialSubscriptionPlan startDate if plan is not 'byDate'
     let savedCustomStartDates = {};
@@ -192,13 +234,13 @@ const SubscriptionPlanStep = ({
 
     setCustomStartDates(savedCustomStartDates);
 
-    // Recalculate plans with saved custom dates
     const plansWithSavedDates = calculatePlans(holidays, numberOfChildren, savedCustomStartDates);
     setPlans(plansWithSavedDates);
 
+    // Plan selection logic
     if (
       initialSubscriptionPlan &&
-      initialSubscriptionPlan.planId // includes 'byDate' or numeric id
+      initialSubscriptionPlan.planId
     ) {
       setSelectedPlan(initialSubscriptionPlan.planId.toString());
 
@@ -220,13 +262,10 @@ const SubscriptionPlanStep = ({
           setEndDate(selectedPlanObj.endDate);
         }
       }
-    } 
-    // else if (computedPlans.length > 0) {
-    //   setSelectedPlan(computedPlans[0].id.toString());
-    //   setStartDate(computedPlans[0].startDate);
-    //   setEndDate(computedPlans[0].endDate);
-    // }
-  }, [holidays, numberOfChildren, initialSubscriptionPlan]);
+    }
+    // ---- CHANGE END ----
+  }, [holidays, numberOfChildren, initialSubscriptionPlan, customStartDates, selectedChildren]);
+
 
 
   const handlePlanChange = (e) => {
@@ -297,6 +336,9 @@ const SubscriptionPlanStep = ({
     }
   };
 
+  // console.log("selectedChildren--->", selectedChildren.length);
+
+
   const handleEndDateChange = (newValue) => {
     setEndDate(newValue);
     setErrors({ ...errors, endDate: false, dateOrder: false });
@@ -308,6 +350,7 @@ const SubscriptionPlanStep = ({
       ? plans.find((plan) => plan.id.toString() === selectedPlan)
       : null;
 
+  // --- Overwrite only handleNext to use selectedChildren ---
   const handleNext = async () => {
     if (!selectedPlan) {
       setPlanError(true);
@@ -320,6 +363,13 @@ const SubscriptionPlanStep = ({
     }
     setAgreedError(false);
 
+    if (selectedChildren.length === 0) {
+      setChildError(true);
+      return;
+    }
+    setChildError(false);
+
+    // (rest of your error logic unchanged)
     if (selectedPlan === "byDate") {
       const newErrors = {
         startDate: !startDate,
@@ -334,6 +384,7 @@ const SubscriptionPlanStep = ({
 
     let totalWorkingDays, totalPrice;
     if (selectedPlan !== "byDate") {
+      const currentPlan = plans.find((plan) => plan.id.toString() === selectedPlan);
       totalWorkingDays = currentPlan?.workingDays;
       totalPrice = currentPlan?.price;
     } else {
@@ -347,7 +398,7 @@ const SubscriptionPlanStep = ({
       totalPrice,
       startDate: startDate.format("YYYY-MM-DD"),
       endDate: endDate.format("YYYY-MM-DD"),
-      numberOfChildren,
+      children: selectedChildren, // Pass selected children IDs to backend
     };
 
     try {
@@ -387,6 +438,32 @@ const SubscriptionPlanStep = ({
 
         <Box className="spboxCont" sx={{ width: { xs: "100%", md: "55%" } }}>
           {holidaysLoading && <LinearProgress />}
+
+          {/* CHILD CHECKBOXES */}
+          {childrenLoading && <LinearProgress />}
+          {childrenList?.children?.length > 0 && (
+            <Box mb={2}>
+              <Typography sx={{ fontWeight: 600, mb: 1 }}>Select Child*</Typography>
+              {childrenList?.children?.map(child => (
+                <FormControlLabel
+                  key={child._id}
+                  control={
+                    <Checkbox
+                      checked={selectedChildren.includes(child._id)}
+                      onChange={() => handleChildCheckbox(child._id)}
+                    />
+                  }
+                  label={`${child.childFirstName} ${child.childLastName}`}
+                />
+              ))}
+              {childError && (
+                <FormHelperText error>
+                  Please select at least one child.
+                </FormHelperText>
+              )}
+            </Box>
+          )}
+
           <Typography
             sx={{ color: "#FF6A00", fontWeight: 600, mt: 2, mb: 1 }}
             variant="subtitle2"
@@ -396,6 +473,31 @@ const SubscriptionPlanStep = ({
               (All Taxes included)
             </Typography>
           </Typography>
+
+          {/* CHILD CHECKBOXES */}
+          {/* {childrenLoading && <LinearProgress />}
+          {childrenList.children.length > 0 && (
+            <Box mb={2}>
+              <Typography sx={{ fontWeight: 600, mb: 1 }}>Select Child*</Typography>
+              {childrenList.children.map(child => (
+                <FormControlLabel
+                  key={child._id}
+                  control={
+                    <Checkbox
+                      checked={selectedChildren.includes(child._id)}
+                      onChange={() => handleChildCheckbox(child._id)}
+                    />
+                  }
+                  label={`${child.childFirstName} ${child.childLastName}`}
+                />
+              ))}
+              {childError && (
+                <FormHelperText error>
+                  Please select at least one child.
+                </FormHelperText>
+              )}
+            </Box>
+          )} */}
 
           <RadioGroup
             value={selectedPlan}
@@ -618,6 +720,13 @@ const SubscriptionPlanStep = ({
                 You must agree to the terms and conditions to proceed.
               </FormHelperText>
             )}
+
+            {/* {childError && (
+              <FormHelperText error>
+                Please select at least one child before continuing.
+              </FormHelperText>
+            )} */}
+
 
             {planError && (
               <FormHelperText error>Please select a subscription plan to proceed.</FormHelperText>

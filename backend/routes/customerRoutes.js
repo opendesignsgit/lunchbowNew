@@ -31,6 +31,10 @@ const {
   handleCCAvenueResponse,
   getFormData, // Add this new controller method
   getPaidHolidays,
+  getAllChildrenForUser,
+  localPaymentSuccess,
+  localAddChildPaymentController,
+  getPaymentsForUser,
 } = require("../controller/customerController");
 const {
   passwordVerificationLimit,
@@ -126,5 +130,15 @@ router.post("/payment/verify", verifyCCAvenuePayment);
 router.post("/payment/response", handleCCAvenueResponse);
 
 router.post("/get-paid-holidays", getPaidHolidays);
+
+router.post("/get-all-children", getAllChildrenForUser);
+
+router.post("/local-success", localPaymentSuccess);
+
+router.post("/local-success/local-add-childPayment", localAddChildPaymentController);
+
+router.post("/get-payments", getPaymentsForUser);
+
+
 
 module.exports = router;

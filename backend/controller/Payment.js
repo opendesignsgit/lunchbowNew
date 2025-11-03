@@ -8,12 +8,15 @@ const { sendSMS } = require("../lib/sms-sender/smsService");
 const SmsLog = require("../models/SmsLog");
 const HolidayPayment = require("../models/HolidayPayment");
 const UserMeal = require("../models/UserMeal");
+const Child = require("../models/childModel");
+// const Form = require("../models/Form");
+const Subscription = require("../models/subscriptionModel");
 
 const workingKey =
   process.env.CCAV_WORKING_KEY || "2A561B005709D8B4BAF69D049B23546B"; // Use env vars in production
 
 // Helper function to process payment response and save payment data
-async function processPaymentResponse(responseData, paymentType) {
+async function processPaymentResponse(responseData, paymentType, paidFor = null) {
   const {
     order_id,
     tracking_id,
@@ -55,6 +58,7 @@ async function processPaymentResponse(responseData, paymentType) {
     billing_email,
     payment_type: paymentType,
     merchant_param1,
+    paidFor,
     // Include holidayDate if holiday payment
     ...(paymentType === "holiday" && merchant_param2
       ? { holidayDate: merchant_param2 }
@@ -99,10 +103,19 @@ exports.ccavenueResponse = async (req, res) => {
       const decrypted = ccav.decrypt(encrypted, workingKey);
       const responseData = qs.parse(decrypted);
 
-      console.log("Subscription payment decrypted response:", responseData);
+      // console.log("Subscription payment decrypted response:", responseData);
+
+      // Determine paidFor based on order_id prefix
+      const orderId = responseData.order_id || "";
+      const paidFor =
+        orderId.startsWith("R")
+          ? "RENEW_SUBSCRIPTION"
+          : orderId.startsWith("L")
+            ? "SUBSCRIPTION"
+            : null;
 
       const { order_status, merchant_param1, order_id, tracking_id } =
-        await processPaymentResponse(responseData, "subscription");
+        await processPaymentResponse(responseData, "subscription", paidFor);
 
       if (order_status === "Success") {
         if (!mongoose.Types.ObjectId.isValid(merchant_param1)) {
@@ -130,7 +143,7 @@ exports.ccavenueResponse = async (req, res) => {
           { new: true }
         );
 
-        console.log("Subscription payment updated form:", updatedForm);
+        // console.log("Subscription payment updated form:", updatedForm);
 
         // Send Registration + Payment Success Mail
         if (updatedForm) {
@@ -199,7 +212,7 @@ exports.ccavenueResponse = async (req, res) => {
               });
 
               await smsLog.save();
-              console.log('Payment confirmation SMS sent to:', parentPhone);
+              // console.log('Payment confirmation SMS sent to:', parentPhone);
             } catch (smsError) {
               console.error('Error sending payment confirmation SMS:', smsError);
               // Don't fail payment processing if SMS fails
@@ -253,7 +266,7 @@ exports.holiydayPayment = async (req, res) => {
       if (!mealDate || !/^\d{4}-\d{2}-\d{2}$/.test(mealDate)) return res.status(400).send("Invalid mealDate (should be YYYY-MM-DD)");
 
 
-      await processPaymentResponse(responseData, "holiday");
+      await processPaymentResponse(responseData, "holiday", "HOLIDAY_PAY");
 
       // Parse children's paid meal data
       let childrenData = [];
@@ -329,7 +342,7 @@ exports.holiydayPayment = async (req, res) => {
                   if (err) {
                     console.error("Holiday meal email error:", err);
                   } else {
-                    console.log("Holiday meal email sent:", info.response);
+                    // console.log("Holiday meal email sent:", info.response);
                   }
                 });
               }
@@ -425,5 +438,302 @@ exports.getHolidayPaymentsByDate = async (req, res) => {
   } catch (err) {
     console.error("Error fetching holiday payments:", err);
     return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+exports.addChildPaymentController = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { userId, childrenData, paymentInfo } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid userId");
+    }
+
+    if (!Array.isArray(childrenData) || childrenData.length === 0) {
+      throw new Error("Children data is required and should be array");
+    }
+
+    // Process and save payment transaction details using processPaymentResponse
+    const paymentResponseSummary = await processPaymentResponse(paymentInfo, "subscription", "ADD_CHILD");
+
+    if (paymentResponseSummary.order_status !== "Success") {
+      throw new Error("Payment processing failed");
+    }
+
+    // Save or update children
+    const savedChildrenIds = [];
+    for (const child of childrenData) {
+      child.user = userId;
+      if (child._id && mongoose.Types.ObjectId.isValid(child._id)) {
+        const updatedChild = await Child.findOneAndUpdate({ _id: child._id, user: userId }, child, {
+          new: true,
+          runValidators: true,
+          session,
+        });
+        if (updatedChild) {
+          savedChildrenIds.push(updatedChild._id);
+        } else {
+          const newChild = new Child(child);
+          await newChild.save({ session });
+          savedChildrenIds.push(newChild._id);
+        }
+      } else {
+        const newChild = new Child(child);
+        await newChild.save({ session });
+        savedChildrenIds.push(newChild._id);
+      }
+    }
+
+    const form = await Form.findOne({ user: userId }).populate("subscriptions").session(session);
+    if (!form) throw new Error("User form not found");
+
+    const planId = paymentInfo.planId;
+    const activeSubscription = form.subscriptions.find(
+      (sub) => sub.status === "active" && sub.planId.toString() === planId.toString()
+    );
+
+    if (!activeSubscription) throw new Error("Active subscription not found");
+
+    for (const childId of savedChildrenIds) {
+      if (!activeSubscription.children.includes(childId)) {
+        activeSubscription.children.push(childId);
+      }
+    }
+
+    activeSubscription.orderId = paymentInfo.orderId;
+    activeSubscription.transactionId = paymentInfo.transactionId || "N/A";
+    activeSubscription.paymentDate = new Date();
+    activeSubscription.paymentMethod = "CCAvenue";
+
+    await activeSubscription.save({ session });
+
+    form.step = Math.max(form.step || 1, 3);
+    form.subscriptionCount = (form.subscriptionCount || 0) + 1;
+    form.paymentStatus = "Success";
+
+    await form.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.json({ success: true, savedChildrenIds, subscription: activeSubscription, form });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("Add Child payment error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+
+
+//------------------------ Local Encryption Function and Payment Initiation (React) ------------------------//
+
+exports.localPaymentSuccess = async (req, res) => {
+  try {
+    const { userId, orderId, transactionId } = req.body;
+
+    if (!userId || !orderId) {
+      return res.status(400).json({ success: false, message: "Missing userId or orderId" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, message: "Invalid userId" });
+    }
+
+    const form = await Form.findOne({ user: userId }).populate("subscriptions");
+    if (!form) {
+      return res.status(404).json({ success: false, message: "Form not found" });
+    }
+
+    let subscriptionToUpdate = form.subscriptions.find((sub) => sub.orderId === orderId);
+
+    if (!subscriptionToUpdate) {
+      subscriptionToUpdate = form.subscriptions
+        .filter((sub) => !sub.paymentDate)
+        .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0];
+    }
+
+    if (!subscriptionToUpdate) {
+      return res.status(404).json({
+        success: false,
+        message: "No suitable subscription found for payment update",
+      });
+    }
+
+    subscriptionToUpdate.orderId = orderId;
+    subscriptionToUpdate.transactionId = transactionId || null;
+    subscriptionToUpdate.paymentDate = new Date();
+    subscriptionToUpdate.paymentMethod = "CCAvenue";
+
+    await subscriptionToUpdate.save();
+
+    form.paymentStatus = "Success";
+    form.step = 4;
+    form.subscriptionCount = (form.subscriptionCount || 0) + 1;
+
+    await form.save();
+
+    let paidForValue = null;
+    if (orderId.startsWith("R")) {
+      paidForValue = "RENEW_SUBSCRIPTION";
+    } else if (orderId.startsWith("L")) {
+      paidForValue = "SUBSCRIPTION";
+    }
+
+    const paymentTransaction = {
+      order_id: orderId,
+      tracking_id: transactionId || null,
+      amount: subscriptionToUpdate.price || 0,
+      order_status: "Success",
+      payment_mode: subscriptionToUpdate.paymentMethod || "CCAvenue",
+      card_name: "",
+      bank_ref_no: "",
+      billing_name: form.parentDetails
+        ? `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`
+        : "",
+      billing_email: form.parentDetails?.email || "",
+      payment_date: new Date(),
+      merchant_param1: userId,
+      payment_type: "subscription-local",
+      paidFor: paidForValue,  // <--- set here
+    };
+
+
+    await UserPayment.findOneAndUpdate(
+      { user: userId },
+      {
+        $push: { payments: paymentTransaction },
+        $inc: { total_amount: paymentTransaction.amount },
+        $setOnInsert: { created_at: new Date() },
+      },
+      { upsert: true, new: true, runValidators: true }
+    );
+
+    return res.json({ success: true, data: form });
+  } catch (err) {
+    console.error("Local payment success error:", err);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+exports.localAddChildPaymentController = async (req, res) => {
+  try {
+    const { userId, orderId, transactionId, formData, planId } = req.body;
+
+    if (!userId || !orderId || !planId) {
+      return res.status(400).json({ success: false, message: "Missing userId, orderId or planId" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(planId)) {
+      return res.status(400).json({ success: false, message: "Invalid userId or planId" });
+    }
+
+    const form = await Form.findOne({ user: userId }).populate("subscriptions");
+    if (!form) {
+      return res.status(404).json({ success: false, message: "Form not found" });
+    }
+
+    let subscription = form.subscriptions.find(
+      (sub) => sub._id.toString() === planId.toString()
+    );
+    if (!subscription) {
+      return res.status(404).json({ success: false, message: "Subscription not found" });
+    }
+
+    const savedChildrenIds = [];
+    if (Array.isArray(formData) && formData.length > 0) {
+      for (const child of formData) {
+        if (!child.location || child.location.trim() === "") {
+          return res.status(400).json({
+            success: false,
+            message: `Child location is required for ${child.childFirstName || "unknown"}`,
+          });
+        }
+        child.user = userId;
+        if (child._id && mongoose.Types.ObjectId.isValid(child._id)) {
+          const updatedChild = await Child.findOneAndUpdate(
+            { _id: child._id, user: userId },
+            child,
+            { new: true, runValidators: true }
+          );
+          if (updatedChild) {
+            savedChildrenIds.push(updatedChild._id);
+          } else {
+            const newChild = new Child(child);
+            await newChild.save();
+            savedChildrenIds.push(newChild._id);
+          }
+        } else {
+          const newChild = new Child(child);
+          await newChild.save();
+          savedChildrenIds.push(newChild._id);
+        }
+      }
+    }
+
+    if (!Array.isArray(subscription.children)) {
+      subscription.children = [];
+    }
+
+    savedChildrenIds.forEach((childId) => {
+      if (!subscription.children.some((cId) => cId.toString() === childId.toString())) {
+        subscription.children.push(childId);
+      }
+    });
+
+    subscription.orderId = orderId;
+    subscription.transactionId = transactionId || null;
+    subscription.paymentDate = new Date();
+    subscription.paymentMethod = "CCAvenue";
+
+    await subscription.save();
+
+    form.paymentStatus = "Success";
+    form.subscriptionCount = (form.subscriptionCount || 0) + 1;
+
+    await form.save();
+
+    // Save payment in UserPayment collection
+    const paymentTransaction = {
+      order_id: orderId,
+      tracking_id: transactionId || null,
+      amount: subscription.price || 0,
+      order_status: "Success",
+      payment_mode: subscription.paymentMethod || "CCAvenue",
+      card_name: "",
+      bank_ref_no: "",
+      billing_name: form.parentDetails
+        ? `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`
+        : "",
+      billing_email: form.parentDetails?.email || "",
+      payment_date: new Date(),
+      merchant_param1: userId,
+      payment_type: "subscription-local-addchild",
+      paidFor: "ADD_CHILD",  // <--- set here
+    };
+
+
+    await UserPayment.findOneAndUpdate(
+      { user: userId },
+      {
+        $push: { payments: paymentTransaction },
+        $inc: { total_amount: paymentTransaction.amount },
+        $setOnInsert: { created_at: new Date() },
+      },
+      { upsert: true, new: true, runValidators: true }
+    );
+
+    const updatedForm = await Form.findById(form._id)
+      .populate({
+        path: "subscriptions",
+        populate: { path: "children" },
+      });
+
+    return res.json({ success: true, data: updatedForm });
+  } catch (err) {
+    console.error("Local add child payment error:", err);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };

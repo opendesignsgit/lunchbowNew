@@ -30,13 +30,18 @@ const paymentTransactionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  paidFor: {
+    type: String,
+    default: null
+  },
   // Include any other CCAvenue response fields you need
   merchant_param1: String,
   merchant_param2: String,
   merchant_param3: String,
   merchant_param4: String,
   merchant_param5: String
-}, { _id: true }); // Keep individual IDs for each transaction
+}, { _id: true });
+
 
 const userPaymentSchema = new mongoose.Schema({
   user: {
