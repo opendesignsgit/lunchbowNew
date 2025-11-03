@@ -17,9 +17,14 @@ const { sendVerificationCode } = require("../lib/phone-verification/sender");
 const { sendSMS } = require("../lib/sms-sender/smsService");
 const SmsLog = require("../models/SmsLog");
 const Otp = require("../models/Otp");
-const Form = require("../models/Form");
+// const Form = require("../models/formModel");
 const mongoose = require("mongoose");
 const HolidayPayment = require("../models/HolidayPayment");
+const Form = require("../models/Form");
+const Child = require("../models/childModel");
+const Subscription = require("../models/subscriptionModel");
+const UserPayment = require('../models/Payment');
+const { Types: { ObjectId } } = mongoose;
 
 const verifyEmailAddress = async (req, res) => {
   const isAdded = await Customer.findOne({ email: req.body.email });
@@ -845,86 +850,627 @@ const stepFormRegister = async (req, res) => {
   try {
     const { formData, path, payload, _id, step } = req.body;
 
-    // Validate required fields
     if (!_id || !path) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields: _id and path",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing _id and/or path" });
     }
-
-    // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(_id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID format",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID format" });
     }
-
-    let update = { step };
 
     if (path === "step-Form-ParentDetails") {
-      update.parentDetails = formData;
-    } else if (path === "step-Form-ChildDetails") {
-      update.children = formData;
-    } else if (path === "step-Form-SubscriptionPlan") {
+      const form = await Form.findOneAndUpdate(
+        { user: _id },
+        { parentDetails: formData, step },
+        { new: true, upsert: true }
+      );
+      return res.json({ success: true, data: form });
+    }
+
+    if (path === "step-Form-ChildDetails") {
+      if (!Array.isArray(formData)) {
+        return res.status(400).json({ success: false, message: "Invalid children array" });
+      }
+
+      const savedChildrenIds = [];
+
+      for (const child of formData) {
+        // Ensure the child is linked to this user
+        child.user = _id;
+
+        if (child._id && mongoose.Types.ObjectId.isValid(child._id)) {
+          // Update existing child by _id and user ownership
+          const updatedChild = await Child.findOneAndUpdate(
+            { _id: child._id, user: _id },
+            child,
+            { new: true, runValidators: true } // run validators on update
+          );
+          if (!updatedChild) {
+            // Optional: if not found, maybe create new or throw error
+            // Here we can create or handle as per business logic
+            const newChild = new Child(child);
+            await newChild.save();
+            savedChildrenIds.push(newChild._id);
+          } else {
+            savedChildrenIds.push(updatedChild._id);
+          }
+        } else {
+          // Create new child document
+          const newChild = new Child(child);
+          await newChild.save();
+          savedChildrenIds.push(newChild._id);
+        }
+      }
+
+      // Update the step in Form, indicating progress
+      await Form.findOneAndUpdate(
+        { user: _id },
+        { $set: { step } },
+        { new: true, upsert: true }
+      );
+
+      return res.json({ success: true, data: savedChildrenIds });
+    }
+
+
+
+
+    if (path === "step-Form-SubscriptionPlan") {
       if (
         !payload ||
         !payload.selectedPlan ||
         !payload.startDate ||
         !payload.endDate ||
         !payload.workingDays ||
-        !payload.totalPrice
+        !payload.totalPrice ||
+        !Array.isArray(payload.children)
       ) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing required subscription plan fields",
-        });
+        return res
+          .status(400)
+          .json({ success: false, message: "Missing subscription fields" });
       }
-      update.subscriptionPlan = {
+
+      // Find form with populated subscriptions
+      const form = await Form.findOne({ user: _id }).populate("subscriptions").exec();
+
+      // Look for active subscription with same planId
+      const existingSubscription = form.subscriptions.find(
+        (sub) =>
+          sub.status === "active" && sub.planId.toString() === payload.selectedPlan.toString()
+      );
+
+      if (existingSubscription) {
+        // Update existing subscription with new fields
+        existingSubscription.startDate = payload.startDate;
+        existingSubscription.endDate = payload.endDate;
+        existingSubscription.workingDays = payload.workingDays;
+        existingSubscription.price = payload.totalPrice;
+        existingSubscription.children = payload.children.map((id) => mongoose.Types.ObjectId(id));
+
+        await existingSubscription.save();
+      } else {
+        // Deactivate current active subscriptions before adding new one
+        const activeSubscriptionIds = form.subscriptions
+          .filter((sub) => sub.status === "active")
+          .map((sub) => sub._id);
+
+        if (activeSubscriptionIds.length > 0) {
+          await Subscription.updateMany(
+            { _id: { $in: activeSubscriptionIds }, status: "active" },
+            { $set: { status: "deactivated" } }
+          );
+        }
+
+        // Create new subscription
+        const subscription = new Subscription({
+          user: _id,
+          planId: payload.selectedPlan,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+          workingDays: payload.workingDays,
+          price: payload.totalPrice,
+          status: "active",
+          children: payload.children.map((id) => mongoose.Types.ObjectId(id)),
+        });
+        await subscription.save();
+
+        // Push new subscription reference to form
+        await Form.updateOne(
+          { user: _id },
+          { $push: { subscriptions: subscription._id }, $set: { step } }
+        );
+      }
+
+      // Return updated form with populated subscriptions and children
+      const updatedForm = await Form.findOne({ user: _id })
+        .populate({
+          path: "subscriptions",
+          populate: { path: "children" },
+        })
+        .exec();
+
+      return res.json({ success: true, data: updatedForm });
+    }
+
+
+    if (path === "step-Form-Renew-SubscriptionPlan") {
+      if (
+        !payload ||
+        !payload.selectedPlan ||
+        !payload.startDate ||
+        !payload.endDate ||
+        !payload.workingDays ||
+        !payload.totalPrice ||
+        !Array.isArray(payload.children)
+      ) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Missing subscription fields" });
+      }
+
+      // Retrieve user form with populated subscriptions
+      const form = await Form.findOne({ user: _id }).populate("subscriptions").exec();
+      if (!form) {
+        return res.status(404).json({ success: false, message: "Form not found" });
+      }
+
+      // Check if user has any active subscriptions
+      const activeSubscriptions = form.subscriptions.filter(
+        (sub) => sub.status === "active"
+      );
+
+      // Decide new subscription's status based on existing active plans
+      const newStatus = activeSubscriptions.length > 0 ? "upcoming" : "active";
+
+      // Create new subscription document
+      const newSubscription = new Subscription({
+        user: _id,
         planId: payload.selectedPlan,
         startDate: payload.startDate,
         endDate: payload.endDate,
         workingDays: payload.workingDays,
         price: payload.totalPrice,
-      };
-    } else if (path === "step-Form-Payment") {
-      // Handle payment status update
-      if (typeof payload.paymentStatus !== "boolean") {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid payment status",
-        });
-      }
-      update.paymentStatus = payload.paymentStatus;
-      if (payload.paymentStatus) {
-        update.$inc = { subscriptionCount: 1 };
-        update.subscriptionPlan = {
-          ...update.subscriptionPlan,
-          paymentDate: new Date(),
-          paymentMethod: "CCAvenue",
-          transactionId: payload.transactionId || null,
-        };
-      }
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid path parameter",
+        status: newStatus,
+        children: payload.children.map((id) => mongoose.Types.ObjectId(id)),
       });
+      await newSubscription.save();
+
+      // Push new subscription to form's subscriptions array & update step
+      await Form.updateOne(
+        { user: _id },
+        { $push: { subscriptions: newSubscription._id }, $set: { step } }
+      );
+
+      // Return updated form with subscriptions and children populated
+      const updatedForm = await Form.findOne({ user: _id })
+        .populate({
+          path: "subscriptions",
+          populate: { path: "children" },
+        })
+        .exec();
+
+      return res.json({ success: true, data: updatedForm });
     }
 
-    const form = await Form.findOneAndUpdate(
-      { user: _id },
-      { $set: update },
-      { new: true, upsert: true }
+
+
+
+    if (path === "step-Form-Payment") {
+      if (typeof payload.paymentStatus !== "boolean") {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid payment status" });
+      }
+      const updateObj = { paymentStatus: payload.paymentStatus };
+      if (payload.paymentStatus) {
+        updateObj.subscriptionCount = 1;
+        await Form.updateOne(
+          { user: _id, "subscriptions.status": "active" },
+          {
+            $set: {
+              "subscriptions.$.paymentDate": new Date(),
+              "subscriptions.$.paymentMethod": "CCAvenue",
+              "subscriptions.$.transactionId": payload.transactionId || null,
+            },
+          }
+        );
+      }
+
+      const form = await Form.findOneAndUpdate(
+        { user: _id },
+        updateObj,
+        { new: true }
+      );
+      return res.json({ success: true, data: form });
+    }
+
+    return res.status(400).json({ success: false, message: "Invalid path" });
+  } catch (err) {
+    console.error(err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error", error: err.message });
+  }
+};
+
+
+const localPaymentSuccess = async (req, res) => {
+  try {
+    const { userId, orderId, transactionId } = req.body;
+
+    if (!userId || !orderId) {
+      return res.status(400).json({ success: false, message: "Missing userId or orderId" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, message: "Invalid userId" });
+    }
+
+    // Find the form
+    const form = await Form.findOne({ user: userId }).populate("subscriptions");
+    if (!form) {
+      return res.status(404).json({ success: false, message: "Form not found" });
+    }
+
+    // Find subscription by orderId
+    let subscriptionToUpdate = form.subscriptions.find(sub => sub.orderId === orderId);
+
+    // If not found, fallback to most recent unpaid subscription
+    if (!subscriptionToUpdate) {
+      subscriptionToUpdate = form.subscriptions
+        .filter(sub => !sub.paymentDate)
+        .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0];
+    }
+
+    if (!subscriptionToUpdate) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No suitable subscription found for payment update" });
+    }
+
+    // Update the payment details in the subscription
+    subscriptionToUpdate.orderId = orderId;
+    subscriptionToUpdate.transactionId = transactionId || null;
+    subscriptionToUpdate.paymentDate = new Date();
+    subscriptionToUpdate.paymentMethod = "CCAvenue";
+
+    await subscriptionToUpdate.save();
+
+    // Update form
+    form.paymentStatus = "Success";
+    form.step = 4;
+    form.subscriptionCount = (form.subscriptionCount || 0) + 1;
+
+    await form.save();
+
+    // Prepare payment transaction data to save in UserPayment
+    const paymentTransaction = {
+      order_id: orderId,
+      tracking_id: transactionId || null,
+      amount: subscriptionToUpdate.price || 0, // Adjust according to your schema
+      order_status: "Success",
+      payment_mode: subscriptionToUpdate.paymentMethod || "CCAvenue",
+      card_name: "",
+      bank_ref_no: "",
+      billing_name: form.parentDetails ? `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}` : "",
+      billing_email: form.parentDetails?.email || "",
+      payment_date: new Date(),
+      merchant_param1: userId,
+      payment_type: "subscription-local",
+    };
+
+    console.log("Recording payment transaction:", paymentTransaction);
+
+
+    // Upsert payment record
+    const testing = await UserPayment.findOneAndUpdate(
+      { user: userId },
+      {
+        $push: { payments: paymentTransaction },
+        $inc: { total_amount: paymentTransaction.amount },
+        $setOnInsert: { created_at: new Date() }
+      },
+      { upsert: true, new: true, runValidators: true }
     );
 
-    res.status(200).json({ success: true, data: form });
+    console.log("UserPayment upsert result:", testing);
+
+
+    return res.json({ success: true, data: form });
+  } catch (err) {
+    console.error("Local payment success error:", err);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+
+const localAddChildPaymentController = async (req, res) => {
+  try {
+    const { userId, orderId, transactionId, formData, planId } = req.body;
+
+    if (!userId || !orderId || !planId) {
+      return res.status(400).json({ success: false, message: "Missing userId, orderId or planId" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(planId)) {
+      return res.status(400).json({ success: false, message: "Invalid userId or planId" });
+    }
+
+    const form = await Form.findOne({ user: userId }).populate("subscriptions");
+    if (!form) {
+      return res.status(404).json({ success: false, message: "Form not found" });
+    }
+
+    // Find subscription by _id (planId)
+    let subscription = form.subscriptions.find(
+      (sub) => sub._id.toString() === planId.toString()
+    );
+    if (!subscription) {
+      return res.status(404).json({ success: false, message: "Subscription not found" });
+    }
+
+    // Save or update children from formData if provided
+    const savedChildrenIds = [];
+    if (Array.isArray(formData) && formData.length > 0) {
+      for (const child of formData) {
+        if (!child.location || child.location.trim() === "") {
+          return res.status(400).json({
+            success: false,
+            message: `Child location is required for ${child.childFirstName || "unknown"}`,
+          });
+        }
+        child.user = userId;
+        if (child._id && mongoose.Types.ObjectId.isValid(child._id)) {
+          const updatedChild = await Child.findOneAndUpdate(
+            { _id: child._id, user: userId },
+            child,
+            { new: true, runValidators: true }
+          );
+          if (updatedChild) {
+            savedChildrenIds.push(updatedChild._id);
+          } else {
+            const newChild = new Child(child);
+            await newChild.save();
+            savedChildrenIds.push(newChild._id);
+          }
+        } else {
+          const newChild = new Child(child);
+          await newChild.save();
+          savedChildrenIds.push(newChild._id);
+        }
+      }
+    }
+
+    // Initialize subscription children if not present
+    if (!Array.isArray(subscription.children)) {
+      subscription.children = [];
+    }
+
+    // Add new children IDs to subscription, avoid duplicates
+    savedChildrenIds.forEach((childId) => {
+      if (!subscription.children.some((cId) => cId.toString() === childId.toString())) {
+        subscription.children.push(childId);
+      }
+    });
+
+    // Update payment info on subscription
+    subscription.orderId = orderId;
+    subscription.transactionId = transactionId || null;
+    subscription.paymentDate = new Date();
+    subscription.paymentMethod = "CCAvenue";
+
+    await subscription.save();
+
+    // Update form payment status without changing step
+    form.paymentStatus = "Success";
+    form.subscriptionCount = (form.subscriptionCount || 0) + 1;
+
+    await form.save();
+
+    // Record payment in UserPayment
+    const paymentTransaction = {
+      order_id: orderId,
+      tracking_id: transactionId || null,
+      amount: subscription.price || 0, // Adjust to your schema field
+      order_status: "Success",
+      payment_mode: subscription.paymentMethod || "CCAvenue",
+      card_name: "",
+      bank_ref_no: "",
+      billing_name: form.parentDetails ? `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}` : "",
+      billing_email: form.parentDetails?.email || "",
+      payment_date: new Date(),
+      merchant_param1: userId,
+      payment_type: "subscription-local-addchild",
+    };
+
+    await UserPayment.findOneAndUpdate(
+      { user: userId },
+      {
+        $push: { payments: paymentTransaction },
+        $inc: { total_amount: paymentTransaction.amount },
+        $setOnInsert: { created_at: new Date() }
+      },
+      { upsert: true, new: true, runValidators: true }
+    );
+
+    // Return updated form with populated subscriptions and children
+    const updatedForm = await Form.findById(form._id)
+      .populate({
+        path: "subscriptions",
+        populate: { path: "children" },
+      });
+
+    return res.json({ success: true, data: updatedForm });
+  } catch (err) {
+    console.error("Local add child payment error:", err);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+
+const activateNextSubscriptionPlans = async () => {
+  const now = new Date();
+
+  // Find forms with active subscriptions that have ended
+  const forms = await Form.find({
+    "subscriptions.status": "active",
+    "subscriptions.endDate": { $lt: now }
+  });
+
+  for (const form of forms) {
+    // Deactivate the ended active plan
+    await Form.updateOne(
+      { _id: form._id, "subscriptions.status": "active", "subscriptions.endDate": { $lt: now } },
+      { $set: { "subscriptions.$.status": "deactivated" } }
+    );
+
+    // Find the next upcoming plan where startDate is <= now (time to activate)
+    const nextPlanIndex = form.subscriptions.findIndex(
+      sub => sub.status === "upcoming" && sub.startDate <= now
+    );
+    if (nextPlanIndex !== -1) {
+      // Activate the next plan only when its startDate has arrived or passed
+      const subsKey = `subscriptions.${nextPlanIndex}.status`;
+      await Form.updateOne(
+        { _id: form._id },
+        { $set: { [subsKey]: "active" } }
+      );
+    }
+  }
+};
+
+// const getAllChildrenForUser = async (req, res) => {
+//   try {
+//     const { userId } = req.body;
+
+//     if (!userId) {
+//       return res
+//         .status(400)
+//         .json({ message: "Missing userId in request body" });
+//     }
+
+//     if (!mongoose.Types.ObjectId.isValid(userId)) {
+//       return res
+//         .status(400)
+//         .json({ message: "Invalid userId format" });
+//     }
+
+//     const children = await Child.find({ user: userId });
+
+//     // Fetch the current active subscription (if any)
+//     const activeSubscription = await Subscription.findOne({
+//       user: userId,
+//       status: "active"
+//     }).sort({ endDate: -1 }); // In case multiple, prefer the latest ending
+
+//     // Optionally pick specific fields if needed:
+//     // const activeSubscription = await Subscription.findOne({ ... }).select('endDate startDate planId ...')
+
+//     res.json({
+//       success: true,
+//       children,
+//       activeSubscription // Will be null if none found
+//     });
+//   } catch (error) {
+//     res
+//       .status(500)
+//       .json({
+//         message: "Failed to get children",
+//         error: error.message
+//       });
+//   }
+// };
+
+
+// Strict validator that rejects edge-case strings that ObjectId.isValid may accept
+const isValidObjectIdStrict = (v) =>
+  ObjectId.isValid(v) && new ObjectId(v).toString() === String(v);
+
+const getAllChildrenForUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "Missing userId in request body" });
+    }
+    if (!ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId format" });
+    }
+
+    // 1) Children for the user
+    const children = await Child.find({ user: userId });
+
+    // 2) Find the form and read subscriptions array
+    const form = await Form.findOne({ user: userId })
+      .select("subscriptions")
+      .lean();
+
+    let activeSubscription = null;
+
+    if (form && Array.isArray(form.subscriptions) && form.subscriptions.length > 0) {
+      // Walk from the end to get the last strictly valid ObjectId
+      let lastValidId = null;
+      for (let i = form.subscriptions.length - 1; i >= 0; i--) {
+        const candidate = form.subscriptions[i];
+        if (isValidObjectIdStrict(candidate)) {
+          lastValidId = candidate;
+          break;
+        }
+      }
+
+      if (lastValidId) {
+        // Load the subscription; planId is a String in your schema, so don't populate it
+        activeSubscription = await Subscription.findById(lastValidId)
+          .populate({ path: "children" }) // valid because children is ObjectId[]
+          .lean();
+      } else {
+        activeSubscription = null;
+      }
+    }
+
+    return res.json({
+      success: true,
+      children,
+      activeSubscription // null when no valid subscription id at the end
+    });
   } catch (error) {
-    console.error("Error during stepFormRegister:", error);
+    return res.status(500).json({
+      message: "Failed to get children",
+      error: error.message
+    });
+  }
+};
+
+
+const getPaymentsForUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "Missing userId in request body" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId format" });
+    }
+
+    // Fetch payment document for the user
+    const paymentDoc = await UserPayment.findOne({ user: userId });
+
+    if (!paymentDoc) {
+      return res.status(404).json({ message: "No payment data found for user" });
+    }
+
+    res.json({
+      success: true,
+      payments: paymentDoc.payments,
+      total_payments: paymentDoc.total_payments,
+      total_amount: paymentDoc.total_amount,
+    });
+  } catch (error) {
     res.status(500).json({
-      success: false,
-      message: "Internal server error",
+      message: "Failed to get payment details",
       error: error.message,
     });
   }
@@ -1023,230 +1569,197 @@ const stepCheck = async (req, res) => {
   }
 };
 
+async function rollSubscriptionsForUserNoSession(userId) {
+  // Start-of-day so endDate is treated as inclusive for the entire calendar day
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // normalize to local 00:00:00.000 [web:7]
+
+  // 1) Deactivate any expired 'active' subscriptions (ended before today)
+  await Subscription.updateMany(
+    { user: userId, status: "active", endDate: { $lt: today } },
+    { $set: { status: "deactivated" } }
+  ); // bulk update without sessions [web:23]
+
+  // 2) If there is no active subscription, activate the earliest eligible upcoming
+  const hasActive = await Subscription.exists({ user: userId, status: "active" }); // quick existence check [web:30]
+  if (!hasActive) {
+    await Subscription.findOneAndUpdate(
+      { user: userId, status: "upcoming", startDate: { $lte: today } },
+      { $set: { status: "active" } },
+      {
+        sort: { startDate: 1 },   // pick the earliest upcoming that has started
+        new: true,                // return updated doc if you want it
+      }
+    ); // single-doc atomic update with sort [web:6]
+    // If no upcoming matches, nothing happens (as requested)
+  }
+}
+
+// Your handler with the auto-roller added (no sessions)
 const getMenuCalendarDate = async (req, res) => {
   try {
-    const { _id, path } = req.body;
-
+    const { _id } = req.body;
     if (!_id) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID is required",
-      });
+      return res.status(400).json({ success: false, message: "User ID required" });
     }
 
-    const form = await Form.findOne({ user: mongoose.Types.ObjectId(_id) });
+    // Run status roller first (no transaction/session)
+    await rollSubscriptionsForUserNoSession(mongoose.Types.ObjectId(_id));
+
+    // Find form and populate subscriptions and children inside subscriptions
+    const form = await Form.findOne({ user: mongoose.Types.ObjectId(_id) })
+      .populate({
+        path: "subscriptions",
+        populate: {
+          path: "children",
+          model: "Child",
+        },
+      })
+      .lean();
 
     if (!form) {
-      return res.status(404).json({
-        success: false,
-        message: "Form not found",
-      });
+      return res.status(404).json({ success: false, message: "Form not found" });
     }
 
-    // Check if subscriptionPlan exists
-    if (!form.subscriptionPlan) {
-      return res.status(404).json({
-        success: false,
-        message: "Subscription plan not found",
-      });
+    if (!Array.isArray(form.subscriptions) || form.subscriptions.length === 0) {
+      return res.status(404).json({ success: false, message: "No subscription plans found" });
     }
 
-    const { startDate, endDate } = form.subscriptionPlan;
-
-    // Safely map children names
-    const childrenNames =
-      form.children?.map((child) => ({
-        id: child._id?.$oid || child._id,
+    // Map subscriptions to simplified array including children details
+    const plans = form.subscriptions.map((plan) => ({
+      id: plan._id,
+      planId: plan.planId,
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      price: plan.price,
+      status: plan.status,
+      children: (plan.children || []).map((child) => ({
+        id: child._id,
         firstName: child.childFirstName,
         lastName: child.childLastName,
-      })) || [];
+        dob: child.dob,
+        lunchTime: child.lunchTime,
+        school: child.school,
+        location: child.location,
+        childClass: child.childClass,
+        section: child.section,
+        allergies: child.allergies,
+      })),
+    }));
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        startDate,
-        endDate,
-        children: childrenNames,
-      },
-    });
+    return res.status(200).json({ success: true, data: { plans } });
   } catch (error) {
-    console.error("Error in getMenuCalendarDate:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-
-const saveMealPlans = async (req, res) => {
-  try {
-    // Extract data from your specific payload structure
-    const { _id, path, data } = req.body;
-
-    if (!data || !data.userId || !data.children) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid request data: Missing required fields",
-      });
-    }
-
-    const { userId, children } = data;
-
-    // Validate children array
-    if (!Array.isArray(children) || children.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid children data: Must be a non-empty array",
-      });
-    }
-
-    // Process each child's meals
-    const processedChildren = children.map((child) => {
-      if (!child.childId || !Array.isArray(child.meals)) {
-        throw new Error("Invalid child data structure");
-      }
-
-      return {
-        childId: mongoose.Types.ObjectId(child.childId),
-        meals: child.meals.map((meal) => {
-          if (!meal.mealDate || !meal.mealName) {
-            throw new Error("Invalid meal data structure");
-          }
-
-          // Convert string date to Date object
-          let mealDate;
-          try {
-            mealDate = new Date(meal.mealDate);
-            if (isNaN(mealDate.getTime())) {
-              throw new Error("Invalid date format");
-            }
-          } catch (error) {
-            throw new Error(`Invalid meal date: ${meal.mealDate}`);
-          }
-
-          return {
-            mealDate,
-            mealName: meal.mealName,
-          };
-        }),
-      };
-    });
-
-    // Find existing user meal plan
-    const existingPlan = await UserMeal.findOne({
-      userId: mongoose.Types.ObjectId(userId),
-    });
-
-    if (existingPlan) {
-      for (const newChild of processedChildren) {
-        const childIndex = existingPlan.children.findIndex(
-          (c) => c.childId.toString() === newChild.childId.toString()
-        );
-        if (childIndex >= 0) {
-          // Merge meals for existing child
-          for (const newMeal of newChild.meals) {
-            const mealIndex = existingPlan.children[childIndex].meals.findIndex(
-              (m) =>
-                new Date(m.mealDate).toISOString() ===
-                new Date(newMeal.mealDate).toISOString()
-            );
-            if (mealIndex >= 0) {
-              // Update existing meal for the date
-              existingPlan.children[childIndex].meals[mealIndex] = newMeal;
-            } else {
-              // Add new meal for the date
-              existingPlan.children[childIndex].meals.push(newMeal);
-            }
-          }
-        } else {
-          // Add new child with meals if not present
-          existingPlan.children.push(newChild);
-        }
-      }
-      await existingPlan.save();
-
-      return res.status(200).json({
-        success: true,
-        message: "Meal plans updated successfully",
-        data: existingPlan,
-      });
-    } else {
-      // Create new plan
-      const newUserMeal = new UserMeal({
-        userId: mongoose.Types.ObjectId(userId),
-        children: processedChildren,
-      });
-
-      await newUserMeal.save();
-
-      return res.status(201).json({
-        success: true,
-        message: "Meal plans created successfully",
-        data: newUserMeal,
-      });
-    }
-  } catch (error) {
-    console.error("Error saving meal plans:", error);
-    return res.status(400).json({
-      success: false,
-      message: error.message || "Failed to process meal plans",
-      error: process.env.NODE_ENV === "development" ? error.stack : undefined,
-    });
-  }
-};
-
-const getSavedMeals = async (req, res) => {
-  try {
-    const { _id } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(_id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID",
-      });
-    }
-
-    // Find user's saved meals
-    const userMeals = await UserMeal.findOne({
-      userId: mongoose.Types.ObjectId(_id),
-    });
-
-    if (!userMeals) {
-      return res.status(404).json({
-        success: false,
-        message: "No saved meals found",
-      });
-    }
-
-    // Transform data for frontend
-    const transformedData = {
-      menuSelections: {},
-    };
-
-    userMeals.children.forEach((child) => {
-      child.meals.forEach((meal) => {
-        const dateKey = dayjs(meal.mealDate).format("YYYY-MM-DD");
-        if (!transformedData.menuSelections[dateKey]) {
-          transformedData.menuSelections[dateKey] = {};
-        }
-        // Changed from child.childId._id to child.childId since we're not populating
-        transformedData.menuSelections[dateKey][child.childId.toString()] =
-          meal.mealName;
-      });
-    });
-
-    return res.status(200).json({
-      success: true,
-      data: transformedData,
-    });
-  } catch (error) {
-    console.error("Error fetching saved meals:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
       error: error.message,
     });
+  }
+};
+
+
+const saveMealPlans = async (req, res) => {
+  try {
+    const { data } = req.body;
+    if (!data || !data.userId || !data.planId || !Array.isArray(data.children)) {
+      return res.status(400).json({ success: false, message: "Missing required userId, planId or children" });
+    }
+
+    const userId = mongoose.Types.ObjectId(data.userId);
+    const planId = String(data.planId);
+    const processedChildren = data.children.map(child => {
+      if (!child.childId || !Array.isArray(child.meals)) {
+        throw new Error("Invalid child structure");
+      }
+      return {
+        childId: mongoose.Types.ObjectId(child.childId),
+        meals: child.meals.map(meal => {
+          if (!meal.mealDate || !meal.mealName) throw new Error("Invalid meal data");
+          const mealDate = new Date(meal.mealDate);
+          if (isNaN(mealDate.getTime())) throw new Error("Invalid date format");
+          return { mealDate, mealName: meal.mealName };
+        })
+      };
+    });
+
+    let userMeal = await UserMeal.findOne({ userId });
+    if (!userMeal) {
+      userMeal = new UserMeal({ userId, plans: [] });
+    }
+
+    // Find existing plan or create new plan entry
+    let plan = userMeal.plans.find(p => p.planId === planId);
+    if (!plan) {
+      userMeal.plans.push({ planId, children: processedChildren });
+    } else {
+      // Merge meals for each child
+      processedChildren.forEach(newChild => {
+        const childIndex = plan.children.findIndex(c => c.childId.equals(newChild.childId));
+        if (childIndex >= 0) {
+          newChild.meals.forEach(newMeal => {
+            const mealIndex = plan.children[childIndex].meals.findIndex(m =>
+              +new Date(m.mealDate) === +new Date(newMeal.mealDate)
+            );
+            if (mealIndex >= 0) {
+              plan.children[childIndex].meals[mealIndex] = newMeal;
+            } else {
+              plan.children[childIndex].meals.push(newMeal);
+            }
+          });
+        } else {
+          plan.children.push(newChild);
+        }
+      });
+    }
+
+    await userMeal.save();
+
+    return res.status(200).json({ success: true, message: "Meal plans saved successfully", data: userMeal });
+  } catch (error) {
+    console.error("Error in saveMealPlans:", error);
+    return res.status(400).json({ success: false, message: error.message || "Failed to save meal plans" });
+  }
+};
+
+const getSavedMeals = async (req, res) => {
+  try {
+    const { _id, planId } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(_id)) {
+      return res.status(400).json({ success: false, message: "Invalid user ID" });
+    }
+
+    const userMeals = await UserMeal.findOne({ userId: mongoose.Types.ObjectId(_id) });
+
+    if (!userMeals || !userMeals.plans.length) {
+      return res.status(404).json({ success: false, message: "No saved meals found" });
+    }
+
+    let plansToReturn = userMeals.plans;
+    if (planId) {
+      plansToReturn = plansToReturn.filter(p => p.planId === String(planId));
+      if (!plansToReturn.length) {
+        return res.status(404).json({ success: false, message: "No meals found for this plan" });
+      }
+    }
+
+    const data = {};
+    plansToReturn.forEach(plan => {
+      const menuSelections = {};
+      plan.children.forEach(child => {
+        child.meals.forEach(meal => {
+          const dateKey = dayjs(meal.mealDate).format("YYYY-MM-DD");
+          if (!menuSelections[dateKey]) menuSelections[dateKey] = {};
+          menuSelections[dateKey][child.childId.toString()] = meal.mealName;
+        });
+      });
+      data[plan.planId] = menuSelections;
+    });
+
+    return res.status(200).json({ success: true, data });
+
+  } catch (error) {
+    console.error("Error in getSavedMeals:", error);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
 
@@ -1267,13 +1780,13 @@ const accountDetails = async (req, res) => {
       ["email", "mobile"].includes(updateField) &&
       updateValue
     ) {
-      // Update Customer schema
       const customerUpdate = {};
       if (updateField === "email") customerUpdate.email = updateValue;
-      if (updateField === "mobile") customerUpdate.phone = updateValue;
+      if (updateField === "mobile") customerUpdate.phone = updateValue; // assuming 'phone' in Customer schema
+
       await Customer.findByIdAndUpdate(userId, customerUpdate);
 
-      // Update Form schema (parentDetails)
+      // Update Form schema parentDetails for relevant fields
       const form = await Form.findOne({ user: userId });
       if (form && form.parentDetails) {
         if (updateField === "email") form.parentDetails.email = updateValue;
@@ -1282,8 +1795,14 @@ const accountDetails = async (req, res) => {
       }
     }
 
-    // Always return latest details
-    const user = await Form.findOne({ user: mongoose.Types.ObjectId(userId) });
+    // Fetch form with populated subscriptions and children inside each subscription
+    const user = await Form.findOne({ user: userId })
+      .populate({
+        path: "subscriptions",
+        populate: { path: "children" }
+      })
+      .populate("user"); // optionally populate user details
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -1318,9 +1837,20 @@ const getFormData = async (req, res) => {
       });
     }
 
+    // Find the active subscription plan; fallback to latest if none active
+    let subscriptionPlan = null;
+    if (Array.isArray(form.subscriptions)) {
+      subscriptionPlan = form.subscriptions.find((sub) => sub.status === "active")
+        || form.subscriptions[form.subscriptions.length - 1]; // fallback
+    }
+
     res.status(200).json({
       success: true,
-      data: form,
+      data: {
+        subscriptionPlan: subscriptionPlan || {},
+        user: form.user || {},
+        parentDetails: form.parentDetails || {},
+      },
     });
   } catch (error) {
     console.error("Error fetching form data:", error);
@@ -1331,6 +1861,7 @@ const getFormData = async (req, res) => {
     });
   }
 };
+
 
 const getPaidHolidays = async (req, res) => {
   try {
@@ -1405,5 +1936,10 @@ module.exports = {
   stepCheck,
   accountDetails,
   getFormData,
-  getPaidHolidays
+  getPaidHolidays,
+  activateNextSubscriptionPlans,
+  getAllChildrenForUser,
+  localPaymentSuccess,
+  localAddChildPaymentController,
+  getPaymentsForUser,
 };

@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Image from "next/image";
 import {
   HiUsers,
-  HiUserGroup,
   HiUserAdd,
   HiUserCircle,
-  HiCalendar,
 } from "react-icons/hi";
 import { useSession } from "next-auth/react";
 import AccountServices from "@services/AccountServices";
@@ -16,10 +14,14 @@ import { Button } from "@mui/material";
 import Mainheader from "@layout/header/Mainheader";
 import Mainfooter from "@layout/footer/Mainfooter";
 import SubscriptionPlanStep from "@components/profile-Step-Form/subscriptionPlanStep";
+import { useRouter } from 'next/router';
+
 
 const UserDashboard = () => {
   const { data: session } = useSession();
   const userId = session?.user?.id;
+  const router = useRouter();
+
   const [dashboardData, setDashboardData] = useState({
     parentName: "",
     subscriptionCount: 0,
@@ -37,16 +39,19 @@ const UserDashboard = () => {
         const response = await AccountServices.getAccountDetails(userId);
         const userData = response.data;
 
+        // Find active subscription plan (status === 'active')
+        const activeSubscription = userData.subscriptions?.find(sub => sub.status === "active") || null;
+
         setDashboardData({
           parentName: `${userData.parentDetails.fatherFirstName} ${userData.parentDetails.fatherLastName}`,
           subscriptionCount: userData.subscriptionCount || 0,
-          subscriptionActive: userData.paymentStatus || false,
+          subscriptionActive: userData.paymentStatus === "Success" && !!activeSubscription,
           subscriptionDates: {
-            start: userData.subscriptionPlan?.startDate || null,
-            end: userData.subscriptionPlan?.endDate || null,
+            start: activeSubscription?.startDate || null,
+            end: activeSubscription?.endDate || null,
           },
-          childrenCount: userData.children?.length || 0,
-          recentChildren: userData.children?.slice(0, 4) || [],
+          childrenCount: activeSubscription?.children?.length || 0,
+          recentChildren: activeSubscription?.children?.slice(0, 4) || [],
           loading: false,
         });
       } catch (error) {
@@ -68,7 +73,6 @@ const UserDashboard = () => {
     });
   };
 
-  // TEMPORARY FOR TESTING - Always return true to show renew button
   const isSubscriptionExpired = () => {
     if (!dashboardData.subscriptionDates.end) return true;
     const endDate = new Date(dashboardData.subscriptionDates.end);
@@ -77,20 +81,27 @@ const UserDashboard = () => {
 
   const handleRenewSuccess = () => {
     setShowRenewalForm(false);
-    // Refresh data after renewal
     const fetchUserData = async () => {
-      const response = await AccountServices.getAccountDetails(userId);
-      const userData = response.data;
-      setDashboardData((prev) => ({
-        ...prev,
-        subscriptionCount: userData.subscriptionCount || 0,
-        subscriptionActive: userData.paymentStatus || false,
-        subscriptionDates: {
-          start: userData.subscriptionPlan?.startDate || null,
-          end: userData.subscriptionPlan?.endDate || null,
-        },
-        loading: false,
-      }));
+      try {
+        const response = await AccountServices.getAccountDetails(userId);
+        const userData = response.data;
+        const activeSubscription = userData.subscriptions?.find(sub => sub.status === "active") || null;
+        setDashboardData((prev) => ({
+          ...prev,
+          subscriptionCount: userData.subscriptionCount || 0,
+          subscriptionActive: userData.paymentStatus === "Success" && !!activeSubscription,
+          subscriptionDates: {
+            start: activeSubscription?.startDate || null,
+            end: activeSubscription?.endDate || null,
+          },
+          childrenCount: activeSubscription?.children?.length || 0,
+          recentChildren: activeSubscription?.children?.slice(0, 4) || [],
+          loading: false,
+        }));
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        setDashboardData((prev) => ({ ...prev, loading: false }));
+      }
     };
     fetchUserData();
   };
@@ -119,22 +130,18 @@ const UserDashboard = () => {
             <div className="pageinconter relative h-full w-full flex items-center">
               <div className="hworkTitle combtntb comtilte">
                 <h1 className="flex flex-col textFF6514">
-                  {" "}
-                  <span className="block firstspan">HEALTHY BITES </span>{" "}
-                  <span className="block">JOYFUL SMILES</span>{" "}
+                  <span className="block firstspan">HEALTHY BITES </span>
+                  <span className="block">JOYFUL SMILES</span>
                 </h1>
-                <p className="">!HEY! CONFUSED ALREADY? — We are here with full pack of protein fiber <br />and also an appetizing meal bowl for your little one; so no more worries <br />of lunch bowl for our little smiles.</p>
+                <p className="">
+                  !HEY! CONFUSED ALREADY? — We are here with full pack of protein fiber <br />and also an appetizing meal bowl for your little one; so no more worries <br />of lunch bowl for our little smiles.
+                </p>
                 <Breadcrumbs />
               </div>
             </div>
             <div className="abbanIconss">
               <div className="abbanicn iconone absolute">
-                <Image
-                  src={abbanicon1}
-                  priority  
-                  alt="Icon"
-                  className="iconrotates"
-                />
+                <Image src={abbanicon1} priority alt="Icon" className="iconrotates" />
               </div>
               <div className="abbanicn icontwo absolute">
                 <Image src={abbanicon2} priority alt="Icon" />
@@ -147,8 +154,8 @@ const UserDashboard = () => {
           <section className="renewsec DetlsSepBox secpaddblock">
             <div className="container mx-auto ">
               <div className="flex items-center comtilte relative">
-                <div className='rnewbackbtn'>
-                  <button onClick={() => setShowRenewalForm(false)} className="text-blue-600 hover:text-blue-800 flex items-center" >
+                <div className="rnewbackbtn">
+                  <button onClick={() => setShowRenewalForm(false)} className="text-blue-600 hover:text-blue-800 flex items-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="h-5 w-5 mr-1"
@@ -177,15 +184,13 @@ const UserDashboard = () => {
             </div>
           </section>
         ) : (
-            <div className='DashboardSecss secpaddblock'>
+            <div className="DashboardSecss secpaddblock">
               <div className="container mx-auto ">
-                <div className='comtilte mb-[5vh]'>
-                  <h3 className='textFF6514'>Welcome, <small>{dashboardData.parentName}</small></h3>
+                <div className="comtilte mb-[5vh]">
+                  <h3 className="textFF6514">Welcome, <small>{dashboardData.parentName}</small></h3>
                   <p>Here's your account overview</p>
                 </div>
-                {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 DashboardTBoxss">
-                  {/* Total Subscriptions Card */}
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500 DashboardTItems">
                     <div className="flex items-center justify-between">
                       <div>
@@ -201,18 +206,34 @@ const UserDashboard = () => {
                     <div className="mt-4 text-sm text-gray-500 curplan flex">
                       <span> <strong>Current plan:</strong> </span>
                       <strong
-                        className={`ml-1 ${dashboardData.subscriptionCount > 0 ? "planactive" : "planinactive"}`}
+                        className={`ml-1 ${dashboardData.subscriptionCount > 0 && dashboardData.subscriptionActive ? "planactive" : "planinactive"}`}
                       >
-                        {dashboardData.subscriptionCount > 0 ? "Active" : "Inactive"}
+                        {dashboardData.subscriptionCount > 0 && dashboardData.subscriptionActive ? "Active" : "Inactive"}
                       </strong>
                     </div>
                   </div>
 
-                {/* Renew Subscription Button/Card - only show if subscription is expired */}
-                {isSubscriptionExpired() && (
+                  {/* <div className="child-cards grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {dashboardData.recentChildren.map((child) => (
+                      <div key={child._id} className="bg-white rounded-lg shadow p-4 flex flex-col items-center">
+                        <HiUserCircle className="h-16 w-16 text-gray-400 mb-2" />
+                        <h4 className="text-lg font-bold text-[#FF6514] mb-1">
+                          {child.childFirstName} {child.childLastName}
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-1">{child.school}</p>
+                        <p className="text-sm text-gray-600">
+                          {child.childClass} - {child.section}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2">{formatDate(child.dob)}</p>
+                      </div>
+                    ))}
+                  </div> */}
+
+                  {/* Renew Subscription Button */}
+                  {/* {isSubscriptionExpired() && ( */}
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500 flex flex-col items-start DashboardTItems">
                     <div className="mb-4">
-                      <h5> Your subscription has expired </h5>
+                      <h5>Your subscription has expired</h5>
                       <p className="text-lg font-semibold text-gray-800">
                         Renew to continue
                       </p>
@@ -221,14 +242,30 @@ const UserDashboard = () => {
                       variant="contained"
                       color="primary"
                       className="bg-orange-500 hover:bg-orange-600 text-white"
-                      onClick={() => setShowRenewalForm(true)}
+                      onClick={() => router.push('/user/renew-subscription')}
                     >
                       Renew Subscription
                     </Button>
                   </div>
-                )}
+                  {/* )} */}
 
-                  {/* Children Card */}
+                  <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500 flex flex-col items-start DashboardTItems">
+                    <div className="mb-4">
+                      <h5>Your subscription has expired</h5>
+                      <p className="text-lg font-semibold text-gray-800">
+                        Renew to continue
+                      </p>
+                    </div>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      className="bg-orange-500 hover:bg-orange-600 text-white"
+                      onClick={() => router.push('/user/renew-subscription')}
+                    >
+                      Renew Subscription
+                    </Button>
+                  </div>
+
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500 DashboardTItems">
                     <div className="flex items-center justify-between">
                       <div>
@@ -237,7 +274,16 @@ const UserDashboard = () => {
                           {dashboardData.childrenCount}
                         </p>
                       </div>
-                      <div className="p-3 rounded-full bg-purple-100 text-purple-600">
+                      <div
+                        className="p-3 rounded-full bg-purple-100 text-purple-600 cursor-pointer"
+                        onClick={() => router.push("/user/add-child")}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") router.push("/user/add-child");
+                        }}
+                        aria-label="Add Child"
+                      >
                         <HiUserAdd className="w-6 h-6" />
                       </div>
                     </div>
@@ -250,24 +296,16 @@ const UserDashboard = () => {
                 {/* Children Table */}
                 <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
                   <div className="px-6 py-4 border-b border-gray-200 comtilte">
-                    <h5 >  Your Children ({dashboardData.childrenCount}) </h5>
+                    <h5>Your Children ({dashboardData.childrenCount})</h5>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-bold text-[#333333] uppercase tracking-wider">
-                            Name
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-bold text-[#333333] uppercase tracking-wider">
-                            School
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-bold text-[#333333] uppercase tracking-wider">
-                            Class
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-bold text-[#333333] uppercase tracking-wider">
-                            Lunch Time
-                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-bold text-[#333333] uppercase tracking-wider">Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-bold text-[#333333] uppercase tracking-wider">School</th>
+                          <th className="px-6 py-3 text-left text-xs font-bold text-[#333333] uppercase tracking-wider">Class</th>
+                          <th className="px-6 py-3 text-left text-xs font-bold text-[#333333] uppercase tracking-wider">Lunch Time</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -282,29 +320,19 @@ const UserDashboard = () => {
                                   <div className="text-sm font-bold text-[#FF6514]">
                                     {child.childFirstName} {child.childLastName}
                                   </div>
-                                  <div className="text-sm text-gray-500">
-                                    {formatDate(child.dob)}
-                                  </div>
+                                  <div className="text-sm text-gray-500">{formatDate(child.dob)}</div>
                                 </div>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {child.school}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {child.location}
-                              </div>
+                              <div className="text-sm text-gray-900">{child.school}</div>
+                              <div className="text-sm text-gray-500">{child.location}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {child.childClass} - {child.section}
-                              </div>
+                              <div className="text-sm text-gray-900">{child.childClass} - {child.section}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {child.lunchTime}
-                              </div>
+                              <div className="text-sm text-gray-900">{child.lunchTime}</div>
                             </td>
                           </tr>
                         ))}
