@@ -97,38 +97,39 @@ const RenewSubscriptionPage = () => {
             </div>
           </div>
         </section>
+        <section className="overenewSec secpaddblock relative">
+          <div className="container mx-auto">
+            {showChildStep && (
+              <RenewChildDetailsStep
+                formData={childFormData}
+                setFormData={setChildFormData}
+                nextStep={handleChildNext}
+                prevStep={handlePrev}
+                _id={_id}
+                setChildCount={setChildCount}
+              />
+            )}
 
-        <div className="container mx-auto px-4 py-12">
-          {showChildStep && (
-            <RenewChildDetailsStep
-              formData={childFormData}
-              setFormData={setChildFormData}
-              nextStep={handleChildNext}
-              prevStep={handlePrev}
-              _id={_id}
-              setChildCount={setChildCount}
-            />
-          )}
+            {showPlanStep && (
+              <RenewSubscriptionPlanStep
+                nextStep={handlePlanNext}
+                prevStep={handlePrev}
+                _id={_id}
+                initialSubscriptionPlan={selectedPlan}
+                onSubscriptionPlanChange={handlePlanChange}
+                childrenData={childFormData.children}
+              />
+            )}
 
-          {showPlanStep && (
-            <RenewSubscriptionPlanStep
-          nextStep={handlePlanNext}
-          prevStep={handlePrev}
-          _id={_id}
-          initialSubscriptionPlan={selectedPlan}
-          onSubscriptionPlanChange={handlePlanChange}
-          childrenData={childFormData.children}
-        />
-          )}
-
-          {showPaymentStep && (
-            <RenewPaymentStep
-              prevStep={handlePrev}
-              _id={_id}
-              selectedPlan={selectedPlan}
-            />
-          )}
-        </div>
+            {showPaymentStep && (
+              <RenewPaymentStep
+                prevStep={handlePrev}
+                _id={_id}
+                selectedPlan={selectedPlan}
+              />
+            )}
+          </div>
+        </section>
       </div>
 
       <Mainfooter />

@@ -30,10 +30,12 @@ const AddChildPage = () => {
             </div>
           </div>
         </section>
-        <div className="container mx-auto flex items-center justify-center py-12">
-          {/* Pass userId to AddChild */}
-          <AddChild _id={userId} />
+        <section className="addchildsec secpaddblock relative">
+          <div className="container mx-auto">
+            {/* Pass userId to AddChild */}
+            <AddChild _id={userId} />
         </div>
+        </section>
       </div>
 
       <Mainfooter />

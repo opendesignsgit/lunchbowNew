@@ -188,6 +188,7 @@ const CenterPanel = ({
               <li>(<span style={{ color: "green", fontSize: '24px', lineHeight: '1' }}>◉</span>) Denotes Selected / Saved Menu.</li>
             </ul>
           </Typography>
+
         </Box>
       </div>
     </Box>

@@ -691,7 +691,7 @@ transform: translateY(100%);z-index: 9;animation: slide 50s linear infinite;-web
 .calandySecs{}
 .MCcalendy {border: 1px solid #EAEAEC;}
 .MCcalendy p{font-family: "Open Sans", sans-serif;}
-.MCcalendy .MCMainPanel {min-height: 75vh;}
+.MCcalendy .MCMainPanel {min-height: 75vh;border-top-left-radius: 0;border-top-right-radius: 0;}
 .MCcalendy .MCLeftPanel{padding: 2vw 1.5vw;height: 75vh;max-height: none;position: relative;}
 .MCcalendy .FLtable{}
 .MCcalendy .FLtable .FLbody{}
@@ -1022,6 +1022,74 @@ html body .MuiPopover-root{z-index: 99999;}
 .mainwhatsapbox a.mobwhatsapplink {display: none;}
 .mainwhatsapbox a img{display: block;width: 100%;}
 
+.calandySecs .menucalnmaintab {min-height: auto;border-bottom: 1px solid rgb(249 115 22 / 60%);}
+.menucalnmaintab .MuiTabs-scroller{}
+.menucalnmaintab .MuiTabs-scroller .MuiTabs-indicator{opacity: 0;visibility: hidden;pointer-events: none;}
+.menucalnmaintab .MuiTabs-list{}
+.menucalnmaintab .MuiTabs-list button{padding: 0;min-height: auto;padding-inline: 20px;line-height: 45px;font-weight: 600;letter-spacing: 0;}
+.menucalnmaintab .MuiTabs-list button:hover{color: #f97316;}
+.menucalnmaintab .MuiTabs-list button.Mui-selected{background: #f97316;color: #ffffff;}
+.menucalnmaintab .MuiButtonBase-root{}
+.menucalnmaintab>.MuiButtonBase-root:first-child{border-right: 1px solid #EAEAEC;}
+.menucalnmaintab>.MuiButtonBase-root:last-child{border-left: 1px solid #EAEAEC;}
+.menucalnmaintab .MuiButtonBase-root.Mui-disabled{opacity: 0.2;}
+
+.transactionTableSec{padding-inline: 20px;}
+.transactionTableSec table{min-width: 100%;font-size: 14px;border-collapse: collapse;}
+.transactionTableSec table th {background: #ff6514;color: #fff;text-align: left;}
+.transactionTableSec table th,.transactionTableSec table td {border: 1px solid #fbe7dd;padding: 8px;}
+.transactionTableSec table tr:nth-child(even) {background: #fff9f6;}
+.transactionTableSec table tr:hover {background: #ffdcca;}
+
+.curplanBox{}
+.curplanBox h4{font-size: 1.2vw;color: #4AB138;line-height: 1;font-family: 'Baloo';letter-spacing: -1px;font-weight: 100;text-transform: uppercase;}
+.curplanGrid{}
+.curplanGrid .curplanItem{padding: 10px;width: 20%;border: 1px solid #f0f0f0;}
+.curplanGrid .curplanItem h5{font-size: 16px;margin-bottom: 5px;line-height: 1.1;color: #7b7b7b;}
+.curplanGrid .curplanItem p{font-weight: 500;color: #000000;}
+.curplanGrid .curplanItem{padding: 10px;width: 20%;border: 1px solid #f0f0f0;}
+.curplanGrid .totalamountItem h5{font-size: 16px;margin-bottom: 5px;line-height: 1.1;color: #7b7b7b;}
+.curplanGrid .totalamountItem p{font-weight: 800;color: #ff6514;}
+
+.childtabox{padding-bottom: 10px;border-bottom: 1px solid #cccccc;}
+.childtabox>button{color: #ffffff;margin-left: auto;background: #333333;border-color: #333333;line-height: 34px;padding: 0 20px;position: relative;}
+.childtabox>button:hover{color: #333333;background: #ffffff;}
+.childtabox>button:after{content: '+';position: relative;display: block;margin-left: 8px;}
+.childtabox .childtabs{min-height: auto;border: none;}
+.childtabox .childtabs .MuiTabs-list[role="tablist"]{}
+.childtabox .childtabs .MuiTabs-list>button{padding: 0;min-height: auto;padding-inline: 15px;color: #fff;height: 36px;border-radius: 3px;border: 1px solid #ff6a00;color: #ff6a00;margin-right: 15px;}
+.childtabox .childtabs .MuiTabs-list>button:last-child{margin-right: 0px;}
+.childtabox .childtabs .MuiTabs-list>button.Mui-selected{color: #ffffff;}
+.childtabox .childtabs .MuiTabs-list>button button.closeicon {color: #ff6a00;margin-left: 5px;padding: 0;}
+.childtabox .childtabs .MuiTabs-list>button.Mui-selected button.closeicon {color: #ffffff;}
+.childtabox .childtabs .childtablabel {}
+.childtabox .childtabs .childtablabel p{}
+.childtabox .childtabs .childtablabel .checkbtn {padding: 0;color: #ff6a00;}
+.childtabox .childtabs .MuiTabs-list>button.Mui-selected .childtablabel .checkbtn {color: #fff;}
+.childtabox .childtabs .childtablabel input{}
+.childtabox .childtabs .MuiTabs-scroller .MuiTabs-indicator{opacity: 0;height: 0;}
+
+.addchildformbox .childformgrid{gap: 20px;}
+.addchildformbox .childformgrid .MuiGrid-root{width: calc(50% - 10px);}
+.addchildformbox .childformgrid .MuiGrid-root:last-child{width: calc(100%);}
+
+
+.workingdayscalbox{}
+.workingdayscalbox .wdaybtn{border-color: #ff6514;color: #fe6514;font-family: 'Baloo';padding: 0 20px;line-height: 36px;position: relative;}
+.workingdayscalbox .wdaybtn:before{content: '';position: relative;display: block;width: 16px;height: 16px;background: url(/calendar-icon.svg) no-repeat center center;background-size: 100%;margin-right: 5px;}
+.workingdayscalbox .wdaybtn:hover{background: #ff6514;color: #ffffff;font-family: 'Baloo';padding: 0 20px;line-height: 36px;position: relative;}
+.workingdayscalbox .wdaybtn:hover:before{filter: brightness(0) invert(1);}
+.navbtnbox{}
+.navbtnbox button{position: relative;border: none;padding: 0;border-radius: 0;}
+.navbtnbox button::before {content: '';position: absolute;width: 80%;height: 100%;right: -6px;bottom: -6px;border: 2px solid #777778;border-width: 0 1px 1px 0;pointer-events: none;transition: all 0.5s ease-in-out;}
+.navbtnbox button span{line-height: 50px;padding-inline: 30px;background: #FF6514;color: #ffffff;font-family: 'Baloo';font-size: 16px;font-weight: 400;letter-spacing: 0.5px;display: flex;border: 1px solid #333333;}
+.navbtnbox button span:nth-child(2){display: none;}
+.navbtnbox button span::after {content: '';position: relative;display: block;width: 14px;aspect-ratio: 1;background: url(/logtrial-icon.svg) no-repeat center center;background-size: 100%;margin-left: 15px;transition: all 0.5s ease-in-out;top: 0;right: 0;}
+.navbtnbox button:hover span::after {filter: invert(1);}
+.navbtnbox button.backbtn span{background: #ffffff;color: #333333;}
+.navbtnbox button.backbtn:hover span{background: #333333;color: #ffffff;}
+.navbtnbox button.proceedbtn span{background: #ffffff;color: #FF6514;border-color: #FF6514;}
+.navbtnbox button.proceedbtn::before{border-color: #FF6514;}
 
 @media (min-width: 1100px) {
   html body .container {max-width: 980px;  }
@@ -1208,6 +1276,7 @@ html body .MuiPopover-root{z-index: 99999;}
   .setpbanersec  .comtilte h1{justify-content: center;}
   .HintroSec  .comtilte p br {display: none;}
   .hbanRight .videoscreenbox {height: 495px;}
+  .transactionTableSec table th{white-space: nowrap;}
 }
 
 @media screen and (max-width:1023px){
@@ -1287,6 +1356,8 @@ html body .MuiPopover-root{z-index: 99999;}
   .ppricebox .ppricetbox h2{font-size: 45px;}
   .ppricebox .ppricetbox h2 small{font-size: 35px;}
   .Prodeilsliders  .teamboximg {padding-inline: 20px;}
+  .menucalnmaintab .MuiTabs-list button{font-size: 13px;line-height: 35px;}
+  .MCcalendy{border-radius: 0;}
   
 }
 @media screen and (max-width:820px){

@@ -24,6 +24,7 @@ import useAsync from "@hooks/useAsync";
 import WorkingDaysCalendar from "../profile-Step-Form/WorkingDaysCalendar";
 import AddChildPayment from "./AddChildPayment";
 import { useRouter } from 'next/router';
+import stepTwo from "../../../public/profileStepImages/stepTwo.png";
 
 const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
@@ -429,405 +430,442 @@ const AddChild = ({ _id, onComplete }) => {
     });
 
   return (
-    <Box sx={{ maxWidth: 900, mx: "auto" }}>
-      <Typography variant="h5" mb={2}>
-        Add Child Details
-      </Typography>
+    <div >
+      <Box sx={{ display: "flex", flexDirection: "column" }}>
 
-      <Box mb={4}>
-        <Typography variant="h6" gutterBottom>
-          Subscription Plan Details
-        </Typography>
-        <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={12} md={6}>
-            <Typography><strong>Current Plan Range:</strong></Typography>
-            <Typography>
-              {activeSubscription && activeSubscription.startDate
-                ? dayjs(activeSubscription.startDate).format("DD MMM YYYY")
-                : "-"}&nbsp;to&nbsp;
-              {activeSubscription && activeSubscription.endDate
-                ? dayjs(activeSubscription.endDate).format("DD MMM YYYY")
-                : "-"}
-            </Typography>
+        <div className='hworkTitle combtntb comtilte textcenter  mb-[5vh]'>
+          <h3 className='flex flex-col textFF6514'> <span className='block'>Add Child Details</span> </h3>
+          <p className=''>See how our site works as soon as you register <br />and create an account with us.</p>
+        </div>
+
+        <Box className="curplanBox" sx={{ mb: 4, p: 2, border: "1px solid #ccc", borderRadius: 2 }}>
+          <Typography variant="h4" gutterBottom>
+            Subscription Plan Details
+          </Typography>
+          <Grid className="curplanGrid flex flex-wrap">
+            <Grid className="curplanItem">
+              <Typography variant="h5"><strong>Current Plan Range:</strong></Typography>
+              <Typography>
+                {activeSubscription && activeSubscription.startDate
+                  ? dayjs(activeSubscription.startDate).format("DD MMM YYYY")
+                  : "-"} &nbsp;to&nbsp;
+                {activeSubscription && activeSubscription.endDate
+                  ? dayjs(activeSubscription.endDate).format("DD MMM YYYY")
+                  : "-"}
+              </Typography>
+            </Grid>
+            <Grid className="curplanItem">
+              <Typography variant="h5"><strong>Total Working Days (Plan):</strong></Typography>
+              <Typography>
+                {activeSubscription && activeSubscription.startDate && activeSubscription.endDate
+                  ? calculateWorkingDays(dayjs(activeSubscription.startDate), dayjs(activeSubscription.endDate), holidayDates)
+                  : "-"}
+              </Typography>
+            </Grid>
+            <Grid className="curplanItem">
+              <Typography variant="h5"><strong>Remaining Working Days:</strong></Typography>
+              <Typography>{remainingWorkingDays}</Typography>
+            </Grid>
+            <Grid className="curplanItem">
+              <Typography variant="h5"><strong>Earliest New Plan Start Date:</strong></Typography>
+              <Typography>{startCalcDate ? startCalcDate.format("DD MMM YYYY") : "-"}</Typography>
+            </Grid>
+            <Grid className="curplanItem">
+              <Typography variant="h5"><strong>New Children Selected:</strong></Typography>
+              <Typography>{newSelectedChildrenCount}</Typography>
+            </Grid>
+            <Grid className="curplanItem">
+              <Typography variant="h5"><strong>Amount per Day per Child:</strong></Typography>
+              <Typography>₹ 200</Typography>
+            </Grid>
+            <Grid className="curplanItem totalamountItem">
+              <Typography variant="h5" color="primary" fontWeight="bold">
+                Total Amount to Pay:
+              </Typography>
+              <Typography color="primary" fontWeight="bold">
+                ₹ {totalToPay}
+              </Typography>
+            </Grid>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography><strong>Total Working Days (Plan):</strong></Typography>
-            <Typography>
-              {activeSubscription && activeSubscription.startDate && activeSubscription.endDate
-                ? calculateWorkingDays(dayjs(activeSubscription.startDate), dayjs(activeSubscription.endDate), holidayDates)
-                : "-"}
-            </Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography><strong>Remaining Working Days:</strong></Typography>
-            <Typography>{remainingWorkingDays}</Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography><strong>Earliest New Plan Start Date:</strong></Typography>
-            <Typography>{startCalcDate ? startCalcDate.format("DD MMM YYYY") : "-"}</Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography><strong>New Children Selected:</strong></Typography>
-            <Typography>{newSelectedChildrenCount}</Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography><strong>Amount per Day per Child:</strong></Typography>
-            <Typography>₹ 200</Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant="h6" color="primary" fontWeight="bold">
-              Total Amount to Pay: ₹ {totalToPay}
-            </Typography>
-          </Grid>
-        </Grid>
+        </Box>
       </Box>
+      <Box className="addchildformbox"
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          gap: 2,
+        }}>
 
-      {/* Tabs */}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-        <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
-          {children.map((child, index) => {
-            const isInActiveSubscription = activeSubscriptionChildIds.includes(child._id);
-            const key = child._id || `new-${index}`;
-            return (
-              <Tab
-                key={key}
-                label={
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <Typography>CHILD {index + 1}</Typography>
-                    {!isInActiveSubscription && (
-                      <>
-                        <Checkbox
-                          checked={!!selectedChildren[key]}
-                          onChange={() => toggleChildSelection(index)}
-                          size="small"
-                          sx={{ ml: 1 }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        {!child.isExisting && (
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeChild(index);
-                            }}
-                          >
-                            <CloseIcon fontSize="small" />
-                          </IconButton>
+
+        {/* Image Side */}
+        <Box
+          className="spboximg"
+          sx={{
+            width: { xs: "100%", md: "40%" },
+            backgroundImage: `url(${stepTwo.src})`,
+            backgroundRepeat: "no-repeat",
+            backgroundSize: "contain",
+            backgroundPosition: "center",
+            minHeight: 500,
+          }}
+        />
+        <Box
+          sx={{
+            width: { xs: "100%", md: "60%" },
+          }}>
+
+          {/* Tabs */}
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }} className="childtabox">
+            <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto" className="childtabs">
+              {children.map((child, index) => {
+                const isInActiveSubscription = activeSubscriptionChildIds.includes(child._id);
+                const key = child._id || `new-${index}`;
+                return (
+                  <Tab
+                    className="childsubtab"
+                    key={key}
+                    label={
+                      <Box sx={{ display: "flex", alignItems: "center" }} className="childtablabel">
+                        <Typography>CHILD {index + 1}</Typography>
+                        {!isInActiveSubscription && (
+                          <>
+                            <Checkbox
+                              checked={!!selectedChildren[key]}
+                              onChange={() => toggleChildSelection(index)}
+                              size="small"
+                              sx={{ ml: 1 }}
+                              onClick={(e) => e.stopPropagation()} 
+                              className="checkbtn"
+                            />
+                            {!child.isExisting && (
+                              <IconButton
+                                size="small"
+                                className="closeicon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeChild(index);
+                                }}
+                              >
+                                <CloseIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </>
                         )}
-                      </>
-                    )}
-                  </Box>
-                }
-                sx={{
-                  bgcolor: activeTab === index ? "#FF6A00" : "transparent",
-                  color: activeTab === index ? "#fff" : "inherit",
+                      </Box>
+                    }
+                    sx={{
+                      bgcolor: activeTab === index ? "#FF6A00" : "transparent",
+                      color: activeTab === index ? "#fff" : "inherit",
+                    }}
+                  />
+                );
+              })}
+            </Tabs>
+            {children.length < 3 && (
+              <Button variant="outlined" onClick={addChild} disabled={children.length >= 3} sx={{ ml: 2 }}>
+                Add Another Child
+              </Button>
+            )}
+          </Box>
+
+          {/* Form Fields */}
+          <Grid container spacing={2} className="childformgrid">
+            {[
+              ["CHILD'S FIRST NAME*", "childFirstName", "Enter Child's First Name"],
+              ["CHILD'S LAST NAME*", "childLastName", "Enter Child's Last Name"],
+            ].map(([label, name, placeholder]) => (
+              <Grid item xs={12} md={6} key={name}>
+                <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
+                  {label}
+                </Typography>
+                <TextField
+                  fullWidth
+                  placeholder={placeholder}
+                  {...register(name)}
+                  error={!!errors[name]}
+                  helperText={errors[name]?.message}
+                  disabled={children[activeTab]?.isExisting}
+                />
+              </Grid>
+            ))}
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
+                DATE OF BIRTH*
+              </Typography>
+              <Controller
+                name="dob"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    type="date"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    error={!!errors.dob}
+                    helperText={errors.dob?.message}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value || "")}
+                    inputProps={{ max: getYesterdayDateString() }}
+                    disabled={children[activeTab]?.isExisting}
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
+                SCHOOL*
+              </Typography>
+              <Controller
+                name="school"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Select School"
+                    {...field}
+                    error={!!errors.school}
+                    helperText={errors.school?.message}
+                    disabled={schoolsLoading || children[activeTab]?.isExisting}
+                  >
+                    <MenuItem value="" disabled>
+                      {schoolsLoading ? "Loading schools..." : "Select School"}
+                    </MenuItem>
+                    {[...new Set(schools.map((s) => s.name))].map((school) => (
+                      <MenuItem value={school} key={school}>
+                        {school}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
+                LOCATION*
+              </Typography>
+              <Controller
+                name="location"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Select Location"
+                    {...field}
+                    error={!!errors.location}
+                    helperText={errors.location?.message}
+                    disabled={
+                      !watchSchool || filteredLocations.length === 0 || children[activeTab]?.isExisting
+                    }
+                  >
+                    <MenuItem value="" disabled>
+                      {!watchSchool
+                        ? "Select a school first"
+                        : filteredLocations.length === 0
+                          ? "No locations available"
+                          : "Select Location"}
+                    </MenuItem>
+                    {filteredLocations.map((location) => (
+                      <MenuItem key={location} value={location}>
+                        {location}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
+                CHILD'S LUNCH TIME*
+              </Typography>
+              <Controller
+                name="lunchTime"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Select Lunch Time"
+                    {...field}
+                    error={!!errors.lunchTime}
+                    helperText={errors.lunchTime?.message}
+                    disabled={children[activeTab]?.isExisting}
+                  >
+                    <MenuItem value="" disabled>
+                      Select Lunch Time
+                    </MenuItem>
+                    {lunchTimeOptions.map((time) => (
+                      <MenuItem key={time} value={time}>
+                        {time}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
+                CHILD CLASS*
+              </Typography>
+              <Controller
+                name="childClass"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Select Class"
+                    {...field}
+                    error={!!errors.childClass}
+                    helperText={errors.childClass?.message}
+                    disabled={children[activeTab]?.isExisting}
+                  >
+                    <MenuItem value="" disabled>
+                      Select Class
+                    </MenuItem>
+                    {[
+                      "LKG",
+                      "UKG",
+                      "Class 1",
+                      "Class 2",
+                      "Class 3",
+                      "Class 4",
+                      "Class 5",
+                      "Class 6",
+                      "Class 7",
+                      "Class 8",
+                      "Class 9",
+                      "Class 10",
+                      "Class 11",
+                      "Class 12",
+                    ].map((grade) => (
+                      <MenuItem key={grade} value={grade}>
+                        {grade}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
+                CHILD SECTION*
+              </Typography>
+              <Controller
+                name="section"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Select Section"
+                    {...field}
+                    error={!!errors.section}
+                    helperText={errors.section?.message}
+                    disabled={children[activeTab]?.isExisting}
+                  >
+                    <MenuItem value="" disabled>
+                      Select Section
+                    </MenuItem>
+                    {["A", "B", "C", "D", "E", "F", "G", "H"].map((section) => (
+                      <MenuItem key={section} value={section}>
+                        {section}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
+                DOES THE CHILD HAVE ANY ALLERGIES?
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="If yes, please specify."
+                {...register("allergies")}
+                error={!!errors.allergies}
+                helperText={errors.allergies?.message}
+                disabled={children[activeTab]?.isExisting}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Working Days Calendar with toggle */}
+          <Box mt={2} className="workingdayscalbox">
+            <Button variant="outlined" onClick={() => setCalendarOpen(true)} className="wdaybtn">
+              Show Working Days Calendar
+            </Button>
+
+            {startCalcDate && (
+              <WorkingDaysCalendar
+                open={calendarOpen}
+                onClose={() => setCalendarOpen(false)}
+                startDate={startCalcDate}
+                workingDays={remainingWorkingDays}
+                holidays={holidayDates}
+                hideMessage={true}
+              />
+            )}
+          </Box>
+
+          {/* Navigation Buttons */}
+          <Box sx={{ mt: 4, display: "flex", gap: 3 }} className="navbtnbox">
+            <Button variant="outlined" onClick={() => { /* Implement back logic */ }} className="backbtn">
+              <span>Back</span>
+            </Button>
+
+            {hasInvalidRequired ? (
+              <Button
+                className="proceedbtn"
+                variant="contained"
+                color="primary"
+                disabled
+                onClick={() => {
+                  // Surface errors on current tab if needed
+                  selectedChildrenForPayment.forEach((c) => {
+                    try {
+                      schema.validateSync(c, { abortEarly: false });
+                    } catch (err) {
+                      if (err?.inner) {
+                        err.inner.forEach((ve) =>
+                          setError(ve.path, { type: "manual", message: ve.message })
+                        );
+                      }
+                    }
+                  });
+                  alert("Please fill all mandatory fields for selected child(ren) before proceeding.");
+                }}
+              >
+                <span>Proceed to Payment</span>
+              </Button>
+            ) : (
+              <AddChildPayment
+                _id={_id}
+                formData={selectedChildrenForPayment}
+                subscriptionPlan={activeSubscription}
+                totalAmount={totalToPay}
+                onError={(msg) => alert(msg)}
+                onSuccess={() => {
+                  if (typeof onComplete === "function") onComplete(children);
+                  router.push("/user/menuCalendarPage");
                 }}
               />
-            );
-          })}
-        </Tabs>
-        {children.length < 3 && (
-          <Button variant="outlined" onClick={addChild} disabled={children.length >= 3} sx={{ ml: 2 }}>
-            Add Another Child
-          </Button>
-        )}
+            )}
+          </Box>
+        </Box>
       </Box>
-
-      {/* Form Fields */}
-      <Grid container spacing={2}>
-        {[
-          ["CHILD'S FIRST NAME*", "childFirstName", "Enter Child's First Name"],
-          ["CHILD'S LAST NAME*", "childLastName", "Enter Child's Last Name"],
-        ].map(([label, name, placeholder]) => (
-          <Grid item xs={12} md={6} key={name}>
-            <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
-              {label}
-            </Typography>
-            <TextField
-              fullWidth
-              placeholder={placeholder}
-              {...register(name)}
-              error={!!errors[name]}
-              helperText={errors[name]?.message}
-              disabled={children[activeTab]?.isExisting}
-            />
-          </Grid>
-        ))}
-
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
-            DATE OF BIRTH*
-          </Typography>
-          <Controller
-            name="dob"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                type="date"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                error={!!errors.dob}
-                helperText={errors.dob?.message}
-                value={field.value || ""}
-                onChange={(e) => field.onChange(e.target.value || "")}
-                inputProps={{ max: getYesterdayDateString() }}
-                disabled={children[activeTab]?.isExisting}
-              />
-            )}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
-            SCHOOL*
-          </Typography>
-          <Controller
-            name="school"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                select
-                fullWidth
-                label="Select School"
-                {...field}
-                error={!!errors.school}
-                helperText={errors.school?.message}
-                disabled={schoolsLoading || children[activeTab]?.isExisting}
-              >
-                <MenuItem value="" disabled>
-                  {schoolsLoading ? "Loading schools..." : "Select School"}
-                </MenuItem>
-                {[...new Set(schools.map((s) => s.name))].map((school) => (
-                  <MenuItem value={school} key={school}>
-                    {school}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
-            LOCATION*
-          </Typography>
-          <Controller
-            name="location"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                select
-                fullWidth
-                label="Select Location"
-                {...field}
-                error={!!errors.location}
-                helperText={errors.location?.message}
-                disabled={
-                  !watchSchool || filteredLocations.length === 0 || children[activeTab]?.isExisting
-                }
-              >
-                <MenuItem value="" disabled>
-                  {!watchSchool
-                    ? "Select a school first"
-                    : filteredLocations.length === 0
-                    ? "No locations available"
-                    : "Select Location"}
-                </MenuItem>
-                {filteredLocations.map((location) => (
-                  <MenuItem key={location} value={location}>
-                    {location}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
-            CHILD'S LUNCH TIME*
-          </Typography>
-          <Controller
-            name="lunchTime"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                select
-                fullWidth
-                label="Select Lunch Time"
-                {...field}
-                error={!!errors.lunchTime}
-                helperText={errors.lunchTime?.message}
-                disabled={children[activeTab]?.isExisting}
-              >
-                <MenuItem value="" disabled>
-                  Select Lunch Time
-                </MenuItem>
-                {lunchTimeOptions.map((time) => (
-                  <MenuItem key={time} value={time}>
-                    {time}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
-            CHILD CLASS*
-          </Typography>
-          <Controller
-            name="childClass"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                select
-                fullWidth
-                label="Select Class"
-                {...field}
-                error={!!errors.childClass}
-                helperText={errors.childClass?.message}
-                disabled={children[activeTab]?.isExisting}
-              >
-                <MenuItem value="" disabled>
-                  Select Class
-                </MenuItem>
-                {[
-                  "LKG",
-                  "UKG",
-                  "Class 1",
-                  "Class 2",
-                  "Class 3",
-                  "Class 4",
-                  "Class 5",
-                  "Class 6",
-                  "Class 7",
-                  "Class 8",
-                  "Class 9",
-                  "Class 10",
-                  "Class 11",
-                  "Class 12",
-                ].map((grade) => (
-                  <MenuItem key={grade} value={grade}>
-                    {grade}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
-            CHILD SECTION*
-          </Typography>
-          <Controller
-            name="section"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                select
-                fullWidth
-                label="Select Section"
-                {...field}
-                error={!!errors.section}
-                helperText={errors.section?.message}
-                disabled={children[activeTab]?.isExisting}
-              >
-                <MenuItem value="" disabled>
-                  Select Section
-                </MenuItem>
-                {["A", "B", "C", "D", "E", "F", "G", "H"].map((section) => (
-                  <MenuItem key={section} value={section}>
-                    {section}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          />
-        </Grid>
-
-        <Grid item xs={12}>
-          <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
-            DOES THE CHILD HAVE ANY ALLERGIES?
-          </Typography>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            placeholder="If yes, please specify."
-            {...register("allergies")}
-            error={!!errors.allergies}
-            helperText={errors.allergies?.message}
-            disabled={children[activeTab]?.isExisting}
-          />
-        </Grid>
-      </Grid>
-
-      {/* Working Days Calendar with toggle */}
-      <Box mt={2}>
-        <Button variant="outlined" onClick={() => setCalendarOpen(true)}>
-          Show Working Days Calendar
-        </Button>
-
-        {startCalcDate && (
-          <WorkingDaysCalendar
-            open={calendarOpen}
-            onClose={() => setCalendarOpen(false)}
-            startDate={startCalcDate}
-            workingDays={remainingWorkingDays}
-            holidays={holidayDates}
-            hideMessage={true}
-          />
-        )}
-      </Box>
-
-      {/* Navigation Buttons */}
-      <Box sx={{ mt: 4, display: "flex", gap: 3 }}>
-        <Button variant="outlined" onClick={() => { /* Implement back logic */ }}>
-          Back
-        </Button>
-
-        {hasInvalidRequired ? (
-          <Button
-            variant="contained"
-            color="primary"
-            disabled
-            onClick={() => {
-              // Surface errors on current tab if needed
-              selectedChildrenForPayment.forEach((c) => {
-                try {
-                  schema.validateSync(c, { abortEarly: false });
-                } catch (err) {
-                  if (err?.inner) {
-                    err.inner.forEach((ve) =>
-                      setError(ve.path, { type: "manual", message: ve.message })
-                    );
-                  }
-                }
-              });
-              alert("Please fill all mandatory fields for selected child(ren) before proceeding.");
-            }}
-          >
-            Proceed to Payment
-          </Button>
-        ) : (
-          <AddChildPayment
-            _id={_id}
-            formData={selectedChildrenForPayment}
-            subscriptionPlan={activeSubscription}
-            totalAmount={totalToPay}
-            onError={(msg) => alert(msg)}
-            onSuccess={() => {
-              if (typeof onComplete === "function") onComplete(children);
-              router.push("/user/menuCalendarPage");
-            }}
-          />
-        )}
-      </Box>
-    </Box>
+    </div>
   );
 };
 

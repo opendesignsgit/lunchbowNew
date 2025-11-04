@@ -534,7 +534,7 @@ const MenuCalendar = () => {
         onChange={(e, val) => setSelectedPlanIndex(val)}
         variant="scrollable"
         scrollButtons="auto"
-        sx={{ mb: 2, bgcolor: "#fafbfc" }}
+        className="menucalnmaintab"
       >
         {subscriptionPlans.map((plan, i) => (
           <Tab

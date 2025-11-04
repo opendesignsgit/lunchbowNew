@@ -22,6 +22,15 @@ const MenuCalendarPage = () => {
         "Our Lunch dishes are tightly sealed with Plastic free, eco-friendly leak proof and Sugarcane Bagasse Canisters. To preserve freshness and maintain the right temperature until noon, we also use insulated bags for delivery purposes.",
     },
     {
+      title: "Can I order meals for a specific day only?",
+      content:
+        (
+          <>
+            Yes, you can order adhoc meals for ₹250 per meal by calling or messaging us on <a href="tel:+919176917602">9176 9176 02</a>.
+          </>
+        ),
+    },
+    {
       title: "Over time, what type of variation can I anticipate in the lunch bowl options?",
       content:
         "We provide a varied and ever-changing menu to keep your child engaged. Our culinary team regularly introduces new recipes and seasonal ingredients to ensure a range of wholesome and appealing options.",

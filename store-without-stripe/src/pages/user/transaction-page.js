@@ -30,10 +30,17 @@ const TransactionPage = () => {
             </div>
           </div>
         </section>
-        <div className="container mx-auto flex items-center justify-center py-12">
-          {/* Pass userId to PaymentsTable */}
-          <PaymentsTable _id={userId} />
-        </div>
+        <section className="transactionTableSec secpaddblock bg-white">
+          <div className="container mx-auto">
+
+            <div className='hworkTitle combtntb comtilte textcenter  mb-[5vh]'>
+              <h3 className='flex flex-col textFF6514'> <span className='block'>Transaction Details</span> </h3>
+              <p className=''>See how our site works as soon as you register <br />and create an account with us.</p>
+            </div>
+            {/* Pass userId to PaymentsTable */}
+            <PaymentsTable _id={userId} />
+          </div>
+        </section>
       </div>
 
       <Mainfooter />

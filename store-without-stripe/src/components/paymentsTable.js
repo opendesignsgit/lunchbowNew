@@ -19,6 +19,8 @@ export default function PaymentsTable({ _id }) {
   return (
     <div>
       {/* <h3>Payment Details for User: {userId}</h3> */}
+
+      <div className='mobilePaymentTable overflow-x-auto'>
       <table border="1" cellPadding="8" cellSpacing="0" style={{ width: '100%' }}>
         <thead>
           <tr>
@@ -43,6 +45,7 @@ export default function PaymentsTable({ _id }) {
           ))}
         </tbody>
       </table>
+      </div>
       {/* <h4>Total Amount: INR {paymentData.total_amount}</h4> */}
     </div>
   );

@@ -46,7 +46,7 @@ const AddChildPayment = ({ _id, formData, subscriptionPlan, onError, onSuccess }
 
       if (isLocalhost()) {
         // Local environment: call local API directly with children data and planId
-        const localApiUrl = "http://localhost:5056/api/ccavenue/local-success/local-add-childPayment";
+        const localApiUrl = "http://localhost:5055/api/ccavenue/local-success/local-add-childPayment";
         const response = await axios.post(localApiUrl, {
           userId: _id,
           orderId,
