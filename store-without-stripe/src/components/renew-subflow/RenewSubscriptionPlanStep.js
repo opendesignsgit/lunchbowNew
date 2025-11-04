@@ -293,7 +293,7 @@ const RenewSubscriptionPlanStep = ({
     try {
       const res = await submitHandler({
         payload,
-        step: 3,
+        // step: 3,
         path: "step-Form-Renew-SubscriptionPlan",
         _id,
       });

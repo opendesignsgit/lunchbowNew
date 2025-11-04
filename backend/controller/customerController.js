@@ -905,15 +905,18 @@ const stepFormRegister = async (req, res) => {
         }
       }
 
-      // Update the step in Form, indicating progress
-      await Form.findOneAndUpdate(
-        { user: _id },
-        { $set: { step } },
-        { new: true, upsert: true }
-      );
+      // Update the step in Form only if 'step' is provided
+      if (step != null) {
+        await Form.findOneAndUpdate(
+          { user: _id },
+          { $set: { step } },
+          { new: true, upsert: true }
+        );
+      }
 
       return res.json({ success: true, data: savedChildrenIds });
     }
+
 
 
 
@@ -1038,11 +1041,12 @@ const stepFormRegister = async (req, res) => {
       });
       await newSubscription.save();
 
-      // Push new subscription to form's subscriptions array & update step
-      await Form.updateOne(
-        { user: _id },
-        { $push: { subscriptions: newSubscription._id }, $set: { step } }
-      );
+      // Push new subscription; only set 'step' if provided
+      const update = { $push: { subscriptions: newSubscription._id } };
+      if (step != null) {
+        update.$set = { step };
+      }
+      await Form.updateOne({ user: _id }, update);
 
       // Return updated form with subscriptions and children populated
       const updatedForm = await Form.findOne({ user: _id })
@@ -1054,6 +1058,7 @@ const stepFormRegister = async (req, res) => {
 
       return res.json({ success: true, data: updatedForm });
     }
+
 
 
 

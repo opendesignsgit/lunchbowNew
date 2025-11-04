@@ -1,12 +1,11 @@
 // pages/user/renew-subscription.js
-import React, { useState, useEffect, useCallback  } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Mainheader from "@layout/header/Mainheader";
 import Mainfooter from "@layout/footer/Mainfooter";
 import RenewSubscriptionPlanStep from "@components/renew-subflow/RenewSubscriptionPlanStep";
-// import RenewSubscriptionPlanStep from "@components/renew-subflow/RenewSubscriptionPlanStep";
 import RenewChildDetailsStep from "@components/renew-subflow/RenewChildDetailsStep";
-import PaymentStep from "@components/profile-Step-Form/PaymentStep";
 import RenewPaymentStep from "@components/renew-subflow/RenewPaymentStep";
+import StepHeader from "@components/renew-subflow/StepHeader"; // ✅ Imported StepHeader
 
 import { useSession } from "next-auth/react";
 import useRegistration from "@hooks/useRegistration";
@@ -15,20 +14,21 @@ const RenewSubscriptionPage = () => {
   const { data: session } = useSession();
   const _id = session?.user?.id;
   const { submitHandler } = useRegistration();
+
   const [childCount, setChildCount] = useState(0);
-  const [showChildStep, setShowChildStep] = useState(true); // Show child details first
-  const [showPlanStep, setShowPlanStep] = useState(false);  // Subscription plan second
+  const [showChildStep, setShowChildStep] = useState(true);
+  const [showPlanStep, setShowPlanStep] = useState(false);
   const [showPaymentStep, setShowPaymentStep] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [childFormData, setChildFormData] = useState({ children: [] });
-  // const [selectedPlan, setSelectedPlan] = useState(null);
 
-
+  // ✅ Handle plan change
   const handlePlanChange = useCallback((plan) => {
     setSelectedPlan(plan);
   }, []);
 
-  const featchData = async () => {
+  // ✅ Fetch customer data
+  const fetchData = async () => {
     try {
       const response = await submitHandler({
         path: "get-customer-form",
@@ -43,10 +43,11 @@ const RenewSubscriptionPage = () => {
 
   useEffect(() => {
     if (_id) {
-      featchData();
+      fetchData();
     }
   }, [_id]);
 
+  // ✅ Step navigation logic
   const handleChildNext = () => {
     setShowChildStep(false);
     setShowPlanStep(true);
@@ -70,6 +71,9 @@ const RenewSubscriptionPage = () => {
     }
   };
 
+  // ✅ Determine current step number for StepHeader
+  const currentStep = showChildStep ? 1 : showPlanStep ? 2 : showPaymentStep ? 3 : 1;
+
   return (
     <div className="steppage">
       <Mainheader
@@ -78,6 +82,7 @@ const RenewSubscriptionPage = () => {
       />
 
       <div className="pagebody">
+        {/* Banner */}
         <section className="pagebansec setpbanersec relative">
           <div className="container mx-auto relative h-full">
             <div className="pageinconter relative h-full w-full flex items-center justify-center text-center">
@@ -97,8 +102,13 @@ const RenewSubscriptionPage = () => {
             </div>
           </div>
         </section>
+
+        {/* Steps section */}
         <section className="overenewSec secpaddblock relative">
           <div className="container mx-auto">
+            {/* ✅ Added StepHeader */}
+            <StepHeader step={currentStep} />
+
             {showChildStep && (
               <RenewChildDetailsStep
                 formData={childFormData}
