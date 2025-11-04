@@ -27,7 +27,7 @@ const PaymentStep = ({ prevStep, _id }) => {
 
   const simulatePaymentSuccess = async ({ userId, orderId, transactionId }) => {
     try {
-      const response = await axios.post("http://localhost:5056/api/ccavenue/local-success", {
+      const response = await axios.post("http://localhost:5055/api/ccavenue/local-success", {
         userId,
         orderId,
         transactionId,

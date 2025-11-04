@@ -266,7 +266,7 @@ const AboutUs = () => {
             </div>
           </div>
         </section>
-        <section className="HmteamSec relative bg-FFE6E6 flex py-[12vh]" id="HmteamSec">
+        <section className="HmteamSec relative bg-FFE6E6 flex py-[12vh] displaynone" id="HmteamSec">
           <div className="container mx-auto relative">
             <div className="hintroLeft combtntb comtilte text-center mb-[5vh]">
               <h5>Meet the team</h5>

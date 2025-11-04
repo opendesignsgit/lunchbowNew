@@ -151,7 +151,7 @@ useEffect(() => {
   return (
     <>
       <Head>
-        <title>{title ? `Lunchbowl | ${title}` : "Lunchbowl "}</title>
+        <title>{title ? `${title}` : "Lunchbowl "}</title>
         {description && <meta name="description" content={description} />}
         <link ref="icon" href="/favicon.png" />
       </Head>
@@ -219,6 +219,9 @@ useEffect(() => {
                       </li>
                       <li>
                         <Link href="/user/my-account">My Profile</Link>
+                      </li>
+                      <li>
+                        <Link href="/user/transaction-page">Transactions</Link>
                       </li>
                       <li>
                         <button onClick={() => setShowLogoutConfirm(true)}>Log Out</button>

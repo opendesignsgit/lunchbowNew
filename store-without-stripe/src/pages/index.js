@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import Head from "next/head";
+import { Helmet } from "react-helmet";
 import Mainheader from '@layout/header/Mainheader';
 import Mainfooter from '@layout/footer/Mainfooter';
 import HomeProductCard from '@components/product/HomeProductCard';
@@ -98,6 +99,15 @@ const Home = () => {
         "Our Lunch dishes are tightly sealed with Plastic free, eco-friendly leak proof and Sugarcane Bagasse Canisters. To preserve freshness and maintain the right temperature until noon, we also use insulated bags for delivery purposes.",
     },
     {
+      title: "Can I order meals for a specific day only?",
+      content:
+        (
+          <>
+            Yes, you can order adhoc meals for ₹250 per meal by calling or messaging us on <a href="tel:+919176917602">9176 9176 02</a>.
+          </>
+        ),
+    },
+    {
       title: "Over time, what type of variation can I anticipate in the lunch bowl options?",
       content:
         "We provide a varied and ever-changing menu to keep your child engaged. Our culinary team regularly introduces new recipes and seasonal ingredients to ensure a range of wholesome and appealing options.",
@@ -167,8 +177,9 @@ const Home = () => {
 
 
   return (
+    <>
     <div class="homepage">
-        <Mainheader  title="Home" description="This is Home page"/>
+        <Mainheader title="Healthy Diet for Students | Order Lunch Online - Lunch Bowl" description="Stay energized with Lunchbowl’s healthy diet for students. Order lunch online and enjoy fresh, home-style meals packed with nutrition." />
         <div className='pagebody'>
             <section className='HbanSec relative bg-white flex'>
                 <div className='hbanLeft flex items-center justify-center' >
@@ -299,7 +310,7 @@ const Home = () => {
                     </div>
                 </div>
             </section>
-              <section className='HteamSec relative bg-FF6514 flex secpaddblock'>
+          <section className='HteamSec relative bg-FF6514 flex secpaddblock displaynone'>
                   <div className='container mx-auto relative' >
                     <div className='hworkTitle combtntb comtilte textcenter mb-[5vh]'>
                         <h4 className='text-[#000000]'>Meet the team</h4>
@@ -369,6 +380,7 @@ const Home = () => {
         <HomepopVideo open={open} onClose={handleCloseDialog}/>
           <NutritiousEnquire open={popopen} onClose={handlepopCloseDialog} />
     </div>
+    </>
   );
 }
 
