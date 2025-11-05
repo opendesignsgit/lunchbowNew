@@ -175,7 +175,7 @@ useEffect(() => {
                 </li>
               )} */}
               <li className="nodesign mobhidpplink">
-                <Link href="/plan-pricing">Plan & Pricing</Link>
+                <Link href="/school-kids-lunch-subscription-service-in-chennai-pricing">Plan & Pricing</Link>
               </li>
               {/* Only show login button if user is not logged in */}
               {!session && (
@@ -293,10 +293,10 @@ useEffect(() => {
                     <Link href="/about-us">About Us</Link>
                   </li>
                   <li className="nav__item hamnavlink">
-                    <Link href="/plan-pricing">Plan & Pricing</Link>
+                    <Link href="/school-kids-lunch-subscription-service-in-chennai-pricing">Plan & Pricing</Link>
                   </li>
                   <li className="nav__item hamnavlink">
-                    <Link href="/Menulist">Food Menu</Link>
+                    <Link href="/kids-nutritious-lunch-subscription-menu">Food Menu</Link>
                   </li>
                   <li className="nav__item hamnavlink">
                     <Link href="/contact-us">Contact Us</Link>

@@ -179,7 +179,7 @@ const Home = () => {
   return (
     <>
     <div class="homepage">
-        <Mainheader title="Healthy Diet for Students | Order Lunch Online - Lunch Bowl" description="Stay energized with Lunchbowl’s healthy diet for students. Order lunch online and enjoy fresh, home-style meals packed with nutrition." />
+        <Mainheader title="Fresh & Healthy Lunch Subscription Box for Kids | Lunch Bowl" description="Get a healthy lunch subscription box in Chennai from Lunchbowl with fresh, nutritionist-approved meals for kids. Convenient school delivery of balanced lunchboxes." />
         <div className='pagebody'>
             <section className='HbanSec relative bg-white flex'>
                 <div className='hbanLeft flex items-center justify-center' >

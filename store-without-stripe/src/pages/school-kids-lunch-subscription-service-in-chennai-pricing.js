@@ -136,7 +136,7 @@ const PlanPricingPage = () => {
 
     return (
         <div className="planpricepage">
-            <Mainheader  title="Plan & Pricing" description="This is Plan & Pricing page"/>
+            <Mainheader  title="Monthly food subscription Chennai For School Kids" description="Choose Lunchbowl’s reliable lunch subscription service for school kids in Chennai. Enjoy healthy, tasty meals with flexible monthly plans and daily delivery."/>
             <div className='pagebody'>
                 <section className="pagebansec setpbanersec relative">
                     <div className='container mx-auto relative h-full' >

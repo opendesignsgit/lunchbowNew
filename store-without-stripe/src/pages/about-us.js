@@ -63,7 +63,7 @@ const AboutUs = () => {
 
   return (
     <div className="aboutuspage">
-      <Mainheader title="About Us" description="This is About Us page" />
+      <Mainheader title="Vegetarian Lunch Box Delivery for School Kids | Lunchbowl" description="Get in touch with Lunchbowl, your trusted lunch subscription service for school kids in Chennai. Fresh, nutritious meals delivered daily. Subscribe today." />
       <div className="pagebody">
         <section className="pagebansec aboutbanersec relative">
           <div className="container mx-auto relative h-full">
