@@ -176,7 +176,7 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
 
   return (
     <Box
-      className="subplnBoxss"
+      className="subplnBoxss renewcompaySec"
       sx={{
         display: "flex",
         alignItems: "center",
@@ -203,20 +203,17 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
             {error}
           </Typography>
         )}
-        <div className="steptitles">
-          <h3>Complete Payment</h3>
-          <h6>Secure payment via CCAvenue</h6>
-          <p>
-            We have curated our payment system with the finest level of
-            security ensuring a smooth and dependable experience.
-          </p>
+        <div className="steptitles compaySec">
+          <h4>Complete Payment</h4>
+          <h6><strong>Secure payment via CCAvenue</strong></h6>
+          <p>We have curated our payment system with the finest <br />level of security ensuring a smooth and <br />dependable experience.</p>
         </div>
-        <Box className="subbtnrow" sx={{ display: "flex", gap: 3 }}>
+        <Box className="subbtnrow navbtnbox" sx={{ display: "flex", gap: 3 }}>
           <Button className="backbtn" variant="outlined" onClick={prevStep}>
             <span className="nextspan">Back</span>
           </Button>
           <Button
-            className="nextbtn Proceedbtn widthautobtn"
+            className="nextbtn proceedbtn widthautobtn"
             variant="contained"
             onClick={initiatePayment}
             disabled={loading}
@@ -227,7 +224,7 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
 
           {isLocalhost && (
             <Button
-              className="nextbtn Proceedbtn widthautobtn"
+              className="nextbtn proceedbtn widthautobtn"
               variant="contained"
               color="secondary"
               disabled={loading}

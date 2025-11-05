@@ -283,6 +283,7 @@ const RenewChildDetailsStep = ({
 
   return (
     <Box
+      className="renewchildboxs addchildformbox"
       component="form"
       onSubmit={handleSubmit(onSubmit)}
       sx={{
@@ -293,6 +294,7 @@ const RenewChildDetailsStep = ({
     >
       {/* Image Side */}
       <Box
+        className="renewchildLcol"
         sx={{
           width: { xs: "100%", md: "45%" },
           backgroundImage: `url(${stepTwo.src})`,
@@ -304,17 +306,18 @@ const RenewChildDetailsStep = ({
       />
 
       {/* Form Side */}
-      <Box sx={{ width: { xs: "100%", md: "55%" } }}>
-        <Typography variant="h5" mb={2}>
+      <Box
+        className="renewchildRcol" sx={{ width: { xs: "100%", md: "55%" } }}>
+        <Typography variant="h5" mb={2} className="renewchildtitle">
           CHILD DETAILS :
         </Typography>
 
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+        <Box className="childtabox" sx={{ display: "flex", alignItems: "center", mb: 2 }}>
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
             variant="scrollable"
-            scrollButtons="auto"
+            scrollButtons="auto" className="childtabs"
           >
             {children.map((child, index) => (
               <Tab
@@ -324,6 +327,7 @@ const RenewChildDetailsStep = ({
                     <Typography>CHILD {index + 1}</Typography>
                     {!child.isExisting && children.length > 1 && (
                       <IconButton
+                        className="closeicon"
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -355,7 +359,7 @@ const RenewChildDetailsStep = ({
           )}
         </Box>
 
-        <Grid container spacing={2}>
+        <Grid container spacing={2} className="childformgrid">
           {/* Child First & Last Name */}
           {[
             ["CHILD'S FIRST NAME*", "childFirstName", "Enter Child's First Name"],
@@ -597,12 +601,12 @@ const RenewChildDetailsStep = ({
         </Grid>
 
         {/* Buttons */}
-        <Box sx={{ mt: 4, display: "flex", gap: 3 }}>
-          <Button variant="outlined" onClick={prevStep}>
-            Back
+        <Box sx={{ mt: 4, display: "flex", gap: 3 }} className="navbtnbox">
+          <Button variant="outlined" onClick={prevStep} className="backbtn">
+            <span>Back</span>
           </Button>
-          <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? "Processing..." : "Next"}
+          <Button type="submit" variant="contained" disabled={loading} className="proceedbtn">
+            <span>{loading ? "Processing..." : "Next"}</span>
           </Button>
         </Box>
       </Box>

@@ -313,7 +313,7 @@ const RenewSubscriptionPlanStep = ({
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box
-        className="subplnBoxss"
+        className="subplnBoxss subplnBoxssrenew"
         display="flex"
         flexDirection={{ xs: "column", md: "row" }}
         gap={4}
@@ -335,10 +335,11 @@ const RenewSubscriptionPlanStep = ({
           {childrenLoading && <LinearProgress />}
 
           {childrenList?.children?.length > 0 && (
-            <Box mb={2}>
-              <Typography sx={{ fontWeight: 600, mb: 1 }}>Select Child*</Typography>
+            <Box mb={2} className="renewptitlebox">
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }} className="renewplantitle">Select Child*</Typography>
               {childrenList?.children?.map(child => (
-                <FormControlLabel
+                <div className="childlistboxs flex items-center">
+                  <FormControlLabel className="childlistfbox"
                   key={child._id}
                   control={
                     <Checkbox
@@ -348,6 +349,7 @@ const RenewSubscriptionPlanStep = ({
                   }
                   label={`${child.childFirstName} ${child.childLastName}`}
                 />
+                </div>
               ))}
               {childError && (
                 <FormHelperText error>
@@ -520,14 +522,14 @@ const RenewSubscriptionPlanStep = ({
             )}
           </Box>
 
-          <Box className="subbtnrow" sx={{ mt: 4, display: "flex", gap: 3 }}>
+          <Box className="subbtnrow navbtnbox" sx={{ mt: 4, display: "flex", gap: 3 }}>
             <Button variant="outlined" onClick={prevStep} className="backbtn">
               <span className="nextspan">Back</span>
             </Button>
             <Button
               variant="contained"
               onClick={handleNext}
-              className="nextbtn"
+              className="nextbtn proceedbtn"
               disabled={loading || holidaysLoading}
               sx={{
                 bgcolor: "#FF6A00",
