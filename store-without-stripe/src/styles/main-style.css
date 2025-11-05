@@ -922,9 +922,11 @@ body .compopups .fieldbox input:hover {  border: none;  outline: none;  box-shad
 .myaccboxitems .boxthree {width:calc(100% - 20px);padding:20px 10px;}
 .myaccboxitems .boxfour {width:calc(100% - 20px);}
 .myaccboxitems .ChildlistBoxs {margin-inline: 0px;}
-.myaccboxitems .ChildlistBoxs .ChildlistItems{width:calc(33.333% - 20px);border-right: 1px solid #e1e1e1;padding:0 20px;    gap: unset;}
+.myaccboxitems .ChildlistBoxs .ChildlistItems{width:calc(33.333% - 20px);border-right: 0px solid #e1e1e1;padding:0px;gap: unset;margin-inline: 10px;}
 .myaccboxitems .ChildlistBoxs .ChildlistItems:last-child{border-right: 0px solid #e1e1e1;}
-
+.myaccboxitems .ChildlistBoxs .ChildlistItems table{font-size: 15px;}
+.myaccboxitems .ChildlistBoxs .ChildlistItems table tr th{padding: 4px 10px !important;}
+.myaccboxitems .ChildlistBoxs .ChildlistItems table tr td{padding: 4px 10px !important;}
 .myaccContainer .notfetchbox{margin: 10px;border: 1px solid #e1e1e1;border-radius: 5px;padding: 1vw 2vw;}
 .myaccContainer .notfetchbox h4{text-align: center;}
 

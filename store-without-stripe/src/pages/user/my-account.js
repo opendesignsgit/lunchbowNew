@@ -418,7 +418,12 @@ const MyAccount = () => {
 
                   {/* Children */}
                   <Box className="myaccboxlist boxthree ">
+                    <h4>Children </h4>
                     <Box className="ChildlistBoxs flex">
+
+                      {uniqueChildren && uniqueChildren.length > 0 ? (
+                        uniqueChildren.map((child, idx) => (
+
                       <Box
                         className="ChildlistItems"
                         sx={{
@@ -427,15 +432,10 @@ const MyAccount = () => {
                           gap: "1.5rem",
                           justifyContent: "flex-start",
                         }}
-                      >
-                        <h4>Children </h4>
-
-                        {uniqueChildren && uniqueChildren.length > 0 ? (
-                          uniqueChildren.map((child, idx) => (
+                          >
                             <table
                               key={child._id || idx}
                               style={{
-                              width: "300px",
                               borderCollapse: "collapse",
                               border: "1px solid #ddd",
                             }}
@@ -582,11 +582,13 @@ const MyAccount = () => {
                               </tr>
                             </tbody>
                           </table>
+
+                          </Box>
                         ))
                         ) : (
                           <h6>No children details available.</h6>
                         )}
-                      </Box>
+
                     </Box>
                   </Box>
               </Box>
