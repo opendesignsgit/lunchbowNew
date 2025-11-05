@@ -3,12 +3,11 @@ import { Box, Button, Typography, LinearProgress } from "@mui/material";
 import { useRouter } from "next/router";
 import CryptoJS from "crypto-js";
 import useRegistration from "@hooks/useRegistration";
-import stepFour from "../../../public/profileStepImages/stepFour.png";  
+import stepFour from "../../../public/profileStepImages/stepFour.png";
 import axios from "axios";
 
 const generateOrderId = () =>
   `RENEW${Date.now()}${Math.floor(Math.random() * 1000)}`;
-
 
 const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
   const router = useRouter();
@@ -18,25 +17,35 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
   const [isLocalhost, setIsLocalhost] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-      setIsLocalhost(true);
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname;
+      // Enable simulate button on localhost and dev domains
+      if (host === "localhost" || host.startsWith("dev.") || host.includes("dev-")) {
+        setIsLocalhost(true);
+      }
     }
   }, []);
 
-  console.log("====================================");
-  console.log("isLocalhost:", isLocalhost);
-  console.log("====================================");
+  // Decide which API base to use for local-payment simulation
+  const getPaymentBaseUrl = () => {
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname;
+      if (host === "localhost") return "http://localhost:5055";
+      if (host.startsWith("dev.") || host.includes("dev-")) return "https://dev-api.lunchbowl.co.in";
+    }
+    return "https://api.lunchbowl.co.in";
+  };
 
   const simulatePaymentSuccess = async ({ userId, orderId, transactionId }) => {
     try {
-      const response = await axios.post("http://localhost:5055/api/ccavenue/local-success", {
+      const baseUrl = getPaymentBaseUrl();
+      const response = await axios.post(`${baseUrl}/api/ccavenue/local-success`, {
         userId,
         orderId,
         transactionId,
       });
       return response.data; // Axios parses the response automatically
     } catch (error) {
-      // Provide a consistent error object
       return {
         success: false,
         message: error?.response?.data?.message || "Local payment failed",
@@ -44,7 +53,6 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
       };
     }
   };
-
 
   const ccavenueConfig = {
     merchant_id: "4381442",
@@ -57,7 +65,6 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
     endpoint:
       "https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction",
   };
-
 
   // Exact implementation matching Node.js crypto
   const encrypt = (plainText, workingKey) => {
@@ -109,11 +116,9 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
       if (!subscriptionPlan || !user) {
         throw new Error("Required data missing in response");
       }
-      console.log("====================================");
-      console.log("Subscription Plan:", response);
-      console.log("====================================");
-      // Use passed orderId or generate one if missing (optional)
-      const currentOrderId = orderId || `RENEW${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+      const currentOrderId =
+        orderId || `RENEW${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
       // Prepare payment data
       const paymentData = {
@@ -136,9 +141,7 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
         merchant_param2: subscriptionPlan.planId,
         merchant_param3: currentOrderId,
       };
-      console.log("====================================");
-      console.log("Payment Data:", paymentData);
-      console.log("====================================");
+
       // Create request string
       const plainText = Object.entries(paymentData)
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)

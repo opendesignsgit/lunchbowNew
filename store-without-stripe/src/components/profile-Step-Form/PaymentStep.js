@@ -3,7 +3,7 @@ import { Box, Button, Typography, LinearProgress } from "@mui/material";
 import { useRouter } from "next/router";
 import CryptoJS from "crypto-js";
 import useRegistration from "@hooks/useRegistration";
-import stepFour from "../../../public/profileStepImages/stepFour.png";  
+import stepFour from "../../../public/profileStepImages/stepFour.png";
 import axios from "axios";
 
 const PaymentStep = ({ prevStep, _id }) => {
@@ -14,20 +14,29 @@ const PaymentStep = ({ prevStep, _id }) => {
   const [isLocalhost, setIsLocalhost] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-      setIsLocalhost(true);
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname;
+      // Enable simulate button on localhost and dev domains
+      if (host === "localhost" || host === "127.0.0.1" || host.startsWith("dev.") || host.includes("dev-")) {
+        setIsLocalhost(true);
+      }
     }
   }, []);
 
-  // const isLocalhost = typeof window !== "undefined" && window.location.hostname === "localhost";
-
-  console.log("====================================");
-  console.log("isLocalhost:", isLocalhost);
-  console.log("====================================");
+  // Decide which API base to use for local-payment simulation
+  const getPaymentBaseUrl = () => {
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname; // hostname excludes port
+      if (host === "localhost" || host === "127.0.0.1") return "http://localhost:5055";
+      if (host.startsWith("dev.") || host.includes("dev-")) return "https://dev-api.lunchbowl.co.in";
+    }
+    return "https://api.lunchbowl.co.in";
+  };
 
   const simulatePaymentSuccess = async ({ userId, orderId, transactionId }) => {
     try {
-      const response = await axios.post("http://localhost:5055/api/ccavenue/local-success", {
+      const baseUrl = getPaymentBaseUrl();
+      const response = await axios.post(`${baseUrl}/api/ccavenue/local-success`, {
         userId,
         orderId,
         transactionId,
@@ -41,7 +50,7 @@ const PaymentStep = ({ prevStep, _id }) => {
         error: error,
       };
     }
-  }
+  };
 
   const ccavenueConfig = {
     merchant_id: "4381442",
@@ -108,9 +117,7 @@ const PaymentStep = ({ prevStep, _id }) => {
       if (!subscriptionPlan || !user) {
         throw new Error("Required data missing in response");
       }
-      console.log("====================================");
-      console.log("Subscription Plan:", response);
-      console.log("====================================");
+
       // Prepare payment data
       const orderId = generateOrderId();
       const paymentData = {
@@ -124,10 +131,7 @@ const PaymentStep = ({ prevStep, _id }) => {
         billing_name: (user?.name || "Customer").substring(0, 50),
         billing_email: (user?.email || "no-email@example.com").substring(0, 50),
         billing_tel: (user?.phone || "0000000000").substring(0, 20),
-        billing_address: (parentDetails?.address || "Not Provided").substring(
-          0,
-          100
-        ),
+        billing_address: (parentDetails?.address || "Not Provided").substring(0, 100),
         billing_city: (parentDetails?.city || "Chennai").substring(0, 50),
         billing_state: (parentDetails?.state || "Tamil Nadu").substring(0, 50),
         billing_zip: (parentDetails?.pincode || "600001").substring(0, 10),
@@ -136,9 +140,7 @@ const PaymentStep = ({ prevStep, _id }) => {
         merchant_param2: subscriptionPlan.planId,
         merchant_param3: orderId,
       };
-      console.log("====================================");
-      console.log("Payment Data:", paymentData);
-      console.log("====================================");
+
       // Create request string
       const plainText = Object.entries(paymentData)
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
@@ -175,14 +177,18 @@ const PaymentStep = ({ prevStep, _id }) => {
   };
 
   return (
-    <Box className="subplnBoxss" sx={{
-      display: "flex", alignItems: "center",
-      flexDirection: { xs: "column", md: "row" },
-      gap: 2,
-    }}>
-
+    <Box
+      className="subplnBoxss"
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        flexDirection: { xs: "column", md: "row" },
+        gap: 2,
+      }}
+    >
       {/* Image Side */}
-      <Box className="spboximg"
+      <Box
+        className="spboximg"
         sx={{
           width: { xs: "100%", md: "45%" },
           backgroundImage: `url(${stepFour.src})`,
@@ -193,16 +199,18 @@ const PaymentStep = ({ prevStep, _id }) => {
         }}
       />
       <Box className="spboxCont" sx={{ width: { xs: "100%", md: "55%" } }}>
-      {loading && <LinearProgress sx={{ mb: 3 }} />}
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-      )}
+        {loading && <LinearProgress sx={{ mb: 3 }} />}
+        {error && (
+          <Typography color="error" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+        )}
         <div className="steptitles">
           <h3>Complete Payment</h3>
           <h6>Secure payment via CCAvenue</h6>
-          <p>We have curated our payment system with the finest level of security ensuring a smooth and dependable experience.</p>
+          <p>
+            We have curated our payment system with the finest level of security ensuring a smooth and dependable experience.
+          </p>
         </div>
         <Box className="subbtnrow" sx={{ display: "flex", gap: 3 }}>
           <Button className="backbtn" variant="outlined" onClick={prevStep}>
@@ -221,7 +229,6 @@ const PaymentStep = ({ prevStep, _id }) => {
           {isLocalhost && (
             <Button
               className="nextbtn Proceedbtn widthautobtn"
-
               variant="contained"
               color="secondary"
               disabled={loading}
@@ -245,7 +252,7 @@ const PaymentStep = ({ prevStep, _id }) => {
             >
               Simulate Payment Success (Local)
             </Button>
-          )} 
+          )}
         </Box>
       </Box>
     </Box>
