@@ -458,7 +458,7 @@ const SubscriptionPlanStep = ({
               ))}
               {childError && (
                 <FormHelperText error>
-                  Please select at least one child.
+                  Please choose the children.
                 </FormHelperText>
               )}
             </Box>
