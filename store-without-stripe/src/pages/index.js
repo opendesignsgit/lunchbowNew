@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import Head from "next/head";
-import { Helmet } from "react-helmet";
+// import { Helmet } from "react-helmet";
 import Mainheader from '@layout/header/Mainheader';
 import Mainfooter from '@layout/footer/Mainfooter';
 import HomeProductCard from '@components/product/HomeProductCard';
