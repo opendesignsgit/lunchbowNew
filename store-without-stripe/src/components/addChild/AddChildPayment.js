@@ -6,7 +6,7 @@ import { Button } from "@mui/material";
 const AddChildPayment = ({ _id, formData, subscriptionPlan, onError, onSuccess }) => {
   const [loading, setLoading] = useState(false);
 
-  // CCAvenue payment config (replace with your real config)
+  // CCAvenue payment config (existing)
   const ccavenueConfig = {
     merchant_id: "4381442",
     access_code: "AVRM80MF59BY86MRYB",
@@ -22,7 +22,6 @@ const AddChildPayment = ({ _id, formData, subscriptionPlan, onError, onSuccess }
     const md5Hash = CryptoJS.MD5(CryptoJS.enc.Utf8.parse(workingKey));
     const key = CryptoJS.enc.Hex.parse(md5Hash.toString(CryptoJS.enc.Hex));
     const iv = CryptoJS.enc.Hex.parse("000102030405060708090a0b0c0d0e0f");
-
     const encrypted = CryptoJS.AES.encrypt(
       CryptoJS.enc.Utf8.parse(plainText),
       key,
@@ -33,10 +32,21 @@ const AddChildPayment = ({ _id, formData, subscriptionPlan, onError, onSuccess }
 
   const generateOrderId = () => `LB${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-  const isLocalhost = () => {
+  // Treat localhost and dev domains as "dev-like" for simulation
+  const isDevLikeHost = () => {
     if (typeof window === "undefined") return false;
-    const hostname = window.location.hostname;
-    return hostname === "localhost" || hostname === "127.0.0.1";
+    const host = window.location.hostname;
+    return host === "localhost" || host === "127.0.0.1" || host.startsWith("dev.") || host.includes("dev-"); // dev.* or dev- subdomains
+  };
+
+  // Base URL selection for simulation/local-success
+  const getPaymentBaseUrl = () => {
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname; // domain or IP, no port [MDN]
+      if (host === "localhost" || host === "127.0.0.1") return "http://localhost:5055";
+      if (host.startsWith("dev.") || host.includes("dev-")) return "https://dev-api.lunchbowl.co.in";
+    }
+    return "https://api.lunchbowl.co.in";
   };
 
   const initiatePayment = async () => {
@@ -44,15 +54,15 @@ const AddChildPayment = ({ _id, formData, subscriptionPlan, onError, onSuccess }
     try {
       const orderId = generateOrderId();
 
-      if (isLocalhost()) {
-        // Local environment: call local API directly with children data and planId
-        const localApiUrl = "http://localhost:5055/api/ccavenue/local-success/local-add-childPayment";
-        const response = await axios.post(localApiUrl, {
+      if (isDevLikeHost()) {
+        // Dev-like env: hit appropriate API to simulate success with child data
+        const baseUrl = getPaymentBaseUrl();
+        const response = await axios.post(`${baseUrl}/api/ccavenue/local-success/local-add-childPayment`, {
           userId: _id,
           orderId,
-          transactionId: `TXN${Date.now()}`, // dummy transactionId for local
-          formData,                         // pass children details here
-          planId: subscriptionPlan?._id, // pass subscription plan ID
+          transactionId: `TXN${Date.now()}`,
+          formData,                      // children details
+          planId: subscriptionPlan?._id, // subscription plan ID
         });
 
         if (response.data.success) {
@@ -61,7 +71,7 @@ const AddChildPayment = ({ _id, formData, subscriptionPlan, onError, onSuccess }
           onError(response.data.message || "Local payment simulation failed");
         }
       } else {
-        // Live environment: open CCAvenue payment gateway with updated URLs and encrypted data
+        // Live env: open CCAvenue gateway
         if (!subscriptionPlan || !subscriptionPlan.price || !subscriptionPlan.planId) {
           throw new Error("Invalid subscription plan data");
         }
@@ -77,7 +87,6 @@ const AddChildPayment = ({ _id, formData, subscriptionPlan, onError, onSuccess }
           merchant_param1: _id,
           merchant_param2: subscriptionPlan.planId,
           merchant_param3: orderId,
-          // Add more fields as needed (billing info, etc.)
         };
 
         const plainText = Object.entries(paymentData)
@@ -104,8 +113,6 @@ const AddChildPayment = ({ _id, formData, subscriptionPlan, onError, onSuccess }
 
         document.body.appendChild(form);
         form.submit();
-
-        // onSuccess will be called after payment response handled by your backend asynchronously
       }
     } catch (e) {
       onError(e.message || "Payment initiation failed");
