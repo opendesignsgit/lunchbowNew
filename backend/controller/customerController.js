@@ -1392,10 +1392,12 @@ const activateNextSubscriptionPlans = async () => {
 const isValidObjectIdStrict = (v) =>
   ObjectId.isValid(v) && new ObjectId(v).toString() === String(v);
 
+// inside your handler:
 const getAllChildrenForUser = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { userId, path } = req.body; // <-- read optional flag
 
+    console.log("getAllChildrenForUser called with path:", path);
     if (!userId) {
       return res.status(400).json({ message: "Missing userId in request body" });
     }
@@ -1413,8 +1415,30 @@ const getAllChildrenForUser = async (req, res) => {
 
     let activeSubscription = null;
 
-    if (form && Array.isArray(form.subscriptions) && form.subscriptions.length > 0) {
-      // Walk from the end to get the last strictly valid ObjectId
+    // New branch: when flag is present, choose the actually "active" plan
+    if (path === "Add-Child" && form && Array.isArray(form.subscriptions) && form.subscriptions.length > 0) {
+      console.log("Looking for truly active subscription for Add_Child path");
+
+      const validIds = form.subscriptions.filter(isValidObjectIdStrict);
+      if (validIds.length > 0) {
+        const now = new Date();
+        activeSubscription = await Subscription.findOne({
+          _id: { $in: validIds },
+          $or: [
+            { status: "active" },                         // status-based active
+            { startDate: { $lte: now }, endDate: { $gte: now } } // date-window active
+          ]
+        })
+          .sort({ startDate: -1, createdAt: -1 }) // prefer the most recent active
+          .populate({ path: "children" })
+          .lean();
+      }
+    }
+
+    // Existing fallback (unchanged): use the last valid id in the array
+    if (!activeSubscription && form && Array.isArray(form.subscriptions) && form.subscriptions.length > 0) {
+      console.log("Falling back to last valid subscription ID");
+
       let lastValidId = null;
       for (let i = form.subscriptions.length - 1; i >= 0; i--) {
         const candidate = form.subscriptions[i];
@@ -1423,11 +1447,9 @@ const getAllChildrenForUser = async (req, res) => {
           break;
         }
       }
-
       if (lastValidId) {
-        // Load the subscription; planId is a String in your schema, so don't populate it
         activeSubscription = await Subscription.findById(lastValidId)
-          .populate({ path: "children" }) // valid because children is ObjectId[]
+          .populate({ path: "children" })
           .lean();
       } else {
         activeSubscription = null;
@@ -1437,7 +1459,7 @@ const getAllChildrenForUser = async (req, res) => {
     return res.json({
       success: true,
       children,
-      activeSubscription // null when no valid subscription id at the end
+      activeSubscription
     });
   } catch (error) {
     return res.status(500).json({
@@ -1446,6 +1468,7 @@ const getAllChildrenForUser = async (req, res) => {
     });
   }
 };
+
 
 
 const getPaymentsForUser = async (req, res) => {

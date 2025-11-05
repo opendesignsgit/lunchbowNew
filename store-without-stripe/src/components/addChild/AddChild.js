@@ -88,7 +88,7 @@ const getEarliestValidStartDate = (holidays) => {
 
 const AddChild = ({ _id, onComplete }) => {
   const { data: fetchedChildren = {}, loading: childrenLoading } = useAsync(() =>
-    CategoryServices.getChildren(_id)
+    CategoryServices.getChildren(_id, "Add-Child")
   );
 
   const { data: schools = [], loading: schoolsLoading } = useAsync(
@@ -108,10 +108,15 @@ const AddChild = ({ _id, onComplete }) => {
     [fetchedChildren]
   );
 
-  const activeSubscriptionChildIds = useMemo(
-    () => (activeSubscription?.children ? activeSubscription.children : []),
-    [activeSubscription]
-  );
+  // Build a Set of child ids (as strings) from the current plan (supports populated docs or plain ids)
+  const activeSubscriptionChildIdSet = useMemo(() => {
+    const list = activeSubscription?.children ?? [];
+    const ids = list
+      .map((c) => (typeof c === "string" || typeof c === "number" ? c : c?._id))
+      .filter(Boolean)
+      .map(String);
+    return new Set(ids);
+  }, [activeSubscription]);
 
   const [activeTab, setActiveTab] = useState(0);
 
@@ -148,11 +153,12 @@ const AddChild = ({ _id, onComplete }) => {
       }));
       setChildren(existingChildren);
 
-      // Initialize selection for children
+      // Initialize selection for children; ensure children already in plan are NOT marked selected
       const selection = {};
       existingChildren.forEach((child) => {
-        // For children in active subscription, mark selected true
-        selection[child._id] = activeSubscriptionChildIds.includes(child._id);
+        const idStr = child._id ? String(child._id) : null;
+        selection[child._id] = idStr ? activeSubscriptionChildIdSet.has(idStr) : false;
+        if (selection[child._id]) selection[child._id] = false; // force not selected if already in plan
       });
       setSelectedChildren(selection);
     } else {
@@ -173,7 +179,7 @@ const AddChild = ({ _id, onComplete }) => {
       ]);
       setSelectedChildren({});
     }
-  }, [fetchedChildren, activeSubscriptionChildIds]);
+  }, [fetchedChildren, activeSubscriptionChildIdSet]);
 
   const {
     register,
@@ -272,28 +278,52 @@ const AddChild = ({ _id, onComplete }) => {
   const removeChild = (index) => {
     if (children[index]?.isExisting) return;
     if (children.length === 1) return;
+
     const updated = children.filter((_, i) => i !== index);
     setChildren(updated);
 
-    // Also remove selection for this child
+    // Remove selection for this child
     setSelectedChildren((prev) => {
       const newSelection = { ...prev };
       const childToRemove = children[index];
       if (childToRemove._id) {
         delete newSelection[childToRemove._id];
-      } else {
-        // For new children without _id, they don't have selections
-      }
-      return newSelection;
-    });
+    }
+    return newSelection;
+  });
 
-    if (index === activeTab && activeTab > 0) setActiveTab(activeTab - 1);
-    else if (index < activeTab) setActiveTab(activeTab - 1);
+    // Calculate new active tab index
+    let newActiveTab = activeTab;
+    if (index === activeTab && activeTab > 0) {
+      newActiveTab = activeTab - 1;
+    } else if (index < activeTab) {
+      newActiveTab = activeTab - 1;
+    }
+
+    setActiveTab(newActiveTab);
+
+    // Important: Reset form with the new active tab's data
+    setTimeout(() => {
+      const targetChild = updated[newActiveTab];
+      if (targetChild) {
+        reset({
+          ...targetChild,
+          dob: targetChild.dob && typeof targetChild.dob === "string"
+            ? targetChild.dob.slice(0, 10)
+            : "",
+        }, { keepErrors: false, keepDirty: false, keepTouched: false });
+      }
+    }, 0);
   };
+
 
   const toggleChildSelection = (index) => {
     const child = children[index];
     if (!child) return;
+
+    // Prevent selection for children already in the plan
+    const idStr = child._id ? String(child._id) : null;
+    if (idStr && activeSubscriptionChildIdSet.has(idStr)) return;
 
     const key = child._id || `new-${index}`;
     setSelectedChildren((prev) => {
@@ -399,7 +429,9 @@ const AddChild = ({ _id, onComplete }) => {
   // Count only newly added selected children (not active subscription children) for amount calculation
   const newSelectedChildrenCount = children.reduce((count, child, idx) => {
     const key = child._id || `new-${idx}`;
-    if (selectedChildren[key] && !activeSubscriptionChildIds.includes(child._id)) {
+    const idStr = child._id ? String(child._id) : null;
+    const alreadyInPlan = idStr ? activeSubscriptionChildIdSet.has(idStr) : false;
+    if (selectedChildren[key] && !alreadyInPlan) {
       return count + 1;
     }
     return count;
@@ -496,7 +528,6 @@ const AddChild = ({ _id, onComplete }) => {
           gap: 2,
         }}>
 
-
         {/* Image Side */}
         <Box
           className="spboximg"
@@ -518,7 +549,8 @@ const AddChild = ({ _id, onComplete }) => {
           <Box sx={{ display: "flex", alignItems: "center", mb: 2 }} className="childtabox">
             <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto" className="childtabs">
               {children.map((child, index) => {
-                const isInActiveSubscription = activeSubscriptionChildIds.includes(child._id);
+                const childIdStr = child._id ? String(child._id) : null;
+                const isInActiveSubscription = childIdStr ? activeSubscriptionChildIdSet.has(childIdStr) : false;
                 const key = child._id || `new-${index}`;
                 return (
                   <Tab
@@ -534,7 +566,7 @@ const AddChild = ({ _id, onComplete }) => {
                               onChange={() => toggleChildSelection(index)}
                               size="small"
                               sx={{ ml: 1 }}
-                              onClick={(e) => e.stopPropagation()} 
+                              onClick={(e) => e.stopPropagation()}
                               className="checkbtn"
                             />
                             {!child.isExisting && (
