@@ -147,10 +147,23 @@ const RenewChildDetailsStep = ({
             : ""
           : "",
       };
-      // Preserve error/touched/dirty state so UI errors don't disappear
-      reset(child, { keepErrors: true, keepDirty: true, keepTouched: true }); // <-- fix
+
+    // Set filtered locations BEFORE resetting the form
+    if (child.school && schools && schools.length > 0) {
+      const schoolLocations = schools
+        .filter((s) => s.name === child.school)
+        .map((s) => s.location);
+      const uniqueLocations = [...new Set(schoolLocations)];
+      setFilteredLocations(uniqueLocations);
+    } else {
+      setFilteredLocations([]);
     }
-  }, [children, activeTab, reset]);
+
+      // Then reset the form with preserved state
+      reset(child, { keepErrors: true, keepDirty: true, keepTouched: true });
+    }
+  }, [children, activeTab, reset, schools]);
+
 
   useEffect(() => {
     if (formData.children && formData.children.length > 0) {
