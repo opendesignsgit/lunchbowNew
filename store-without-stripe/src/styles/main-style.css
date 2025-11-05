@@ -1084,12 +1084,44 @@ html body .MuiPopover-root{z-index: 99999;}
 .navbtnbox button::before {content: '';position: absolute;width: 80%;height: 100%;right: -6px;bottom: -6px;border: 2px solid #777778;border-width: 0 1px 1px 0;pointer-events: none;transition: all 0.5s ease-in-out;}
 .navbtnbox button span{line-height: 50px;padding-inline: 30px;background: #FF6514;color: #ffffff;font-family: 'Baloo';font-size: 16px;font-weight: 400;letter-spacing: 0.5px;display: flex;border: 1px solid #333333;}
 .navbtnbox button span:nth-child(2){display: none;}
-.navbtnbox button span::after {content: '';position: relative;display: block;width: 14px;aspect-ratio: 1;background: url(/logtrial-icon.svg) no-repeat center center;background-size: 100%;margin-left: 15px;transition: all 0.5s ease-in-out;top: 0;right: 0;}
-.navbtnbox button:hover span::after {filter: invert(1);}
+.navbtnbox button span::after {content: '';position: relative;display: block;width: 14px;aspect-ratio: 1;background: url(/logtrial-icon.svg) no-repeat center center;background-size: 100%;margin-left: 15px;transition: all 0.5s ease-in-out;top: 0;right: 0;}       
+.navbtnbox button.proceedbtn span::after {background: url(/logtrial-orange-icon.svg) no-repeat center center;background-size: 100%;}       
+.navbtnbox button:hover span::after {filter: brightness(0) invert(1);}
 .navbtnbox button.backbtn span{background: #ffffff;color: #333333;}
 .navbtnbox button.backbtn:hover span{background: #333333;color: #ffffff;}
 .navbtnbox button.proceedbtn span{background: #ffffff;color: #FF6514;border-color: #FF6514;}
+.navbtnbox button.proceedbtn:hover span{background: #FF6514;color: #ffffff;}
 .navbtnbox button.proceedbtn::before{border-color: #FF6514;}
+.navbtnbox button.proceedbtn[disabled]{opacity: 0.4;}
+
+.overenewSec .SetpTabNav {}
+.overenewSec .SetpTabNav>.MuiBox-root{margin: 0;margin-top: -2px;}
+.overenewSec .SetpTabNav .SetpTabul {}
+.overenewSec .SetpTabNav .SetpTabul>div{padding: 0px;border-radius: 0;width: 33.333%;}
+.overenewSec .SetpTabNav .SetpTabul>div>p{line-height: 40px;padding-inline: 20px;font-weight: 600;}
+
+.renewchildboxs{}
+.renewchildboxs h5.renewchildtitle{font-family: 'Baloo';color: #4ab138;font-size: 1.3vw;font-weight: 500;}
+
+.subplnBoxssrenew h5.renewplantitle{font-family: 'Baloo';color: #4ab138;font-size: 1.3vw;font-weight: 500;line-height: 1;}
+.childlistboxs{}
+.childlistboxs .childlistfbox{padding: 5px 10px;background: #fd6900;color: #fff;border-radius: 3px;margin-left: 0;}
+.childlistboxs .childlistfbox span.MuiCheckbox-root{padding: 0;color: #ffffff;margin-right: 5px;}
+.childlistboxs .childlistfbox span.MuiFormControlLabel-label{}
+
+.eachplansradiosBoxs{}
+.eachplansradiosBoxs label{margin-left: 0;}
+.eachplansradiosBoxs label span.MuiRadio-root{padding: 0;margin-right: 15px;}
+.eachplansradiosBoxs label .datepicOthers{}
+.eachplansradiosBoxs label .datepicOthers .MuiBox-root{}
+.eachplansradiosBoxs label .datepicOthers .MuiBox-root p{margin: 0;}
+.overenewSec .eachplansOthbox {margin-top: 10px;}
+.overenewSec .eachplansOthbox p{margin: 0;}
+
+.subplnBoxss .compaySec h4{font-family: 'Baloo';color: #4ab138;font-size: 1.3vw;font-weight: 500;line-height: 1;margin-bottom: 10px;}
+.subplnBoxss .compaySec h6{font-family: 'Baloo';line-height: 1;margin-bottom: 10px;}
+.subplnBoxss .compaySec h6 strong{font-weight: 500;}
+
 
 @media (min-width: 1100px) {
   html body .container {max-width: 980px;  }
@@ -1197,6 +1229,11 @@ html body .MuiPopover-root{z-index: 99999;}
   .steptitles h5{font-size: 20px;}
   .DetlsSepBox h6 {font-size: 13px;}
   .hbanRight .videoscreenbox{height: 550px;}
+  .curplanGrid .curplanItem{width: 25%;}
+  .curplanBox h4{font-size: 18px;    letter-spacing: 0;}
+  .navbtnbox button span {line-height: 42px;padding-inline: 25px;font-size: 15px;}
+  .subplnBoxss .compaySec h4{font-size: 22px;}
+  .subplnBoxss .compaySec h6{font-size: 18px;}
 }
 
 @media screen and (min-width:1100px)  and (max-width:1200px) {
@@ -1277,6 +1314,20 @@ html body .MuiPopover-root{z-index: 99999;}
   .HintroSec  .comtilte p br {display: none;}
   .hbanRight .videoscreenbox {height: 495px;}
   .transactionTableSec table th{white-space: nowrap;}
+  .overenewSec .renewchildboxs {flex-direction: column-reverse;}
+  .overenewSec .renewchildboxs .renewchildLcol {width: 50%;margin-inline: auto;}
+  .overenewSec .renewchildboxs .renewchildRcol {width: 100%;}
+  .transactionTableSec table th{white-space: nowrap;}
+  .overenewSec .subplnBoxssrenew {flex-direction: column-reverse;}
+  .overenewSec .subplnBoxssrenew .spboximg {width: 50%;margin-inline: auto;}
+  .overenewSec .subplnBoxssrenew .spboxCont {width: 100%;}
+  .transactionTableSec table th{white-space: nowrap;}
+  .overenewSec .renewcompaySec {flex-direction: column-reverse;}
+  .overenewSec .renewcompaySec .spboximg {width: 50%;margin-inline: auto;}
+  .overenewSec .renewcompaySec .spboxCont {width: 100%;}
+  .subplnBoxssrenew h5.renewplantitle{    font-size: 18px;}
+  .renewchildboxs h5.renewchildtitle{font-size: 18px;}
+
 }
 
 @media screen and (max-width:1023px){
@@ -1358,6 +1409,7 @@ html body .MuiPopover-root{z-index: 99999;}
   .Prodeilsliders  .teamboximg {padding-inline: 20px;}
   .menucalnmaintab .MuiTabs-list button{font-size: 13px;line-height: 35px;}
   .MCcalendy{border-radius: 0;}
+  .navbtnbox button span {line-height: 42px;padding-inline: 16px;font-size: 14px;}
   
 }
 @media screen and (max-width:820px){
@@ -1458,6 +1510,17 @@ html body .MuiPopover-root{z-index: 99999;}
   .DetlsSepBox .eachplansradiosBoxs label{width: 100%;flex: 1 0 100%;}
   .DetlsSepBox .eachplansradiosBoxs .datepicints{    margin: 10px 0 0;}
   .DetlsSepBox .eachplansradiosBoxs .planclendicons {    background: #ebdfd1;    margin-left: auto;    margin-top: 10px;}
+  
+  .curplanGrid .curplanItem{width: 50%;}
+  .addchildsec .addchildformbox {flex-direction: column-reverse;}
+  .overenewSec {padding-inline: 20px;}
+  .renewcompaySec .navbtnbox{flex-direction: column;align-items: flex-start;}
+  .overenewSec .SetpTabNav .SetpTabul{counter-reset: step;}
+  .overenewSec .SetpTabNav .SetpTabul>div{position: relative;counter-increment: step;}
+  .overenewSec .SetpTabNav .SetpTabul>div:before{content: counter(step);position: relative;color: #333333;line-height: 30px;font-weight: 700;font-size: 20px;}
+  .overenewSec .SetpTabNav .SetpTabul>div.css-xiyi76:before{color: #ffffff;}
+  .overenewSec .SetpTabNav .SetpTabul>div p{font-size: 0;display: none;}
+
 }
 
 @media screen and (min-width:651px){
@@ -1475,6 +1538,8 @@ html body .MuiPopover-root{z-index: 99999;}
   .banimgss img {height: 400px;}
   .HbanSec .hbanLeft {padding-top: 3rem;}
   .hbanCont h1 {font-size: 26px;}
+  .addchildsec {padding-inline: 20px;}
+  .addchildformbox .childformgrid .MuiGrid-root {width: calc(100% - 0px);}
 }
 
 @media screen and (max-width:650px){
@@ -1758,6 +1823,11 @@ html body .MuiPopover-root{z-index: 99999;}
   .mainwhatsapbox {width: 40px;bottom: 30px;right: 20px;z-index: 9999;}
   .mainwhatsapbox a.webwhatsapplink {display: none;}
   .mainwhatsapbox a.mobwhatsapplink {display: block;}
+  .overenewSec .renewchildboxs .renewchildLcol {width: 100%;}
+  .overenewSec .subplnBoxssrenew .spboximg {width: 100%;}
+  .overenewSec .renewcompaySec .spboximg {width: 100%;}
+  .subplnBoxssrenew .navbtnbox{flex-direction: column;align-items: flex-start;}
+  .addchildformbox .navbtnbox{flex-direction: column;align-items: flex-start;}
 }
 @media screen and (min-width:501px) and (max-width:650px){ 
    .produtMobView {width: 80%;margin-inline: auto;}
@@ -1768,12 +1838,20 @@ html body .MuiPopover-root{z-index: 99999;}
   .pagebansec{height: 580px;}
   .MuiPopover-root ul[aria-labelledby="school-select-label"]{}
   .MuiPopover-root ul[aria-labelledby="school-select-label"] li{white-space: break-spaces;}
+  .curplanGrid .curplanItem {width: 100%;padding: 5px 10px;}
+  .addchildformbox  .childtabox{flex-direction: column;align-items: flex-start;gap: 10px;}
+  .childtabox>button{margin-left: 0;}
+  .childtabox .childtabs .childtablabel p {font-size: 14px;}
 }
 
 @media screen and (max-width:500px){
   .mteambox{width:100%;margin-block: 5px;}
   .HmteamSec {padding-inline: 30px;}
   .menulistpage .produtDeskView{display: block;width: 100%;margin-inline: auto;}
+  .navbtnbox{flex-direction: column-reverse;align-items: flex-start;}
+  .childtabox .childtabs .MuiTabs-list[role="tablist"] {flex-wrap: wrap;gap: 8px;}
+  .childtabox .childtabs .MuiTabs-list>button{margin-right: 0;}
+
 }
 @media screen and (max-width:420px){
   body {font-size: 14px;letter-spacing: 0;}
