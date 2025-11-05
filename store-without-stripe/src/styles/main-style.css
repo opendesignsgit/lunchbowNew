@@ -1122,6 +1122,7 @@ html body .MuiPopover-root{z-index: 99999;}
 .subplnBoxss .compaySec h6{font-family: 'Baloo';line-height: 1;margin-bottom: 10px;}
 .subplnBoxss .compaySec h6 strong{font-weight: 500;}
 
+.MCRightPanel .saveworkmenu {left: 50%;transform: translate(-50% , 50%);bottom: 0%;position: absolute;}
 
 @media (min-width: 1100px) {
   html body .container {max-width: 980px;  }

@@ -573,7 +573,7 @@ const RightPanel = ({
         childrenData={holidayPaymentData}
       />
 
-      <Snackbar open={showSaveWarning} autoHideDuration={4000} onClose={() => setShowSaveWarning(false)}>
+      <Snackbar open={showSaveWarning} autoHideDuration={4000} onClose={() => setShowSaveWarning(false)} className="saveworkmenu">
         <Alert severity="warning" sx={{ width: '100%' }}>
           Please save working days menu before paying holidays.
         </Alert>
