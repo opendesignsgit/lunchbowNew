@@ -12,7 +12,7 @@ const Menulist = () => {
   return (
     <>
         <div className="menulistpage">    
-            <Mainheader  title="Menu List" description="Menu List"/>
+            <Mainheader  title="Nutritious Food Subscription for School Kids | Lunchbowl" description="Choose nutritious, healthy, and tasty meals for your kid from Lunchbowl’s food subscription menu. Fresh, balanced lunch options delivered daily to school."/>
             <div className='pagebody'>
               <section className="pagebansec MenusLbanersec relative">
                 <div className='container mx-auto relative h-full' >

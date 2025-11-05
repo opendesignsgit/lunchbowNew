@@ -147,7 +147,7 @@ const ContactUs = () => {
 
   return (
     <div className="contuspage">
-      <Mainheader title="Home" description="This is Home page" />
+      <Mainheader title="Lunch Subscription Service for School Kids in Chennai" description="Get fresh, vegetarian lunch box delivery for school kids in Chennai from Lunchbowl, nutritionist-approved, tasty food delivered to school. Contact us today!" />
       <div className="pagebody">
         <section className="pagebansec contusbanersec relative">
           <div className="container mx-auto relative h-full">
