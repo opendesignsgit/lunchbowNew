@@ -113,7 +113,7 @@ const HolidayPayment = ({
 
         merchant_param1: _id, // userId
         merchant_param2: selectedDate, // meal date
-        merchant_param3: JSON.stringify(childrenDataWithPlan), // ✅ now includes planId
+        merchant_param3: btoa(JSON.stringify(childrenData)), // ✅ now includes planId
         merchant_param4: "HOLIDAY_PAYMENT",
       };
 
