@@ -4,16 +4,15 @@ import CryptoJS from "crypto-js";
 import { Button } from "@mui/material";
 
 const AddChildPayment = ({
-  _id,
+  _id, // ✅ This is userId
   formData,
-  subscriptionPlan,
+  subscriptionPlan, // ✅ This contains activeSubscription
   totalAmount,
   onError,
   onSuccess,
 }) => {
   const [loading, setLoading] = useState(false);
 
-  // --- CCAvenue Payment Config ---
   const ccavenueConfig = {
     merchant_id: "4381442",
     access_code: "AVRM80MF59BY86MRYB",
@@ -28,7 +27,6 @@ const AddChildPayment = ({
       "https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction",
   };
 
-  // --- Helpers ---
   const encrypt = (plainText, workingKey) => {
     const md5Hash = CryptoJS.MD5(CryptoJS.enc.Utf8.parse(workingKey));
     const key = CryptoJS.enc.Hex.parse(md5Hash.toString(CryptoJS.enc.Hex));
@@ -41,60 +39,50 @@ const AddChildPayment = ({
     return encrypted.ciphertext.toString();
   };
 
-  const generateOrderId = () =>
-    `LB${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const generateOrderId = () => `LB${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
   const isDevLikeHost = () => {
     if (typeof window === "undefined") return false;
     const host = window.location.hostname;
-    return (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host.startsWith("dev.") ||
-      host.includes("dev-")
-    );
+    return host === "localhost" || host === "127.0.0.1" || host.startsWith("dev.") || host.includes("dev-");
   };
 
   const getPaymentBaseUrl = () => {
     if (typeof window !== "undefined") {
       const host = window.location.hostname;
-      if (host === "localhost" || host === "127.0.0.1")
-        return "http://localhost:5055";
-      if (host.startsWith("dev.") || host.includes("dev-"))
-        return "https://dev-api.lunchbowl.co.in";
+      if (host === "localhost" || host === "127.0.0.1") return "http://localhost:5055";
+      if (host.startsWith("dev.") || host.includes("dev-")) return "https://dev-api.lunchbowl.co.in";
     }
     return "https://api.lunchbowl.co.in";
   };
 
-  // --- Main Payment Function ---
   const initiatePayment = async () => {
     setLoading(true);
     try {
       const orderId = generateOrderId();
 
-      // ✅ Extract the correct Customer userId from the subscription
-      const userId = subscriptionPlan?.user?._id;
-      if (!userId) throw new Error("Customer ID not found in subscription plan");
+      const userId = _id; // ✅ Use the prop directly (customer ID)
+      const subscriptionId = subscriptionPlan?._id; // ✅ Use current active subscription ID
 
-      // ✅ Build paymentInfo object (matches backend structure)
+      if (!userId) throw new Error("User ID not provided");
+      if (!subscriptionId) throw new Error("Subscription ID not found");
+
+      // ✅ Build paymentInfo object
       const paymentInfo = {
         orderId,
         transactionId: `TXN${Date.now()}`,
-        planId: subscriptionPlan?._id,
+        subscriptionId, // ✅ pass subscription ID
         paymentAmount: totalAmount,
       };
 
       if (isDevLikeHost()) {
         // --- Local / Dev Simulation ---
         const baseUrl = getPaymentBaseUrl();
-        const response = await axios.post(
-          `${baseUrl}/api/ccavenue/local-success/local-add-childPayment`,
-          {
-            userId,
-            childrenData: formData, // ✅ renamed to match backend
-            paymentInfo,
-          }
-        );
+        const response = await axios.post(`${baseUrl}/api/ccavenue/local-success/local-add-childPayment`, {
+          userId,
+          childrenData: formData,
+          paymentInfo,
+        });
 
         if (response.data.success) {
           onSuccess();
@@ -103,39 +91,28 @@ const AddChildPayment = ({
         }
       } else {
         // --- Live Payment Flow ---
-        if (!subscriptionPlan || !subscriptionPlan.price || !subscriptionPlan.planId) {
-          throw new Error("Invalid subscription plan data");
-        }
-
-        // ✅ Prepare full paymentData with billing details
-        const { parentDetails, user } = subscriptionPlan || {};
+        const { parentDetails } = subscriptionPlan || {};
 
         const paymentData = {
           merchant_id: ccavenueConfig.merchant_id,
           order_id: orderId,
-          amount: totalAmount?.toFixed(2) || "1.00", // fallback ₹1 for testing
+          amount: totalAmount?.toFixed(2) || "1.00",
           currency: ccavenueConfig.currency,
           redirect_url: ccavenueConfig.redirect_url_live,
           cancel_url: ccavenueConfig.cancel_url_live,
           language: ccavenueConfig.language,
 
-          // Billing Info (safe fallbacks)
-          billing_name: `${parentDetails?.fatherFirstName || "Customer"} ${parentDetails?.fatherLastName || ""
-            }`.trim(),
-          billing_email:
-            parentDetails?.email?.substring(0, 50) || "no-email@example.com",
-          billing_tel:
-            parentDetails?.mobile?.substring(0, 20) || "0000000000",
-          billing_address:
-            parentDetails?.address?.substring(0, 100) || "Not Provided",
+          billing_name: `${parentDetails?.fatherFirstName || "Customer"} ${parentDetails?.fatherLastName || ""}`.trim(),
+          billing_email: parentDetails?.email || "no-email@example.com",
+          billing_tel: parentDetails?.mobile || "0000000000",
+          billing_address: parentDetails?.address || "Not Provided",
           billing_city: parentDetails?.city || "Chennai",
           billing_state: parentDetails?.state || "Tamil Nadu",
           billing_zip: parentDetails?.pincode || "600001",
           billing_country: parentDetails?.country || "India",
 
-          // Merchant params for backend reference
-          merchant_param1: userId, // ✅ Correct userId
-          merchant_param2: subscriptionPlan.planId,
+          merchant_param1: userId,
+          merchant_param2: subscriptionId, // ✅ Send subscription ID instead of planId
           merchant_param3: orderId,
         };
 
@@ -145,7 +122,6 @@ const AddChildPayment = ({
 
         const encryptedData = encrypt(plainText, ccavenueConfig.working_key);
 
-        // Create a hidden form and submit to CCAvenue
         const form = document.createElement("form");
         form.method = "POST";
         form.action = ccavenueConfig.endpoint;
@@ -172,7 +148,6 @@ const AddChildPayment = ({
     }
   };
 
-  // --- UI ---
   return (
     <Button
       variant="contained"

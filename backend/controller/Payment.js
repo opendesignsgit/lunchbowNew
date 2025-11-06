@@ -470,12 +470,11 @@ exports.getHolidayPaymentsByDate = async (req, res) => {
 };
 
 exports.addChildPaymentController = async (req, res) => {
-  let savedChildrenIds = []; // Track newly created children for rollback
+  let savedChildrenIds = [];
 
   try {
     const { userId, childrenData, paymentInfo } = req.body;
 
-    // 🔹 Validate input
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       throw new Error("Invalid userId");
     }
@@ -484,7 +483,6 @@ exports.addChildPaymentController = async (req, res) => {
       throw new Error("Children data is required and should be an array");
     }
 
-    // 🔹 Process and validate payment
     const paymentResponseSummary = await processPaymentResponse(
       paymentInfo,
       "subscription",
@@ -495,27 +493,22 @@ exports.addChildPaymentController = async (req, res) => {
       throw new Error("Payment processing failed");
     }
 
-    // 🔹 Save or update children sequentially
+    // 🔹 Save or update children
     for (const child of childrenData) {
       child.user = userId;
-
       let savedChild;
 
       if (child._id && mongoose.Types.ObjectId.isValid(child._id)) {
-        // Update existing child
         savedChild = await Child.findOneAndUpdate(
           { _id: child._id, user: userId },
           child,
           { new: true, runValidators: true }
         );
-
-        // If not found, create new child
         if (!savedChild) {
           const newChild = new Child(child);
           savedChild = await newChild.save();
         }
       } else {
-        // Create new child
         const newChild = new Child(child);
         savedChild = await newChild.save();
       }
@@ -523,20 +516,12 @@ exports.addChildPaymentController = async (req, res) => {
       savedChildrenIds.push(savedChild._id);
     }
 
-    // 🔹 Find user form and active subscription
-    const form = await Form.findOne({ user: userId }).populate("subscriptions");
-    if (!form) throw new Error("User form not found");
+    // 🔹 Find subscription using subscriptionId
+    const { subscriptionId, orderId, transactionId } = paymentInfo;
+    const activeSubscription = await Subscription.findById(subscriptionId);
+    if (!activeSubscription) throw new Error("Subscription not found");
 
-    const planId = paymentInfo.planId;
-    const activeSubscription = form.subscriptions.find(
-      (sub) =>
-        sub.status === "active" &&
-        sub.planId.toString() === planId.toString()
-    );
-
-    if (!activeSubscription) throw new Error("Active subscription not found");
-
-    // 🔹 Link new children to active subscription
+    // 🔹 Add new child IDs to subscription
     for (const childId of savedChildrenIds) {
       if (!activeSubscription.children.includes(childId)) {
         activeSubscription.children.push(childId);
@@ -544,47 +529,32 @@ exports.addChildPaymentController = async (req, res) => {
     }
 
     // 🔹 Update payment details
-    activeSubscription.orderId = paymentInfo.orderId;
-    activeSubscription.transactionId = paymentInfo.transactionId || "N/A";
+    activeSubscription.orderId = orderId;
+    activeSubscription.transactionId = transactionId || "N/A";
     activeSubscription.paymentDate = new Date();
     activeSubscription.paymentMethod = "CCAvenue";
-
     await activeSubscription.save();
 
-    // 🔹 Update form progress
-    form.step = Math.max(form.step || 1, 3);
-    form.subscriptionCount = (form.subscriptionCount || 0) + 1;
-    form.paymentStatus = "Success";
-    await form.save();
-
-    // ✅ Success response
     return res.json({
       success: true,
       savedChildrenIds,
       subscription: activeSubscription,
-      form,
     });
 
   } catch (error) {
     console.error("Add Child payment error:", error);
 
-    // 🔥 Rollback newly added children if anything fails
     if (savedChildrenIds.length > 0) {
-      try {
-        await Child.deleteMany({ _id: { $in: savedChildrenIds } });
-        console.log("Rollback successful: deleted newly added children.");
-      } catch (rollbackError) {
-        console.error("Rollback failed:", rollbackError);
-      }
+      await Child.deleteMany({ _id: { $in: savedChildrenIds } });
     }
 
-    // ❌ Error response
     return res.status(500).json({
       success: false,
       message: error.message || "Internal Server Error",
     });
   }
 };
+
 
 
 
