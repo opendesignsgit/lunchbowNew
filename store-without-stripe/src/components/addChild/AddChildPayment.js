@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import CryptoJS from "crypto-js";
 import { Button } from "@mui/material";
+import useRegistration from "@hooks/useRegistration";
 
 const AddChildPayment = ({
   _id, // ✅ This is userId
@@ -12,6 +13,7 @@ const AddChildPayment = ({
   onSuccess,
 }) => {
   const [loading, setLoading] = useState(false);
+  const { submitHandler } = useRegistration(); // ✅ to call backend API
 
   const ccavenueConfig = {
     merchant_id: "4381442",
@@ -61,22 +63,35 @@ const AddChildPayment = ({
     try {
       const orderId = generateOrderId();
 
-      const userId = _id; // ✅ Use the prop directly (customer ID)
-      const subscriptionId = subscriptionPlan?._id; // ✅ Use current active subscription ID
+      const userId = _id;
+      const subscriptionId = subscriptionPlan?._id;
 
       if (!userId) throw new Error("User ID not provided");
       if (!subscriptionId) throw new Error("Subscription ID not found");
 
-      // ✅ Build paymentInfo object
+      // 🟢 Step 1: Fetch customer form data (for billing details)
+      const response = await submitHandler({
+        path: "get-customer-form",
+        _id: userId,
+      });
+
+      if (!response?.success) {
+        throw new Error(response?.message || "Failed to fetch user details for billing");
+      }
+
+      const { user, parentDetails } = response.data || {};
+      console.log("🟢 Billing user data fetched:", { user, parentDetails });
+
+      // 🟢 Step 2: Build payment info
       const paymentInfo = {
         orderId,
         transactionId: `TXN${Date.now()}`,
-        subscriptionId, // ✅ pass subscription ID
+        subscriptionId,
         paymentAmount: totalAmount,
       };
 
       if (isDevLikeHost()) {
-        // --- Local / Dev Simulation ---
+        // --- Local simulation ---
         const baseUrl = getPaymentBaseUrl();
         const response = await axios.post(`${baseUrl}/api/ccavenue/local-success/local-add-childPayment`, {
           userId,
@@ -90,33 +105,31 @@ const AddChildPayment = ({
           onError(response.data.message || "Local payment simulation failed");
         }
       } else {
-        // --- Live Payment Flow ---
-        const { parentDetails } = subscriptionPlan || {};
-
-        const paymentData = {
-          merchant_id: ccavenueConfig.merchant_id,
-          order_id: orderId,
-          // amount: (totalAmount > 0 ? totalAmount.toFixed(2) : "1.00"),
-          amount: "1.00", // For testing purposes, always charge ₹1
-          currency: ccavenueConfig.currency,
-          redirect_url: ccavenueConfig.redirect_url_live,
-          cancel_url: ccavenueConfig.cancel_url_live,
-          language: ccavenueConfig.language,
-
-          billing_name: `${parentDetails?.fatherFirstName || "Customer"} ${parentDetails?.fatherLastName || ""}`.trim(),
-          billing_email: parentDetails?.email || "no-email@example.com",
-          billing_tel: parentDetails?.mobile || "0000000000",
+        // --- Live payment flow ---
+        const billingData = {
+          billing_name: `${parentDetails?.fatherFirstName || user?.name || "Customer"} ${parentDetails?.fatherLastName || ""}`.trim(),
+          billing_email: parentDetails?.email || user?.email || "no-email@example.com",
+          billing_tel: parentDetails?.mobile || user?.phone || "0000000000",
           billing_address: parentDetails?.address || "Not Provided",
           billing_city: parentDetails?.city || "Chennai",
           billing_state: parentDetails?.state || "Tamil Nadu",
           billing_zip: parentDetails?.pincode || "600001",
           billing_country: parentDetails?.country || "India",
-
-          merchant_param1: userId,           // ✅ Customer ID
-          merchant_param2: subscriptionId,   // ✅ Active subscription ID
-          merchant_param3: JSON.stringify(formData),  // ✅ Send selected children details
         };
 
+        const paymentData = {
+          merchant_id: ccavenueConfig.merchant_id,
+          order_id: orderId,
+          amount: (totalAmount > 0 ? totalAmount.toFixed(2) : "1.00"),
+          currency: ccavenueConfig.currency,
+          redirect_url: ccavenueConfig.redirect_url_live,
+          cancel_url: ccavenueConfig.cancel_url_live,
+          language: ccavenueConfig.language,
+          ...billingData,
+          merchant_param1: userId,  // ✅ Customer ID
+          merchant_param2: subscriptionId, // ✅ Subscription ID
+          merchant_param3: btoa(JSON.stringify(formData)), // ✅ Children info encoded
+        };
 
         const plainText = Object.entries(paymentData)
           .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
@@ -124,6 +137,7 @@ const AddChildPayment = ({
 
         const encryptedData = encrypt(plainText, ccavenueConfig.working_key);
 
+        // 🟢 Step 3: Create form and submit
         const form = document.createElement("form");
         form.method = "POST";
         form.action = ccavenueConfig.endpoint;
@@ -143,8 +157,9 @@ const AddChildPayment = ({
         document.body.appendChild(form);
         form.submit();
       }
-    } catch (e) {
-      onError(e.message || "Payment initiation failed");
+    } catch (err) {
+      console.error("❌ Payment initiation error:", err);
+      onError(err.message || "Payment initiation failed");
     } finally {
       setLoading(false);
     }
