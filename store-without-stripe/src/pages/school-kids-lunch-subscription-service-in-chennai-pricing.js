@@ -201,7 +201,7 @@ const PlanPricingPage = () => {
                     {stepCheck !== 4 && (
 
                                   <div className='ppricebbox'>
-                                    <button onClick={handleGetStartedClick}>Get Started</button>
+                        <button onClick={handleGetStartedClick} id="permonth" >Get Started</button>
                                   </div>
                     )}
 
@@ -225,7 +225,7 @@ const PlanPricingPage = () => {
                     {stepCheck !== 4 && (
 
                                   <div className='ppricebbox'>
-                                    <button onClick={handleGetStartedClick}>Get Started</button>
+                        <button onClick={handleGetStartedClick} id="threemonths">Get Started</button>
                                   </div>
                     )}
                                   <div className="offerbox">
@@ -251,7 +251,7 @@ const PlanPricingPage = () => {
                     {stepCheck !== 4 && (
 
                                   <div className='ppricebbox'>
-                                    <button onClick={handleGetStartedClick}>Get Started</button>
+                        <button onClick={handleGetStartedClick} id="sixmonths">Get Started</button>
                                   </div>
                     )}
                                   <div className="offerbox">

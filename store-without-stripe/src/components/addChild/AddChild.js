@@ -465,10 +465,10 @@ const AddChild = ({ _id, onComplete }) => {
     <div >
       <Box sx={{ display: "flex", flexDirection: "column" }}>
 
-        <div className='hworkTitle combtntb comtilte textcenter  mb-[5vh]'>
+        {/*<div className='hworkTitle combtntb comtilte textcenter  mb-[5vh]'>
           <h3 className='flex flex-col textFF6514'> <span className='block'>Add Child Details</span> </h3>
           <p className=''>See how our site works as soon as you register <br />and create an account with us.</p>
-        </div>
+        </div>*/}
 
         <Box className="curplanBox" sx={{ mb: 4, p: 2, border: "1px solid #ccc", borderRadius: 2 }}>
           <Typography variant="h4" gutterBottom>
@@ -476,7 +476,7 @@ const AddChild = ({ _id, onComplete }) => {
           </Typography>
           <Grid className="curplanGrid flex flex-wrap">
             <Grid className="curplanItem">
-              <Typography variant="h5"><strong>Current Plan Range:</strong></Typography>
+              <Typography variant="h5"><strong>Current Plan Range</strong></Typography>
               <Typography>
                 {activeSubscription && activeSubscription.startDate
                   ? dayjs(activeSubscription.startDate).format("DD MMM YYYY")
@@ -487,7 +487,7 @@ const AddChild = ({ _id, onComplete }) => {
               </Typography>
             </Grid>
             <Grid className="curplanItem">
-              <Typography variant="h5"><strong>Total Working Days (Plan):</strong></Typography>
+              <Typography variant="h5"><strong>Total Working Days (Plan)</strong></Typography>
               <Typography>
                 {activeSubscription && activeSubscription.startDate && activeSubscription.endDate
                   ? calculateWorkingDays(dayjs(activeSubscription.startDate), dayjs(activeSubscription.endDate), holidayDates)
@@ -495,19 +495,19 @@ const AddChild = ({ _id, onComplete }) => {
               </Typography>
             </Grid>
             <Grid className="curplanItem">
-              <Typography variant="h5"><strong>Remaining Working Days:</strong></Typography>
+              <Typography variant="h5"><strong>Remaining Working Days</strong></Typography>
               <Typography>{remainingWorkingDays}</Typography>
             </Grid>
             <Grid className="curplanItem">
-              <Typography variant="h5"><strong>Earliest New Plan Start Date:</strong></Typography>
+              <Typography variant="h5"><strong>Earliest New Plan Start Date</strong></Typography>
               <Typography>{startCalcDate ? startCalcDate.format("DD MMM YYYY") : "-"}</Typography>
             </Grid>
             <Grid className="curplanItem">
-              <Typography variant="h5"><strong>New Children Selected:</strong></Typography>
+              <Typography variant="h5"><strong>New Children Selected</strong></Typography>
               <Typography>{newSelectedChildrenCount}</Typography>
             </Grid>
             <Grid className="curplanItem">
-              <Typography variant="h5"><strong>Amount per Day per Child:</strong></Typography>
+              <Typography variant="h5"><strong>Amount per Day per Child</strong></Typography>
               <Typography>₹ 200</Typography>
             </Grid>
             <Grid className="curplanItem totalamountItem">

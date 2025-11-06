@@ -1005,6 +1005,7 @@ body .popvideodialog  {z-index: 99999;}
 .PolicyCont{padding-inline: 20px;}
 
 .setpbanersec .comtilte {padding-block: 10px;}
+.setpbanersec.addchildbansec .comtilte {padding-inline: 2vw;}
 
 html body .seletallmenu{position: absolute;bottom: 0;margin-bottom: 0;}
 html body .seletallmenu>.MuiPaper-root{background-color: #ea1a27;}
@@ -1120,7 +1121,7 @@ html body .MuiPopover-root{z-index: 99999;}
 .overenewSec .eachplansOthbox {margin-top: 10px;}
 .overenewSec .eachplansOthbox p{margin: 0;}
 
-.subplnBoxss .compaySec h4{font-family: 'Baloo';color: #4ab138;font-size: 1.3vw;font-weight: 500;line-height: 1;margin-bottom: 10px;}
+.subplnBoxss .compaySec h4{font-family: 'Baloo';color: #4ab138;font-size: 2vw;font-weight: 500;line-height: 1;margin-bottom: 10px;}
 .subplnBoxss .compaySec h6{font-family: 'Baloo';line-height: 1;margin-bottom: 10px;}
 .subplnBoxss .compaySec h6 strong{font-weight: 500;}
 
