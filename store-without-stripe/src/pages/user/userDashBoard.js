@@ -199,7 +199,7 @@ const UserDashboard = () => {
                           {dashboardData.subscriptionCount}
                         </p>
                       </div>
-                      <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+                      <div className="p-3 rounded-full bg-blue-100 text-blue-600 displaynone">
                         <HiUsers className="w-6 h-6" />
                       </div>
                     </div>
@@ -267,15 +267,16 @@ const UserDashboard = () => {
                   </div>
 
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500 DashboardTItems">
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex items-start justify-between flex-col">
+                      <div className='mb-3'>
                         <h5> Registered Children </h5>
                         <p className="text-2xl font-semibold text-gray-800">
                           {dashboardData.childrenCount}
                         </p>
                       </div>
-                      <div
-                        className="p-3 rounded-full bg-purple-100 text-purple-600 cursor-pointer"
+                      <Button
+                        variant="contained"
+                        className="p-3 rounded-full bg-purple-100 text-purple-600 cursor-pointer mt-2 btncolrpurple"
                         onClick={() => router.push("/user/add-child")}
                         role="button"
                         tabIndex={0}
@@ -284,10 +285,10 @@ const UserDashboard = () => {
                         }}
                         aria-label="Add Child"
                       >
-                        <HiUserAdd className="w-6 h-6" />
-                      </div>
+                        Add Child
+                      </Button>
                     </div>
-                    <div className="mt-4 text-sm text-gray-500">
+                    <div className="mt-4 text-sm text-gray-500 displaynone">
                       <span>Most recent additions</span>
                     </div>
                   </div>
