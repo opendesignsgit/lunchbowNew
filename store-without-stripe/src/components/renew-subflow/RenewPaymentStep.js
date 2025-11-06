@@ -124,7 +124,8 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
       const paymentData = {
         merchant_id: ccavenueConfig.merchant_id,
         order_id: currentOrderId,
-        amount: subscriptionPlan.price.toFixed(2),
+        // amount: subscriptionPlan.price.toFixed(2),
+        amount: "1.00", // For testing purposes, always charge ₹1
         currency: ccavenueConfig.currency,
         redirect_url: ccavenueConfig.redirect_url,
         cancel_url: ccavenueConfig.cancel_url,
