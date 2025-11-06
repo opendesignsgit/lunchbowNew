@@ -390,16 +390,16 @@ const MyAccount = () => {
                     {activeSub ? (
                       <ul>
                         <li>
-                          <b>Start Date:</b> {formatDate(activeSub.startDate)}
+                          <b>Start Date:</b> <span>{(activeSub.startDate)}</span>
                         </li>
                         <li>
-                          <b>End Date:</b> {formatDate(activeSub.endDate)}
+                          <b>End Date:</b> <span>{formatDate(activeSub.endDate)}</span>
                         </li>
                         <li>
-                          <b>Working Days:</b> {activeSub.workingDays}
+                          <b>Working Days:</b> <span>{activeSub.workingDays}</span>
                         </li>
                         <li>
-                          <b>Price:</b> ₹{activeSub.price}
+                          <b>Price:</b> <span>₹{activeSub.price}</span>
                         </li>
                       </ul>
                     ) : (
@@ -446,7 +446,6 @@ const MyAccount = () => {
                                   colSpan={2}
                                   style={{
                                     backgroundColor: "#f4f4f4",
-                                    padding: "8px",
                                     textAlign: "left",
                                     borderBottom: "1px solid #ddd",
                                   }}
@@ -457,126 +456,66 @@ const MyAccount = () => {
                             </thead>
                             <tbody>
                               <tr>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   <b>Name:</b>
                                 </td>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   {child.childFirstName} {child.childLastName}
                                 </td>
                               </tr>
                               <tr>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   <b>Date of Birth:</b>
                                 </td>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   {formatDate(child.dob)}
                                 </td>
                               </tr>
                               <tr>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   <b>School:</b>
                                 </td>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   {child.school}
                                 </td>
                               </tr>
                               <tr>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   <b>Class:</b>
                                 </td>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   {child.childClass}
                                 </td>
                               </tr>
                               <tr>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   <b>Section:</b>
                                 </td>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   {child.section}
                                 </td>
                               </tr>
                               <tr>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   <b>Lunch Time:</b>
                                 </td>
-                                <td
-                                  style={{
-                                    padding: "8px",
-                                    borderBottom: "1px solid #ddd",
-                                  }}
-                                >
+                                  <td >
                                   {child.lunchTime}
                                 </td>
                               </tr>
                               <tr>
-                                <td style={{ padding: "8px" }}>
+                                  <td >
                                   <b>Location:</b>
                                 </td>
-                                <td style={{ padding: "8px" }}>
+                                  <td >
                                   {child.location}
                                 </td>
                               </tr>
                               <tr>
-                                <td style={{ padding: "8px" }}>
+                                  <td >
                                   <b>Allergies:</b>
                                 </td>
-                                <td style={{ padding: "8px" }}>
+                                  <td >
                                   {child.allergies || "None"}
                                 </td>
                               </tr>

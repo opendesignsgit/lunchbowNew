@@ -122,8 +122,8 @@ const AddChildPayment = ({ _id, formData, subscriptionPlan, onError, onSuccess }
   };
 
   return (
-    <Button variant="contained" color="primary" onClick={initiatePayment} disabled={loading}>
-      {loading ? "Processing Payment..." : "Make Payment"}
+    <Button variant="contained" color="primary" onClick={initiatePayment} disabled={loading} className="proceedbtn">
+      <span>{loading ? "Processing Payment..." : "Make Payment"}</span>
     </Button>
   );
 };
