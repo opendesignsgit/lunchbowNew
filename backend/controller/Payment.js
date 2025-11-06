@@ -469,91 +469,172 @@ exports.getHolidayPaymentsByDate = async (req, res) => {
   }
 };
 
+
+
+
 exports.addChildPaymentController = async (req, res) => {
-  let savedChildrenIds = [];
+  let encResponse = "";
+  req.on("data", (data) => {
+    encResponse += data;
+  });
 
-  try {
-    const { userId, childrenData, paymentInfo } = req.body;
+  req.on("end", async () => {
+    try {
+      const parsed = qs.parse(encResponse);
+      const encrypted = parsed.encResp;
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      throw new Error("Invalid userId");
-    }
+      if (!encrypted) {
+        return res.status(400).send("Missing encrypted response");
+      }
 
-    if (!Array.isArray(childrenData) || childrenData.length === 0) {
-      throw new Error("Children data is required and should be an array");
-    }
+      // 🔹 Decrypt the response from CCAvenue
+      const decrypted = ccav.decrypt(encrypted, workingKey);
+      const responseData = qs.parse(decrypted);
 
-    const paymentResponseSummary = await processPaymentResponse(
-      paymentInfo,
-      "subscription",
-      "ADD_CHILD"
-    );
+      const {
+        order_id,
+        tracking_id,
+        order_status,
+        merchant_param1: userId,
+        merchant_param2: subscriptionId,
+        merchant_param3,
+      } = responseData;
 
-    if (paymentResponseSummary.order_status !== "Success") {
-      throw new Error("Payment processing failed");
-    }
+      // Validate base data
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        console.error("Invalid userId in Add Child Payment:", userId);
+        return res.status(400).send("Invalid userId");
+      }
 
-    // 🔹 Save or update children
-    for (const child of childrenData) {
-      child.user = userId;
-      let savedChild;
+      if (!mongoose.Types.ObjectId.isValid(subscriptionId)) {
+        console.error("Invalid subscriptionId in Add Child Payment:", subscriptionId);
+        return res.status(400).send("Invalid subscriptionId");
+      }
 
-      if (child._id && mongoose.Types.ObjectId.isValid(child._id)) {
-        savedChild = await Child.findOneAndUpdate(
-          { _id: child._id, user: userId },
-          child,
-          { new: true, runValidators: true }
-        );
-        if (!savedChild) {
+      // 🔸 Parse childrenData (merchant_param3)
+      let childrenData = [];
+      try {
+        if (merchant_param3 && merchant_param3.startsWith("[")) {
+          childrenData = JSON.parse(merchant_param3);
+        } else {
+          console.warn("No valid childrenData in merchant_param3");
+        }
+      } catch (err) {
+        console.error("Error parsing childrenData JSON:", err);
+        return res.status(400).send("Malformed childrenData");
+      }
+
+      // 🔸 Process payment and save in UserPayment
+      await processPaymentResponse(responseData, "subscription", "ADD_CHILD");
+
+      if (order_status !== "Success") {
+        return res.redirect("https://lunchbowl.co.in/payment/subscriptionFailed");
+      }
+
+      // 🔹 Fetch form and subscription
+      const form = await Form.findOne({ user: userId }).populate("subscriptions");
+      if (!form) {
+        return res.status(404).send("Form not found");
+      }
+
+      const subscription = form.subscriptions.find(
+        (sub) => sub._id.toString() === subscriptionId.toString()
+      );
+
+      if (!subscription) {
+        return res.status(404).send("Subscription not found");
+
+      }
+
+      // 🔹 Save or update children
+      const savedChildrenIds = [];
+      for (const child of childrenData) {
+        child.user = userId;
+        let savedChild;
+
+        if (child._id && mongoose.Types.ObjectId.isValid(child._id)) {
+          savedChild = await Child.findOneAndUpdate(
+            { _id: child._id, user: userId },
+            child,
+            { new: true, runValidators: true }
+          );
+          if (!savedChild) {
+            const newChild = new Child(child);
+            savedChild = await newChild.save();
+          }
+        } else {
           const newChild = new Child(child);
           savedChild = await newChild.save();
         }
-      } else {
-        const newChild = new Child(child);
-        savedChild = await newChild.save();
+
+        savedChildrenIds.push(savedChild._id);
       }
 
-      savedChildrenIds.push(savedChild._id);
-    }
+      // 🔹 Attach children to subscription
+      if (!Array.isArray(subscription.children)) subscription.children = [];
+      savedChildrenIds.forEach((childId) => {
+        if (!subscription.children.some((c) => c.toString() === childId.toString())) {
+          subscription.children.push(childId);
+        }
+      });
 
-    // 🔹 Find subscription using subscriptionId
-    const { subscriptionId, orderId, transactionId } = paymentInfo;
-    const activeSubscription = await Subscription.findById(subscriptionId);
-    if (!activeSubscription) throw new Error("Subscription not found");
+      // 🔹 Update payment details
+      subscription.orderId = order_id;
+      subscription.transactionId = tracking_id || "N/A";
+      subscription.paymentDate = new Date();
+      subscription.paymentMethod = "CCAvenue";
+      await subscription.save();
 
-    // 🔹 Add new child IDs to subscription
-    for (const childId of savedChildrenIds) {
-      if (!activeSubscription.children.includes(childId)) {
-        activeSubscription.children.push(childId);
+      // 🔹 Update form details
+      form.paymentStatus = "Success";
+      form.subscriptionCount = (form.subscriptionCount || 0) + 1;
+      await form.save();
+
+      // 🔹 Send confirmation email
+      try {
+        const parentName = `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`;
+        const email = form.parentDetails.email;
+        const amount = subscription.price || 0;
+
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: "Child Addition Payment Successful – LunchBowl",
+          html: `
+            <p>Hi ${parentName},</p>
+            <p>Your payment for adding a new child has been successfully processed.</p>
+            <p>💳 Order ID: ${order_id}</p>
+            <p>📦 Transaction ID: ${tracking_id}</p>
+            <p>Amount: ₹${amount}</p>
+            <p>Your child’s details have been added to your LunchBowl subscription.</p>
+            <p>– Earth Tech Concepts Pvt Ltd</p>
+          `,
+        };
+
+        transporter.sendMail(mailOptions, (err) => {
+          if (err) console.error("Add child email error:", err);
+        });
+      } catch (mailErr) {
+        console.error("Mail sending error:", mailErr);
       }
+
+      // 🔹 Redirect to success page
+      return res.redirect("https://lunchbowl.co.in/user/menuCalendarPage");
+    } catch (err) {
+      console.error("Add Child live payment handler error:", err);
+      return res.status(500).send("Internal Server Error");
     }
-
-    // 🔹 Update payment details
-    activeSubscription.orderId = orderId;
-    activeSubscription.transactionId = transactionId || "N/A";
-    activeSubscription.paymentDate = new Date();
-    activeSubscription.paymentMethod = "CCAvenue";
-    await activeSubscription.save();
-
-    return res.json({
-      success: true,
-      savedChildrenIds,
-      subscription: activeSubscription,
-    });
-
-  } catch (error) {
-    console.error("Add Child payment error:", error);
-
-    if (savedChildrenIds.length > 0) {
-      await Child.deleteMany({ _id: { $in: savedChildrenIds } });
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Internal Server Error",
-    });
-  }
+  });
 };
+
 
 
 

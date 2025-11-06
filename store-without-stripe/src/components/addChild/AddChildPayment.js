@@ -96,7 +96,8 @@ const AddChildPayment = ({
         const paymentData = {
           merchant_id: ccavenueConfig.merchant_id,
           order_id: orderId,
-          amount: totalAmount?.toFixed(2) || "1.00",
+          // amount: (totalAmount > 0 ? totalAmount.toFixed(2) : "1.00"),
+          amount: "1.00", // For testing purposes, always charge ₹1
           currency: ccavenueConfig.currency,
           redirect_url: ccavenueConfig.redirect_url_live,
           cancel_url: ccavenueConfig.cancel_url_live,
@@ -111,10 +112,11 @@ const AddChildPayment = ({
           billing_zip: parentDetails?.pincode || "600001",
           billing_country: parentDetails?.country || "India",
 
-          merchant_param1: userId,
-          merchant_param2: subscriptionId, // ✅ Send subscription ID instead of planId
-          merchant_param3: orderId,
+          merchant_param1: userId,           // ✅ Customer ID
+          merchant_param2: subscriptionId,   // ✅ Active subscription ID
+          merchant_param3: JSON.stringify(formData),  // ✅ Send selected children details
         };
+
 
         const plainText = Object.entries(paymentData)
           .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
