@@ -268,166 +268,173 @@ exports.holiydayPayment = async (req, res) => {
 
   req.on("end", async () => {
     try {
+      console.log("🟢 [HolidayPayment] Incoming encrypted CCAvenue response...");
+      if (!encResponse) return res.status(400).send("Empty payment response");
+
       const parsed = qs.parse(encResponse);
       const encrypted = parsed.encResp;
-      if (!encrypted) {
-        return res.status(400).send("Missing encrypted response");
+      if (!encrypted) return res.status(400).send("Missing encrypted response");
+
+      // 🔹 Step 1: Decrypt response
+      const decrypted = ccav.decrypt(encrypted, workingKey);
+      const responseData = qs.parse(decrypted);
+
+      console.log("🧾 Decrypted Response:", responseData);
+
+      const {
+        order_status,
+        merchant_param1: userId,
+        merchant_param2: mealDate,
+        merchant_param3,
+        tracking_id,
+        order_id,
+      } = responseData;
+
+      // 🔹 Step 2: Validate base fields
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        console.error("❌ Invalid userId:", userId);
+        return res.status(400).send("Invalid user ID");
       }
 
-      let decrypted, responseData;
-      try {
-        decrypted = ccav.decrypt(encrypted, workingKey);
-      } catch (decryptErr) {
-        return res.status(400).send("Failed to decrypt payment response");
+      if (!mealDate || !/^\d{4}-\d{2}-\d{2}$/.test(mealDate)) {
+        console.error("❌ Invalid mealDate:", mealDate);
+        return res.status(400).send("Invalid mealDate (expected YYYY-MM-DD)");
       }
 
-      try {
-        responseData = qs.parse(decrypted);
-      } catch (parseErr) {
-        return res.status(400).send("Malformed payment response data");
-      }
-
-      const { order_status, merchant_param1: userId, merchant_param2: mealDate, merchant_param3, tracking_id } = responseData;
-
-      if (!userId) return res.status(400).send("Missing user ID");
-      if (!mongoose.Types.ObjectId.isValid(userId)) return res.status(400).send("Invalid user ID");
-      if (!mealDate || !/^\d{4}-\d{2}-\d{2}$/.test(mealDate)) return res.status(400).send("Invalid mealDate (should be YYYY-MM-DD)");
-
-
-      await processPaymentResponse(responseData, "holiday", "HOLIDAY_PAY");
-
-      // Parse children's paid meal data
+      // 🔹 Step 3: Parse childrenData (with planId)
       let childrenData = [];
       try {
-        if (merchant_param3 && merchant_param3.trim().startsWith("[")) {
+        if (merchant_param3 && merchant_param3.startsWith("[")) {
           childrenData = JSON.parse(merchant_param3);
-        } else if (merchant_param3 && merchant_param3.includes("childId")) {
-          const parts = merchant_param3.split(",");
-          const childObj = {};
-          for (const part of parts) {
-            const clean = part.trim();
-            if (clean.startsWith("childId")) childObj.childId = clean.replace("childId", "");
-            if (clean.startsWith("dish")) childObj.dish = clean.replace("dish", "");
-            if (clean.startsWith("mealDate")) childObj.mealDate = clean.replace("mealDate", "");
-          }
-          if (!childObj.mealDate && mealDate) childObj.mealDate = mealDate;
-          childrenData.push(childObj);
+        } else {
+          console.warn("⚠️ merchant_param3 not valid JSON:", merchant_param3);
         }
       } catch (err) {
-        return res.status(400).send("Malformed childrenData in payment");
+        console.error("❌ Error parsing childrenData JSON:", err);
+        return res.status(400).send("Malformed childrenData");
       }
 
+      console.log("✅ Parsed Children Data:", childrenData);
+
+      // 🔹 Step 4: Handle failed transactions
       if (order_status !== "Success") {
+        console.warn("❌ Payment failed:", order_status);
         return res.redirect("https://lunchbowl.co.in/payment/failed");
       }
 
-      // Always update HolidayPayment
+      // 🔹 Step 5: Save payment response
+      await processPaymentResponse(responseData, "holiday", "HOLIDAY_PAY");
+
+      // 🔹 Step 6: Process each child payment
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      const mealDateObj = new Date(mealDate);
+
+      let userMeal = await UserMeal.findOne({ userId: userObjectId });
+      if (!userMeal) {
+        userMeal = new UserMeal({ userId: userObjectId, plans: [] });
+      }
+
       for (const child of childrenData) {
-        const finalMealDate = child.mealDate || mealDate;
-        if (child.childId && child.dish && finalMealDate) {
-          try {
-            await HolidayPayment.create({
-              userId,
-              childId: child.childId,
-              mealDate: finalMealDate,
-              mealName: child.dish,
-              amount: 200,
-              paymentStatus: "Paid",
-              transactionDetails: { tracking_id, ...responseData },
-            });
+        const { childId, dish, planId } = child;
+        if (!childId || !dish || !planId) {
+          console.warn("⚠️ Skipping invalid child entry:", child);
+          continue;
+        }
 
-            try {
-              const userForm = await Form.findOne({ user: userId });
-              if (userForm && userForm.parentDetails) {
-                const parentName = `${userForm.parentDetails.fatherFirstName} ${userForm.parentDetails.fatherLastName}`;
-                const email = userForm.parentDetails.email;
-                const mealDateFormatted = new Date(finalMealDate).toLocaleDateString("en-IN");
-                const menuName = child.dish;
+        console.log(`👶 Processing Child: ${childId} | Plan: ${planId} | Dish: ${dish}`);
 
-                const transporter = nodemailer.createTransport({
-                  service: "gmail",
-                  auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS,
-                  },
-                });
+        // ✅ Step 6A: Save HolidayPayment record
+        await HolidayPayment.create({
+          userId,
+          childId,
+          mealDate: mealDateObj,
+          mealName: dish,
+          amount: 200,
+          paymentStatus: "Paid",
+          transactionDetails: { tracking_id, order_id, ...responseData },
+        });
 
-                const mailOptions = {
-                  from: process.env.EMAIL_USER,
-                  to: email,
-                  subject: "Holiday Meal Payment Confirmation – LunchBowl",
-                  html: `
-        <p>Hi ${parentName},</p>
-        <p>Your holiday meal payment is successful.</p>
-        <p>A meal has been booked for <b>${mealDateFormatted}</b> with menu <b>${menuName}</b>.</p>
-        <p>We hope your child enjoys their special holiday meal!</p>
-        <p>For any queries, contact <a href="mailto:contactus@lunchbowl.co.in">contactus@lunchbowl.co.in</a></p>
-        <p>– Earth Tech Concepts Pvt Ltd</p>
-      `,
-                };
+        // ✅ Step 6B: Update UserMeal
+        let plan = userMeal.plans.find((p) => p.planId === planId);
+        if (!plan) {
+          console.log("🟠 Creating new plan entry in UserMeal:", planId);
+          plan = { planId, children: [] };
+          userMeal.plans.push(plan);
+        }
 
-                transporter.sendMail(mailOptions, (err, info) => {
-                  if (err) {
-                    console.error("Holiday meal email error:", err);
-                  } else {
-                    // console.log("Holiday meal email sent:", info.response);
-                  }
-                });
-              }
-            } catch (emailErr) {
-              console.error("Error sending holiday meal email:", emailErr);
-            }
-          } catch (dbErr) {
-            // Log, don't block
-            console.error("HolidayPayment DB error:", dbErr);
+        let childEntry = plan.children.find((c) => c.childId.equals(childId));
+        if (!childEntry) {
+          console.log("🟠 Creating new child entry in plan");
+          plan.children.push({
+            childId,
+            meals: [{ mealDate: mealDateObj, mealName: dish }],
+          });
+        } else {
+          const mealExists = childEntry.meals.some(
+            (m) => new Date(m.mealDate).toISOString().slice(0, 10) === mealDate
+          );
+
+          if (!mealExists) {
+            childEntry.meals.push({ mealDate: mealDateObj, mealName: dish });
+          } else {
+            childEntry.meals = childEntry.meals.map((m) =>
+              new Date(m.mealDate).toISOString().slice(0, 10) === mealDate
+                ? { ...m, mealName: dish }
+                : m
+            );
           }
         }
       }
 
-      // --- Only update existing UserMeal, DO NOT create new! ---
-      let userMeal = await UserMeal.findOne({ userId: mongoose.Types.ObjectId(userId) });
-      if (!userMeal) {
-        return res.status(404).send("User meal plan not found. Please contact support.");
-      }
-      let updated = false;
-      for (const child of childrenData) {
-        if (!child.childId || !child.dish) continue;
-        const finalMealDate = child.mealDate || mealDate;
-        const mealDateObj = new Date(finalMealDate);
+      await userMeal.save();
+      console.log("💾 UserMeal updated successfully for user:", userId);
 
-        // Find child's entry in userMeal
-        let childObj = userMeal.children.find(
-          c => c.childId.toString() === child.childId
-        );
-        if (!childObj) continue; // DO NOT create new child entry!
+      // 🔹 Step 7: Send confirmation email
+      try {
+        const form = await Form.findOne({ user: userId });
+        if (form?.parentDetails?.email) {
+          const parentName = `${form.parentDetails.fatherFirstName || ""} ${form.parentDetails.fatherLastName || ""}`.trim();
+          const email = form.parentDetails.email;
 
-        // Check if meal for this date exists
-        let mealIndex = childObj.meals.findIndex(
-          m => new Date(m.mealDate).toISOString().slice(0, 10) === mealDateObj.toISOString().slice(0, 10)
-        );
-        if (mealIndex >= 0) {
-          // Overwrite
-          childObj.meals[mealIndex].mealName = child.dish;
-          childObj.meals[mealIndex].mealDate = mealDateObj;
-        } else {
-          // Add new meal for that date
-          childObj.meals.push({
-            mealDate: mealDateObj,
-            mealName: child.dish,
+          const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS,
+            },
           });
+
+          const mealList = childrenData
+            .map((c) => `🍱 ${c.dish} for ${mealDate}`)
+            .join("<br>");
+
+          const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: "Holiday Meal Payment Successful – LunchBowl",
+            html: `
+              <p>Hi ${parentName || "Parent"},</p>
+              <p>Your payment for holiday meals has been successfully processed.</p>
+              <p>${mealList}</p>
+              <p>Order ID: <b>${order_id}</b></p>
+              <p>Transaction ID: <b>${tracking_id}</b></p>
+              <p>We hope your child enjoys their special meal!</p>
+              <p>– Earth Tech Concepts Pvt Ltd</p>
+            `,
+          };
+
+          await transporter.sendMail(mailOptions);
+          console.log("📧 Confirmation email sent to:", email);
         }
-        updated = true;
+      } catch (mailErr) {
+        console.error("❌ Error sending email:", mailErr);
       }
 
-      // Save only if an update happened
-      if (updated) {
-        await userMeal.save();
-      }
-
+      console.log("✅ Holiday Payment completed successfully!");
       return res.redirect("https://lunchbowl.co.in/payment/success");
     } catch (err) {
-      console.error("CCAvenue holiday payment handler - Uncaught error:", err);
-      res.status(500).send("Internal Server Error");
+      console.error("💥 CCAvenue Holiday Payment Handler Error:", err);
+      return res.status(500).send("Internal Server Error");
     }
   });
 };

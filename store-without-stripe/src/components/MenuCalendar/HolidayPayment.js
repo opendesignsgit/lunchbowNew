@@ -17,6 +17,7 @@ const HolidayPayment = ({
   onClose,
   selectedDate,
   childrenData = [],
+  planId, // ✅ NEW: Pass planId from parent (activeSubscription or current plan)
   onSuccess,
 }) => {
   const { data: session } = useSession();
@@ -25,6 +26,13 @@ const HolidayPayment = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { submitHandler } = useRegistration();
+
+  // ✅ Add planId to each child entry before sending
+  const childrenDataWithPlan = childrenData.map((child) => ({
+    ...child,
+    planId: planId || child.planId || "HOLIDAY", // fallback
+    mealDate: selectedDate,
+  }));
 
   const totalAmount = childrenData.length * 200;
   const orderId = `LB-HOLIDAY-${Date.now()}`;
@@ -42,6 +50,7 @@ const HolidayPayment = ({
       "https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction",
   };
 
+  // Encryption (AES-128-CBC)
   const encrypt = (plainText, workingKey) => {
     const md5Hash = CryptoJS.MD5(CryptoJS.enc.Utf8.parse(workingKey));
     const key = CryptoJS.enc.Hex.parse(md5Hash.toString(CryptoJS.enc.Hex));
@@ -70,7 +79,7 @@ const HolidayPayment = ({
       setLoading(true);
       setError("");
 
-      // Fetch user and related details from your API using submitHandler
+      // ✅ Fetch user details (for billing info)
       const response = await submitHandler({
         path: "get-customer-form",
         _id,
@@ -81,32 +90,30 @@ const HolidayPayment = ({
       }
 
       const { user, parentDetails } = response.data || {};
+      if (!user) throw new Error("User data missing in API response");
 
-      if (!user) {
-        throw new Error("User data missing in API response");
-      }
-
-      // Use fetched data or fallback to defaults
+      // ✅ Prepare CCAvenue payment data
       const paymentData = {
         merchant_id: ccavenueConfig.merchant_id,
         order_id: orderId,
-        // amount: totalAmount.toFixed(2),
-        amount: "1.00", // For testing purposes, always charge ₹1
+        amount: "1.00", // For testing (replace with totalAmount.toFixed(2) for live)
         currency: ccavenueConfig.currency,
         redirect_url: ccavenueConfig.redirect_url,
         cancel_url: ccavenueConfig.cancel_url,
         language: ccavenueConfig.language,
+
         billing_name: (user?.name || "Holiday Meal").substring(0, 50),
         billing_email: (user?.email || "no-email@lunchbowl.in").substring(0, 50),
         billing_tel: (user?.phone || "0000000000").substring(0, 20),
         billing_address: (parentDetails?.address || "Holiday Meal Booking").substring(0, 100),
         billing_city: (parentDetails?.city || "Chennai").substring(0, 50),
-        billing_state: (parentDetails?.state || "TN").substring(0, 50),
+        billing_state: (parentDetails?.state || "Tamil Nadu").substring(0, 50),
         billing_zip: (parentDetails?.pincode || "600001").substring(0, 10),
         billing_country: (parentDetails?.country || "India").substring(0, 50),
-        merchant_param1: _id,
-        merchant_param2: selectedDate,
-        merchant_param3: JSON.stringify(childrenData),
+
+        merchant_param1: _id, // userId
+        merchant_param2: selectedDate, // meal date
+        merchant_param3: JSON.stringify(childrenDataWithPlan), // ✅ now includes planId
         merchant_param4: "HOLIDAY_PAYMENT",
       };
 
@@ -116,7 +123,7 @@ const HolidayPayment = ({
 
       const encryptedData = encrypt(plainText, ccavenueConfig.working_key);
 
-      // Submit to CCAVenue
+      // ✅ Submit to CCAvenue
       const form = document.createElement("form");
       form.method = "POST";
       form.action = ccavenueConfig.endpoint;
@@ -137,7 +144,7 @@ const HolidayPayment = ({
       document.body.appendChild(form);
       form.submit();
     } catch (err) {
-      console.error("Payment error:", err);
+      console.error("💥 Payment error:", err);
       setError(err.message || "Payment failed. Please try again.");
     } finally {
       setLoading(false);
