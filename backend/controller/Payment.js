@@ -304,15 +304,18 @@ exports.holiydayPayment = async (req, res) => {
       // 🔹 Step 3: Parse childrenData (with planId)
       let childrenData = [];
       try {
-        if (merchant_param3 && merchant_param3.startsWith("[")) {
-          childrenData = JSON.parse(merchant_param3);
-        } else {
-          console.warn("⚠️ merchant_param3 not valid JSON:", merchant_param3);
-        }
-      } catch (err) {
-        console.error("❌ Error parsing childrenData JSON:", err);
-        return res.status(400).send("Malformed childrenData");
-      }
+       if (merchant_param3) {
+         const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
+         childrenData = JSON.parse(decoded);
+         console.log("✅ Successfully decoded & parsed childrenData:", childrenData);
+       } else {
+         console.warn("⚠️ No merchant_param3 provided.");
+       }
+     } catch (err) {
+       console.error("❌ Failed to decode/parse merchant_param3:", err);
+       return res.status(400).send("Malformed childrenData");
+     }
+
 
       console.log("✅ Parsed Children Data:", childrenData);
 

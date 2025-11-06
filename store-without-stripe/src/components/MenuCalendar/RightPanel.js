@@ -505,9 +505,10 @@ const RightPanel = ({
                                     childId: child.id,
                                     dish,
                                     mealDate: formatDate(selectedDate),
-                                    planId: selectedPlans[child.id] || activeSubscription?._id || "HOLIDAY",
+                                    planId: selectedPlans[child.id] || "HOLIDAY", // ✅ Correct line
                                   },
                                 ]);
+
 
                                 setHolidayPaymentOpen(true);
                               }}
