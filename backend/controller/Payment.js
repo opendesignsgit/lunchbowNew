@@ -514,15 +514,17 @@ exports.addChildPaymentController = async (req, res) => {
       // 🔸 Parse childrenData (merchant_param3)
       let childrenData = [];
       try {
-        if (merchant_param3 && merchant_param3.startsWith("[")) {
-          childrenData = JSON.parse(merchant_param3);
-        } else {
-          console.warn("No valid childrenData in merchant_param3");
-        }
-      } catch (err) {
-        console.error("Error parsing childrenData JSON:", err);
-        return res.status(400).send("Malformed childrenData");
-      }
+       if (merchant_param3) {
+         const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
+         childrenData = JSON.parse(decoded);
+         console.log("🟢 Decoded childrenData:", childrenData);
+       } else {
+         console.warn("⚠️ merchant_param3 missing or empty");
+       }
+     } catch (err) {
+       console.error("❌ Error decoding childrenData:", err);
+       return res.status(400).send("Malformed childrenData");
+     }
 
       // 🔸 Process payment and save in UserPayment
       await processPaymentResponse(responseData, "subscription", "ADD_CHILD");
