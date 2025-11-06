@@ -18,7 +18,7 @@ const SubscriptionSchema = new mongoose.Schema({
   transactionId: { type: String },
   status: {
     type: String,
-    enum: ["active", "upcoming", "deactivated"],
+    enum: ["active", "upcoming", "deactivated", "pending_payment"], 
     default: "upcoming",
   },
   children: [{ type: mongoose.Schema.Types.ObjectId, ref: "Child" }],
