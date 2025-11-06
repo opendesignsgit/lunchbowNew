@@ -413,46 +413,62 @@ const MenuCalendar = () => {
       // ✅ Use dietitian meals
       selectedPlanMeals = dietitianMealPlanData.meal_plan.map((day) => day.meal);
     } else {
-      // Example fallback (reverse menus)
-      selectedPlanMeals = [...menus].reverse();
-    }
+    selectedPlanMeals = [...menus].reverse(); // fallback
+  }
 
     const updates = {};
     const firstDayOfMonth = dayjs(`${currentYear}-${currentMonth + 1}-01`);
     const daysInMonth = firstDayOfMonth.daysInMonth();
+    const now = dayjs(); // current time
 
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = dayjs(
         `${currentYear}-${currentMonth + 1}-${String(day).padStart(2, "0")}`
       );
 
-      // ⛔ Skip outside subscription window
-      if (
-        currentDate.isBefore(subscriptionStart, "day") ||
-        currentDate.isAfter(subscriptionEnd, "day")
-      ) {
-        continue;
-      }
-
-      // ⛔ Skip holidays
-      if (isHoliday(day, currentMonth, currentYear)) {
-        continue;
-      }
-
-      const mealDate = currentDate.format("YYYY-MM-DD");
-      const meal = selectedPlanMeals[(day - 1) % selectedPlanMeals.length];
-
-      updates[mealDate] = {
-        ...(menuSelections[mealDate] || {}),
-        [childId]: meal,
-      };
+    // ⛔ Skip if outside subscription window
+    if (
+      currentDate.isBefore(subscriptionStart, "day") ||
+      currentDate.isAfter(subscriptionEnd, "day")
+    ) {
+      continue;
     }
 
+    // ⛔ Skip holidays
+    if (isHoliday(day, currentMonth, currentYear)) {
+      continue;
+    }
+
+    // ⛔ Skip locked days (within 48 hrs)
+    const hoursDiff = currentDate.diff(now, "hour");
+    if (hoursDiff < 48) {
+      console.log(`Skipping locked date ${currentDate.format("YYYY-MM-DD")} (within 48 hrs)`);
+      continue;
+    }
+
+    // ✅ Apply dietitian meal for available days only
+    const mealDate = currentDate.format("YYYY-MM-DD");
+    const meal = selectedPlanMeals[(day - 1) % selectedPlanMeals.length];
+
+    updates[mealDate] = {
+      ...(menuSelections[mealDate] || {}),
+      [childId]: meal,
+    };
+  }
+
+    // ✅ Update only unlocked days
     setMenuSelections((prev) => ({
       ...prev,
       ...updates,
     }));
+
+    // 🧠 Optional: show warning if all skipped
+    const unlockedDays = Object.keys(updates).length;
+    if (unlockedDays === 0) {
+      alert("All days are locked within 48 hours. No meals were applied.");
+    }
   };
+
 
 
 
