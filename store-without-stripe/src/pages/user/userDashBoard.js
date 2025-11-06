@@ -44,7 +44,9 @@ const UserDashboard = () => {
 
         setDashboardData({
           parentName: `${userData.parentDetails.fatherFirstName} ${userData.parentDetails.fatherLastName}`,
-          subscriptionCount: userData.subscriptionCount || 0,
+          subscriptionCount: userData.subscriptions && userData.subscriptions.length > 0
+            ? Math.max(userData.subscriptions.length, 0)
+            : 0,
           subscriptionActive: userData.paymentStatus === "Success" && !!activeSubscription,
           subscriptionDates: {
             start: activeSubscription?.startDate || null,

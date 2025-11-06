@@ -1020,13 +1020,7 @@ const stepFormRegister = async (req, res) => {
         return res.status(404).json({ success: false, message: "Form not found" });
       }
 
-      // Check if user has any active subscriptions
-      const activeSubscriptions = form.subscriptions.filter(
-        (sub) => sub.status === "active"
-      );
 
-      // Decide new subscription's status based on existing active plans
-      const newStatus = activeSubscriptions.length > 0 ? "upcoming" : "active";
 
       // Create new subscription document
       const newSubscription = new Subscription({
@@ -1036,7 +1030,7 @@ const stepFormRegister = async (req, res) => {
         endDate: payload.endDate,
         workingDays: payload.workingDays,
         price: payload.totalPrice,
-        status: newStatus,
+        status: "pending_payment",
         children: payload.children.map((id) => mongoose.Types.ObjectId(id)),
       });
       await newSubscription.save();
@@ -1396,8 +1390,8 @@ const isValidObjectIdStrict = (v) =>
 const getAllChildrenForUser = async (req, res) => {
   try {
     const { userId, path } = req.body; // <-- read optional flag
-
     console.log("getAllChildrenForUser called with path:", path);
+
     if (!userId) {
       return res.status(400).json({ message: "Missing userId in request body" });
     }
@@ -1405,18 +1399,48 @@ const getAllChildrenForUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid userId format" });
     }
 
-    // 1) Children for the user
+    const userObjectId = mongoose.Types.ObjectId(userId);
+
+    // 🧹 STEP 1: Cleanup pending_payment subscriptions before doing anything else
+    const pendingSubs = await Subscription.find({
+      user: userObjectId,
+      status: "pending_payment",
+    }).select("_id");
+
+    if (pendingSubs.length > 0) {
+      const pendingIds = pendingSubs.map((s) => s._id);
+
+      // 🗑️ Delete from Subscription collection
+      await Subscription.deleteMany({ _id: { $in: pendingIds } });
+
+      // 🧩 Remove from Form.subscriptions array
+      await Form.updateOne(
+        { user: userObjectId },
+        { $pull: { subscriptions: { $in: pendingIds } } }
+      );
+
+      console.log(
+        `Cleaned up ${pendingIds.length} pending_payment subscriptions for user ${userId}`
+      );
+    }
+
+    // STEP 2: Fetch all children for the user
     const children = await Child.find({ user: userId });
 
-    // 2) Find the form and read subscriptions array
+    // STEP 3: Find form (after cleanup)
     const form = await Form.findOne({ user: userId })
       .select("subscriptions")
       .lean();
 
     let activeSubscription = null;
 
-    // New branch: when flag is present, choose the actually "active" plan
-    if (path === "Add-Child" && form && Array.isArray(form.subscriptions) && form.subscriptions.length > 0) {
+    // STEP 4: If Add-Child path, find active subscription
+    if (
+      path === "Add-Child" &&
+      form &&
+      Array.isArray(form.subscriptions) &&
+      form.subscriptions.length > 0
+    ) {
       console.log("Looking for truly active subscription for Add_Child path");
 
       const validIds = form.subscriptions.filter(isValidObjectIdStrict);
@@ -1425,18 +1449,23 @@ const getAllChildrenForUser = async (req, res) => {
         activeSubscription = await Subscription.findOne({
           _id: { $in: validIds },
           $or: [
-            { status: "active" },                         // status-based active
-            { startDate: { $lte: now }, endDate: { $gte: now } } // date-window active
-          ]
+            { status: "active" },
+            { startDate: { $lte: now }, endDate: { $gte: now } },
+          ],
         })
-          .sort({ startDate: -1, createdAt: -1 }) // prefer the most recent active
+          .sort({ startDate: -1, createdAt: -1 }) // prefer latest active
           .populate({ path: "children" })
           .lean();
       }
     }
 
-    // Existing fallback (unchanged): use the last valid id in the array
-    if (!activeSubscription && form && Array.isArray(form.subscriptions) && form.subscriptions.length > 0) {
+    // STEP 5: Fallback — last valid subscription
+    if (
+      !activeSubscription &&
+      form &&
+      Array.isArray(form.subscriptions) &&
+      form.subscriptions.length > 0
+    ) {
       console.log("Falling back to last valid subscription ID");
 
       let lastValidId = null;
@@ -1447,27 +1476,28 @@ const getAllChildrenForUser = async (req, res) => {
           break;
         }
       }
+
       if (lastValidId) {
         activeSubscription = await Subscription.findById(lastValidId)
           .populate({ path: "children" })
           .lean();
-      } else {
-        activeSubscription = null;
       }
     }
 
     return res.json({
       success: true,
       children,
-      activeSubscription
+      activeSubscription,
     });
   } catch (error) {
+    console.error("Error in getAllChildrenForUser:", error);
     return res.status(500).json({
       message: "Failed to get children",
-      error: error.message
+      error: error.message,
     });
   }
 };
+
 
 
 
@@ -1631,11 +1661,34 @@ const getMenuCalendarDate = async (req, res) => {
       return res.status(400).json({ success: false, message: "User ID required" });
     }
 
-    // Run status roller first (no transaction/session)
-    await rollSubscriptionsForUserNoSession(mongoose.Types.ObjectId(_id));
+    const userId = mongoose.Types.ObjectId(_id);
 
-    // Find form and populate subscriptions and children inside subscriptions
-    const form = await Form.findOne({ user: mongoose.Types.ObjectId(_id) })
+    // Run status roller first (no transaction/session)
+    await rollSubscriptionsForUserNoSession(userId);
+
+    // 🧹 STEP 1: Find pending payment subscriptions (to delete)
+    const pendingSubs = await Subscription.find({
+      user: userId,
+      status: "pending_payment",
+    }).select("_id");
+
+    if (pendingSubs.length > 0) {
+      const pendingIds = pendingSubs.map((s) => s._id);
+
+      // 🗑️ Delete all pending subscriptions
+      await Subscription.deleteMany({ _id: { $in: pendingIds } });
+
+      // 🧩 Also remove them from the Form.subscriptions array
+      await Form.updateOne(
+        { user: userId },
+        { $pull: { subscriptions: { $in: pendingIds } } }
+      );
+
+      console.log(`Cleaned up ${pendingIds.length} pending_payment subscriptions for user ${_id}`);
+    }
+
+    // STEP 2: Fetch user's form and populate subscriptions + children
+    const form = await Form.findOne({ user: userId })
       .populate({
         path: "subscriptions",
         populate: {
@@ -1653,8 +1706,20 @@ const getMenuCalendarDate = async (req, res) => {
       return res.status(404).json({ success: false, message: "No subscription plans found" });
     }
 
-    // Map subscriptions to simplified array including children details
-    const plans = form.subscriptions.map((plan) => ({
+    // STEP 3: Filter (extra safety)
+    const validSubscriptions = form.subscriptions.filter(
+      (sub) => sub.status !== "pending_payment"
+    );
+
+    if (validSubscriptions.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No active or upcoming subscriptions found",
+      });
+    }
+
+    // STEP 4: Format and send plans
+    const plans = validSubscriptions.map((plan) => ({
       id: plan._id,
       planId: plan.planId,
       startDate: plan.startDate,
@@ -1677,6 +1742,7 @@ const getMenuCalendarDate = async (req, res) => {
 
     return res.status(200).json({ success: true, data: { plans } });
   } catch (error) {
+    console.error("Error in getMenuCalendarDate:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -1684,6 +1750,8 @@ const getMenuCalendarDate = async (req, res) => {
     });
   }
 };
+
+
 
 
 const saveMealPlans = async (req, res) => {
@@ -1802,7 +1870,32 @@ const accountDetails = async (req, res) => {
       });
     }
 
-    // If updateField and updateValue are present, perform update in both schemas
+    const userObjectId = mongoose.Types.ObjectId(userId);
+
+    // 🧹 STEP 1: Cleanup pending_payment subscriptions for this user
+    const pendingSubs = await Subscription.find({
+      user: userObjectId,
+      status: "pending_payment",
+    }).select("_id");
+
+    if (pendingSubs.length > 0) {
+      const pendingIds = pendingSubs.map((s) => s._id);
+
+      // 🗑️ Delete them from Subscription collection
+      await Subscription.deleteMany({ _id: { $in: pendingIds } });
+
+      // 🧩 Remove their references from the Form
+      await Form.updateOne(
+        { user: userObjectId },
+        { $pull: { subscriptions: { $in: pendingIds } } }
+      );
+
+      console.log(
+        `Cleaned up ${pendingIds.length} pending_payment subscriptions for user ${userId}`
+      );
+    }
+
+    // 🧾 STEP 2: If updateField & updateValue provided, update both Customer + Form
     if (
       updateField &&
       ["email", "mobile"].includes(updateField) &&
@@ -1810,7 +1903,7 @@ const accountDetails = async (req, res) => {
     ) {
       const customerUpdate = {};
       if (updateField === "email") customerUpdate.email = updateValue;
-      if (updateField === "mobile") customerUpdate.phone = updateValue; // assuming 'phone' in Customer schema
+      if (updateField === "mobile") customerUpdate.phone = updateValue; // assuming 'phone' field in Customer schema
 
       await Customer.findByIdAndUpdate(userId, customerUpdate);
 
@@ -1823,13 +1916,13 @@ const accountDetails = async (req, res) => {
       }
     }
 
-    // Fetch form with populated subscriptions and children inside each subscription
+    // 🧠 STEP 3: Fetch updated Form with subscriptions + children
     const user = await Form.findOne({ user: userId })
       .populate({
         path: "subscriptions",
-        populate: { path: "children" }
+        populate: { path: "children" },
       })
-      .populate("user"); // optionally populate user details
+      .populate("user");
 
     if (!user) {
       return res.status(404).json({
@@ -1851,6 +1944,7 @@ const accountDetails = async (req, res) => {
     });
   }
 };
+
 
 const getFormData = async (req, res) => {
   try {
