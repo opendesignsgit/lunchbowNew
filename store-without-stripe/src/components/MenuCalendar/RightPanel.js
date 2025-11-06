@@ -501,8 +501,14 @@ const RightPanel = ({
                                   return;
                                 }
                                 setHolidayPaymentData([
-                                  { childId: child.id, dish, mealDate: formatDate(selectedDate) },
+                                  {
+                                    childId: child.id,
+                                    dish,
+                                    mealDate: formatDate(selectedDate),
+                                    planId: selectedPlans[child.id] || activeSubscription?._id || "HOLIDAY",
+                                  },
                                 ]);
+
                                 setHolidayPaymentOpen(true);
                               }}
                             >
@@ -571,7 +577,9 @@ const RightPanel = ({
         onClose={() => setHolidayPaymentOpen(false)}
         selectedDate={formatDate(selectedDate)}
         childrenData={holidayPaymentData}
+        planId={holidayPaymentData[0]?.planId} // ✅ pass selected planId
       />
+
 
       <Snackbar open={showSaveWarning} autoHideDuration={4000} onClose={() => setShowSaveWarning(false)} className="saveworkmenu">
         <Alert severity="warning" sx={{ width: '100%' }}>
