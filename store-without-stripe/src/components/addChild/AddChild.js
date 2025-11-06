@@ -200,6 +200,19 @@ const AddChild = ({ _id, onComplete }) => {
 
   const [filteredLocations, setFilteredLocations] = useState([]);
 
+  // Log the subscription plan id when available
+  useEffect(() => {
+    const id = activeSubscription?._id ?? activeSubscription?.id ?? null;
+    console.log("Subscription plan id:", activeSubscription);
+
+    if (id) {
+      console.log("Subscription plan id:", id);
+    } else {
+      console.log("Subscription plan id: not available");
+    }
+  }, [activeSubscription]);
+
+
   useEffect(() => {
     if (watchSchool && schools.length) {
       const schoolLocations = schools
