@@ -203,7 +203,7 @@ const UserDashboard = () => {
                         <HiUsers className="w-6 h-6" />
                       </div>
                     </div>
-                    <div className="mt-4 text-sm text-gray-500 curplan flex">
+                    <div className="mt-4 text-sm text-gray-500 curplan flex displaynone">
                       <span> <strong>Current plan:</strong> </span>
                       <strong
                         className={`ml-1 ${dashboardData.subscriptionCount > 0 && dashboardData.subscriptionActive ? "planactive" : "planinactive"}`}

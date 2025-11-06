@@ -539,7 +539,7 @@ const MenuCalendar = () => {
         {subscriptionPlans.map((plan, i) => (
           <Tab
             key={i}
-            label={`${dayjs(plan.startDate).format("DD MMM")} - ${dayjs(plan.endDate).format("DD MMM")}(${plan.status})`}
+            label={`${dayjs(plan.startDate).format("DD MMM")} - ${dayjs(plan.endDate).format("DD MMM")} (${plan.status})`}
           />
         ))}
       </Tabs>

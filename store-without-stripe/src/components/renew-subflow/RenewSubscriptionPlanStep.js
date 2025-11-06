@@ -337,20 +337,22 @@ const RenewSubscriptionPlanStep = ({
           {childrenList?.children?.length > 0 && (
             <Box mb={2} className="renewptitlebox">
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }} className="renewplantitle">Select Child*</Typography>
+              <div className="childalllistboxs flex items-center">
               {childrenList?.children?.map(child => (
                 <div className="childlistboxs flex items-center">
                   <FormControlLabel className="childlistfbox"
-                  key={child._id}
-                  control={
-                    <Checkbox
-                      checked={selectedChildren.includes(child._id)}
-                      onChange={() => handleChildCheckbox(child._id)}
-                    />
-                  }
-                  label={`${child.childFirstName} ${child.childLastName}`}
-                />
+                    key={child._id}
+                    control={
+                      <Checkbox
+                        checked={selectedChildren.includes(child._id)}
+                        onChange={() => handleChildCheckbox(child._id)}
+                      />
+                    }
+                    label={`${child.childFirstName} ${child.childLastName}`}
+                  />
                 </div>
               ))}
+              </div>
               {childError && (
                 <FormHelperText error>
                   Please choose the children.

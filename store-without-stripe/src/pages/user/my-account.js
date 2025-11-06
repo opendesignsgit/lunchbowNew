@@ -390,7 +390,7 @@ const MyAccount = () => {
                     {activeSub ? (
                       <ul>
                         <li>
-                          <b>Start Date:</b> <span>{(activeSub.startDate)}</span>
+                          <b>Start Date:</b> <span>{formatDate(activeSub.startDate)}</span>
                         </li>
                         <li>
                           <b>End Date:</b> <span>{formatDate(activeSub.endDate)}</span>
