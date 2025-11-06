@@ -162,14 +162,40 @@ const RenewSubscriptionPlanStep = ({
     }
   }, [childrenList]);
 
-  // Calculate minStartDate with 2-day buffer from today and not before day after end
+  // Utility function to find next working day
+  const getNextWorkingDay = (date, holidays) => {
+    let current = dayjs(date);
+    // keep moving forward until it's a valid working day
+    while (!isWorkingDay(current, holidays)) {
+      current = current.add(1, "day");
+    }
+    return current;
+  };
+
+  // Calculate minStartDate
   const afterEnd = activeSubscriptionEndDate
-    ? activeSubscriptionEndDate.add(1, "day")
-    : null;
+  ? activeSubscriptionEndDate.add(1, "day") // next day after current plan
+  : null;
+
   const todayPlusTwo = dayjs().add(2, "day");
-  const minStartDate = afterEnd && afterEnd.isAfter(todayPlusTwo)
-    ? afterEnd
-    : todayPlusTwo;
+
+  // Now apply your condition
+  let tentativeStartDate;
+
+  if (afterEnd) {
+    // old plan still active
+    if (afterEnd.isAfter(todayPlusTwo)) {
+      tentativeStartDate = afterEnd; // plan still active → start after it ends
+    } else {
+      tentativeStartDate = todayPlusTwo; // plan ended → wait 2 days from today
+    }
+  } else {
+    // no old plan at all
+    tentativeStartDate = todayPlusTwo;
+  }
+
+  // finally, ensure the start date is a working day
+  const minStartDate = getNextWorkingDay(tentativeStartDate, holidays);
 
   // const [plans, setPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState("");
