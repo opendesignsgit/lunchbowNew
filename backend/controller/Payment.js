@@ -267,124 +267,124 @@ exports.holiydayPayment = async (req, res) => {
   });
 
   req.on("end", async () => {
-    try {
-      console.log("🟢 [HolidayPayment] Incoming encrypted CCAvenue response...");
-      if (!encResponse) return res.status(400).send("Empty payment response");
+    console.log("🟢 [HolidayPayment] Incoming encrypted CCAvenue response...");
 
+    try {
       const parsed = qs.parse(encResponse);
       const encrypted = parsed.encResp;
-      if (!encrypted) return res.status(400).send("Missing encrypted response");
+      if (!encrypted) {
+        console.error("❌ Missing encrypted response");
+        return res.status(400).send("Missing encrypted response");
+      }
 
-      // 🔹 Step 1: Decrypt response
-      const decrypted = ccav.decrypt(encrypted, workingKey);
-      const responseData = qs.parse(decrypted);
-
-      console.log("🧾 Decrypted Response:", responseData);
+      // --- Decrypt the response
+      let decrypted, responseData;
+      try {
+        decrypted = ccav.decrypt(encrypted, workingKey);
+        responseData = qs.parse(decrypted);
+        console.log("🧾 Decrypted Response:", responseData);
+      } catch (err) {
+        console.error("❌ Decryption failed:", err);
+        return res.status(400).send("Failed to decrypt payment response");
+      }
 
       const {
+        order_id,
+        tracking_id,
         order_status,
         merchant_param1: userId,
         merchant_param2: mealDate,
         merchant_param3,
-        tracking_id,
-        order_id,
       } = responseData;
 
-      // 🔹 Step 2: Validate base fields
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        console.error("❌ Invalid userId:", userId);
-        return res.status(400).send("Invalid user ID");
-      }
+      if (!userId) return res.status(400).send("Missing userId");
+      if (!mongoose.Types.ObjectId.isValid(userId))
+        return res.status(400).send("Invalid userId");
 
-      if (!mealDate || !/^\d{4}-\d{2}-\d{2}$/.test(mealDate)) {
-        console.error("❌ Invalid mealDate:", mealDate);
-        return res.status(400).send("Invalid mealDate (expected YYYY-MM-DD)");
-      }
+      await processPaymentResponse(responseData, "holiday", "HOLIDAY_PAY");
 
-      // 🔹 Step 3: Parse childrenData (with planId)
+      // --- Parse merchant_param3
       let childrenData = [];
       try {
-       if (merchant_param3) {
-         const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
-         childrenData = JSON.parse(decoded);
-         console.log("✅ Successfully decoded & parsed childrenData:", childrenData);
-       } else {
-         console.warn("⚠️ No merchant_param3 provided.");
-       }
-     } catch (err) {
-       console.error("❌ Failed to decode/parse merchant_param3:", err);
-       return res.status(400).send("Malformed childrenData");
-     }
+        const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
+        childrenData = JSON.parse(decoded);
+        console.log("✅ Decoded childrenData:", childrenData);
+      } catch (err) {
+        console.error("⚠️ Failed to parse merchant_param3:", err);
+        return res.status(400).send("Invalid children data");
+      }
 
-
-      console.log("✅ Parsed Children Data:", childrenData);
-
-      // 🔹 Step 4: Handle failed transactions
-      if (order_status !== "Success") {
-        console.warn("❌ Payment failed:", order_status);
+      if (!Array.isArray(childrenData) || childrenData.length === 0) {
+        console.warn("⚠️ No children data found in payment");
         return res.redirect("https://lunchbowl.co.in/payment/failed");
       }
 
-      // 🔹 Step 5: Save payment response
-      await processPaymentResponse(responseData, "holiday", "HOLIDAY_PAY");
-
-      // 🔹 Step 6: Process each child payment
-      const userObjectId = new mongoose.Types.ObjectId(userId);
-      const mealDateObj = new Date(mealDate);
-
-      let userMeal = await UserMeal.findOne({ userId: userObjectId });
+      // --- Process each child's holiday meal
+      let userMeal = await UserMeal.findOne({ userId });
       if (!userMeal) {
-        userMeal = new UserMeal({ userId: userObjectId, plans: [] });
+        console.log("🟠 No existing UserMeal found, creating new one...");
+        userMeal = new UserMeal({ userId, plans: [] });
       }
 
       for (const child of childrenData) {
-        const { childId, dish, planId } = child;
-        if (!childId || !dish || !planId) {
-          console.warn("⚠️ Skipping invalid child entry:", child);
+        const { childId, dish, mealDate, planId } = child;
+        if (!childId || !dish || !mealDate || !planId) {
+          console.log("⚠️ Skipping invalid child data:", child);
           continue;
         }
 
-        console.log(`👶 Processing Child: ${childId} | Plan: ${planId} | Dish: ${dish}`);
+        console.log(`👶 Processing child: ${childId}, plan: ${planId}, meal: ${dish}`);
 
-        // ✅ Step 6A: Save HolidayPayment record
-        await HolidayPayment.create({
-          userId,
-          childId,
-          mealDate: mealDateObj,
-          mealName: dish,
-          amount: 200,
-          paymentStatus: "Paid",
-          transactionDetails: { tracking_id, order_id, ...responseData },
-        });
+        // --- Record HolidayPayment
+        try {
+          await HolidayPayment.create({
+            userId,
+            childId,
+            mealDate,
+            mealName: dish,
+            amount: 200,
+            paymentStatus: "Paid",
+            transactionDetails: { tracking_id, order_id, ...responseData },
+          });
+        } catch (err) {
+          console.error("⚠️ Failed to create HolidayPayment:", err.message);
+        }
 
-        // ✅ Step 6B: Update UserMeal
+        // --- Find or create plan
         let plan = userMeal.plans.find((p) => p.planId === planId);
         if (!plan) {
-          console.log("🟠 Creating new plan entry in UserMeal:", planId);
+          console.log("🟢 Adding new plan entry:", planId);
           plan = { planId, children: [] };
           userMeal.plans.push(plan);
         }
 
-        let childEntry = plan.children.find((c) => c.childId.equals(childId));
+        // --- Find or create child under plan
+        let childEntry = plan.children.find((c) =>
+          c.childId.equals(childId)
+        );
         if (!childEntry) {
-          console.log("🟠 Creating new child entry in plan");
+          console.log("🟢 Adding new child to plan:", childId);
           plan.children.push({
             childId,
-            meals: [{ mealDate: mealDateObj, mealName: dish }],
+            meals: [{ mealDate: new Date(mealDate), mealName: dish }],
           });
         } else {
-          const mealExists = childEntry.meals.some(
-            (m) => new Date(m.mealDate).toISOString().slice(0, 10) === mealDate
+          // --- Find if meal already exists for that date
+          const existingMeal = childEntry.meals.find(
+            (m) =>
+              new Date(m.mealDate).toISOString().slice(0, 10) ===
+              new Date(mealDate).toISOString().slice(0, 10)
           );
 
-          if (!mealExists) {
-            childEntry.meals.push({ mealDate: mealDateObj, mealName: dish });
+          if (existingMeal) {
+            console.log("🔄 Updating existing holiday meal for:", mealDate);
+            existingMeal.mealName = dish;
           } else {
-            childEntry.meals = childEntry.meals.map((m) =>
-              new Date(m.mealDate).toISOString().slice(0, 10) === mealDate
-                ? { ...m, mealName: dish }
-                : m
-            );
+            console.log("➕ Adding new holiday meal for:", mealDate);
+            childEntry.meals.push({
+              mealDate: new Date(mealDate),
+              mealName: dish,
+            });
           }
         }
       }
@@ -392,12 +392,12 @@ exports.holiydayPayment = async (req, res) => {
       await userMeal.save();
       console.log("💾 UserMeal updated successfully for user:", userId);
 
-      // 🔹 Step 7: Send confirmation email
+      // --- Optional: send confirmation email
       try {
-        const form = await Form.findOne({ user: userId });
-        if (form?.parentDetails?.email) {
-          const parentName = `${form.parentDetails.fatherFirstName || ""} ${form.parentDetails.fatherLastName || ""}`.trim();
-          const email = form.parentDetails.email;
+        const userForm = await Form.findOne({ user: userId });
+        if (userForm && userForm.parentDetails) {
+          const parentName = `${userForm.parentDetails.fatherFirstName} ${userForm.parentDetails.fatherLastName}`;
+          const email = userForm.parentDetails.email;
 
           const transporter = nodemailer.createTransport({
             service: "gmail",
@@ -407,36 +407,33 @@ exports.holiydayPayment = async (req, res) => {
             },
           });
 
-          const mealList = childrenData
-            .map((c) => `🍱 ${c.dish} for ${mealDate}`)
-            .join("<br>");
-
           const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
-            subject: "Holiday Meal Payment Successful – LunchBowl",
+            subject: "Holiday Meal Payment Confirmation – LunchBowl",
             html: `
-              <p>Hi ${parentName || "Parent"},</p>
-              <p>Your payment for holiday meals has been successfully processed.</p>
-              <p>${mealList}</p>
+              <p>Hi ${parentName},</p>
+              <p>Your holiday meal payment is successful!</p>
               <p>Order ID: <b>${order_id}</b></p>
               <p>Transaction ID: <b>${tracking_id}</b></p>
-              <p>We hope your child enjoys their special meal!</p>
+              <p>We’ve successfully added your holiday meal(s) to your LunchBowl plan.</p>
               <p>– Earth Tech Concepts Pvt Ltd</p>
             `,
           };
 
-          await transporter.sendMail(mailOptions);
-          console.log("📧 Confirmation email sent to:", email);
+          transporter.sendMail(mailOptions, (err) => {
+            if (err) console.error("📧 Email send error:", err);
+            else console.log("📧 Confirmation email sent to:", email);
+          });
         }
       } catch (mailErr) {
-        console.error("❌ Error sending email:", mailErr);
+        console.error("📧 Email sending failed:", mailErr);
       }
 
       console.log("✅ Holiday Payment completed successfully!");
       return res.redirect("https://lunchbowl.co.in/payment/success");
     } catch (err) {
-      console.error("💥 CCAvenue Holiday Payment Handler Error:", err);
+      console.error("💥 Holiday payment handler error:", err);
       return res.status(500).send("Internal Server Error");
     }
   });
