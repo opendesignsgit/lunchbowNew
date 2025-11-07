@@ -59,6 +59,8 @@ const RightPanel = ({
   subscriptionEnd,     // ⬅️ add this
   goToPrevDate,   // ✅ add
   goToNextDate,   // ✅ add
+  subscriptionPlans,       // ✅ add this
+  selectedPlanIndex,
 }) => {
   const { data: session } = useSession();
 
@@ -578,7 +580,7 @@ const RightPanel = ({
         onClose={() => setHolidayPaymentOpen(false)}
         selectedDate={formatDate(selectedDate)}
         childrenData={holidayPaymentData}
-        currentPlanId={subscriptionPlans[selectedPlanIndex]?.id}  // ✅ Pass current planId
+        currentPlanId={subscriptionPlans[selectedPlanIndex]?.id} // ✅ Now it’s defined
       />
 
 

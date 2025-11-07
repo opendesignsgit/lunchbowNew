@@ -103,6 +103,12 @@ const HolidayPayment = ({
       const { user, parentDetails } = response.data || {};
       if (!user) throw new Error("User data missing in API response");
 
+      console.log("🧾 Sending holiday payment data:", {
+        userId: _id,
+        currentPlanId,
+        childrenDataWithPlan,
+      });
+
       // ✅ Prepare Payment Payload
       const paymentData = {
         merchant_id: ccavenueConfig.merchant_id,

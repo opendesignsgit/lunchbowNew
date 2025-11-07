@@ -666,6 +666,8 @@ const MenuCalendar = () => {
             canPay = {canPay}
             subscriptionStart={subscriptionStart}
             subscriptionEnd={subscriptionEnd}
+              subscriptionPlans={subscriptionPlans}        // ✅ added
+              selectedPlanIndex={selectedPlanIndex}
           />
         </>
       )}
@@ -704,6 +706,8 @@ const MenuCalendar = () => {
           canPay={canPay}
           subscriptionStart={subscriptionStart}
           subscriptionEnd={subscriptionEnd}
+            subscriptionPlans={subscriptionPlans}        // ✅ added
+            selectedPlanIndex={selectedPlanIndex}
 
           goToPrevDate={() => {
             let prev = dayjs(`${currentYear}-${currentMonth + 1}-${selectedDate}`).subtract(1, "day");
