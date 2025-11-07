@@ -271,7 +271,7 @@ const UserDashboard = () => {
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500 DashboardTItems">
                     <div className="flex items-start justify-between flex-col">
                       <div className='mb-3'>
-                        <h5> Registered Children </h5>
+                        <h5>Active Children </h5>
                         <p className="text-2xl font-semibold text-gray-800">
                           {dashboardData.childrenCount}
                         </p>

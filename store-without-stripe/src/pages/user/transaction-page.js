@@ -68,10 +68,10 @@ const TransactionPage = () => {
         <section className="transactionTableSec secpaddblock bg-white">
           <div className="container mx-auto">
 
-            <div className='hworkTitle combtntb comtilte textcenter  mb-[5vh]'>
+            {/*<div className='hworkTitle combtntb comtilte textcenter  mb-[5vh]'>
               <h3 className='flex flex-col text4AB138'> <span className='block'>Transaction Details</span> </h3>
               <p className=''>A simple view of your payment history — clear, quick, and organized.</p>
-            </div>
+            </div>*/}
             {/* Pass userId to PaymentsTable */}
             <PaymentsTable _id={userId} />
           </div>
