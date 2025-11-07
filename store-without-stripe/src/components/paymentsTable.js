@@ -10,6 +10,17 @@ export default function PaymentsTable({ _id }) {
     [userId]
   );
 
+
+  function formatDateTime(dateStr) {
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = date.toLocaleString("default", { month: "short" }); // e.g. Nov
+    const year = date.getFullYear();
+    const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); // e.g. 10:30 AM
+    return `${day} ${month} ${year}, ${time}`;
+  }
+
   if (loading) return <div>Loading payments...</div>;
   if (error) return <div>Error: {error.message || error}</div>;
   if (!paymentData || (paymentData.payments && paymentData.payments.length === 0)) {
@@ -38,7 +49,7 @@ export default function PaymentsTable({ _id }) {
               <td>{payment.order_id}</td>
               <td>{payment.billing_email}</td>
               <td>{payment.paidFor}</td>
-              <td>{new Date(payment.payment_date).toLocaleString()}</td>
+              <td>{formatDateTime(payment.payment_date)}</td>
               <td>{payment.order_status}</td>
               <td>{payment.amount}</td>
             </tr>
