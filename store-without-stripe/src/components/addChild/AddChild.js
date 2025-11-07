@@ -892,7 +892,7 @@ const AddChild = ({ _id, onComplete }) => {
                   alert("Please fill all mandatory fields for selected child(ren) before proceeding.");
                 }}
               >
-                <span>Proceed to Payment</span>
+                <span>You need to choose a child</span>
               </Button>
             ) : (
               <AddChildPayment

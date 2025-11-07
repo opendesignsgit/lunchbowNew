@@ -101,11 +101,12 @@ const RenewSubscriptionPage = () => {
                   <span className="block firstspan ml-2">Subscription</span>
                 </h1>
                 <p className="">
-                  {showPaymentStep
+                  {/*{showPaymentStep
                     ? "Complete your payment to renew your subscription"
                     : showPlanStep
                       ? "Choose your subscription plan"
-                      : "Update or confirm child details"}
+                      : "Update or confirm child details"}*/}
+                  Keep the healthy lunches coming! Renew your plan today to <br />ensure uninterrupted meal service for your child.
                 </p>
 
                 <div className="psfbanIconss">
