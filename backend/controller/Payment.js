@@ -267,7 +267,6 @@ exports.holiydayPayment = async (req, res) => {
   });
 
   req.on("end", async () => {
-    console.log("🟢 [HolidayPayment] Incoming encrypted CCAvenue response...");
 
     try {
       const parsed = qs.parse(encResponse);
@@ -282,7 +281,6 @@ exports.holiydayPayment = async (req, res) => {
       try {
         decrypted = ccav.decrypt(encrypted, workingKey);
         responseData = qs.parse(decrypted);
-        console.log("🧾 Decrypted Response:", responseData);
       } catch (err) {
         console.error("❌ Decryption failed:", err);
         return res.status(400).send("Failed to decrypt payment response");
@@ -308,7 +306,6 @@ exports.holiydayPayment = async (req, res) => {
       try {
         const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
         childrenData = JSON.parse(decoded);
-        console.log("✅ Decoded childrenData:", childrenData);
       } catch (err) {
         console.error("⚠️ Failed to parse merchant_param3:", err);
         return res.status(400).send("Invalid children data");
@@ -322,18 +319,15 @@ exports.holiydayPayment = async (req, res) => {
       // --- Process each child's holiday meal
       let userMeal = await UserMeal.findOne({ userId });
       if (!userMeal) {
-        console.log("🟠 No existing UserMeal found, creating new one...");
         userMeal = new UserMeal({ userId, plans: [] });
       }
 
       for (const child of childrenData) {
         const { childId, dish, mealDate, planId } = child;
         if (!childId || !dish || !mealDate || !planId) {
-          console.log("⚠️ Skipping invalid child data:", child);
           continue;
         }
 
-        console.log(`👶 Processing child: ${childId}, plan: ${planId}, meal: ${dish}`);
 
         // --- Record HolidayPayment
         try {
@@ -353,7 +347,6 @@ exports.holiydayPayment = async (req, res) => {
         // --- Find or create plan
         let plan = userMeal.plans.find((p) => p.planId === planId);
         if (!plan) {
-          console.log("🟢 Adding new plan entry:", planId);
           plan = { planId, children: [] };
           userMeal.plans.push(plan);
         }
@@ -363,7 +356,6 @@ exports.holiydayPayment = async (req, res) => {
           c.childId.equals(childId)
         );
         if (!childEntry) {
-          console.log("🟢 Adding new child to plan:", childId);
           plan.children.push({
             childId,
             meals: [{ mealDate: new Date(mealDate), mealName: dish }],
@@ -377,10 +369,8 @@ exports.holiydayPayment = async (req, res) => {
           );
 
           if (existingMeal) {
-            console.log("🔄 Updating existing holiday meal for:", mealDate);
             existingMeal.mealName = dish;
           } else {
-            console.log("➕ Adding new holiday meal for:", mealDate);
             childEntry.meals.push({
               mealDate: new Date(mealDate),
               mealName: dish,
@@ -390,7 +380,6 @@ exports.holiydayPayment = async (req, res) => {
       }
 
       await userMeal.save();
-      console.log("💾 UserMeal updated successfully for user:", userId);
 
       // --- Optional: send confirmation email
       try {
@@ -430,7 +419,6 @@ exports.holiydayPayment = async (req, res) => {
         console.error("📧 Email sending failed:", mailErr);
       }
 
-      console.log("✅ Holiday Payment completed successfully!");
       return res.redirect("https://lunchbowl.co.in/payment/success");
     } catch (err) {
       console.error("💥 Holiday payment handler error:", err);
@@ -524,7 +512,6 @@ exports.addChildPaymentController = async (req, res) => {
        if (merchant_param3) {
          const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
          childrenData = JSON.parse(decoded);
-         console.log("🟢 Decoded childrenData:", childrenData);
        } else {
          console.warn("⚠️ merchant_param3 missing or empty");
        }
