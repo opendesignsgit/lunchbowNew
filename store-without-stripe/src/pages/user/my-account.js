@@ -140,8 +140,14 @@ const MyAccount = () => {
 
   function formatDate(dateStr) {
     if (!dateStr) return "N/A";
-    return new Date(dateStr).toLocaleDateString();
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = date.toLocaleString("default", { month: "short" }); // e.g. Nov
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
   }
+
+
 
   // Derived data (no UI changes)
   const subscriptions = userDetails?.subscriptions ?? [];
