@@ -23,6 +23,9 @@ import abbanicon5 from "../../../public/enterrequireddetails/violetyellow-star.s
 import abbanicon6 from "../../../public/enterrequireddetails/redtriangle.svg";
 import abbanicon7 from "../../../public/enterrequireddetails/redlittleflower.svg";
 import abbanicon8 from "../../../public/enterrequireddetails/layerflower.svg";
+import useAsync from "@hooks/useAsync";
+import CategoryServices from "@services/CategoryServices";
+
 
 const StepHeader = ({ label }) => (
   <Box className="SetpTabNav" sx={{ textAlign: "center", mb: 6 }}>
@@ -77,6 +80,11 @@ const MyAccount = () => {
   const [saving, setSaving] = useState(false);
 
   const userId = session?.user?.id;
+
+  // ✅ Fetch children list using the Add-Child API
+  const { data: fetchedChildren = {}, loading: childrenLoading } = useAsync(() =>
+    userId && CategoryServices.getChildren(userId, "Add-Child")
+  );
 
   // Unified get (and update) function using AccountServices
   const fetchAccountDetails = async (updateField, updateValue) => {
@@ -152,13 +160,7 @@ const MyAccount = () => {
   // Derived data (no UI changes)
   const subscriptions = userDetails?.subscriptions ?? [];
   const activeSub = subscriptions.find((s) => s.status === "active") || null; // first active [web:22]
-  const uniqueChildren = Array.from(
-    new Map(
-      subscriptions
-        .flatMap((s) => s.children || []) // flatten [web:29]
-        .map((c) => [c._id, c]) // de-dup by _id
-    ).values()
-  );
+  const uniqueChildren = fetchedChildren?.children ?? [];
   const isPaid =
     userDetails?.paymentStatus === "Success" ||
     userDetails?.paymentStatus === true;
@@ -427,8 +429,11 @@ const MyAccount = () => {
                     <h4>Children </h4>
                     <Box className="ChildlistBoxs flex">
 
-                      {uniqueChildren && uniqueChildren.length > 0 ? (
+                      {childrenLoading ? (
+                        <h6>Loading children details...</h6>
+                      ) : uniqueChildren && uniqueChildren.length > 0 ? (
                         uniqueChildren.map((child, idx) => (
+
 
                       <Box
                         className="ChildlistItems"

@@ -138,7 +138,13 @@ const RenewChildDetailsStep = ({
   const watchSchool = watch("school");
 
   useEffect(() => {
-    if (children.length > 0 && children[activeTab]) {
+    if (
+      fetchedChildren?.children?.length > 0 &&
+      schools &&
+      schools.length > 0 &&
+      children.length > 0 &&
+      children[activeTab]
+    ) {
       const child = {
         ...children[activeTab],
         dob: children[activeTab]?.dob
@@ -148,21 +154,16 @@ const RenewChildDetailsStep = ({
           : "",
       };
 
-    // Set filtered locations BEFORE resetting the form
-    if (child.school && schools && schools.length > 0) {
       const schoolLocations = schools
         .filter((s) => s.name === child.school)
         .map((s) => s.location);
       const uniqueLocations = [...new Set(schoolLocations)];
       setFilteredLocations(uniqueLocations);
-    } else {
-      setFilteredLocations([]);
-    }
 
-      // Then reset the form with preserved state
       reset(child, { keepErrors: true, keepDirty: true, keepTouched: true });
     }
-  }, [children, activeTab, reset, schools]);
+  }, [fetchedChildren, children, activeTab, schools, reset]);
+
 
 
   useEffect(() => {

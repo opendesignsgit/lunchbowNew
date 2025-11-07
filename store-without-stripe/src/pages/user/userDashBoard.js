@@ -10,11 +10,13 @@ import AccountServices from "@services/AccountServices";
 import Breadcrumbs from "@layout/Breadcrumbs";
 import abbanicon1 from "../../../public/about/icons/herosec/pink-rounded-lines.svg";
 import abbanicon2 from "../../../public/about/icons/herosec/pink-smileflower.svg";
-import { Button } from "@mui/material";
+// import { Button } from "@mui/material";
 import Mainheader from "@layout/header/Mainheader";
 import Mainfooter from "@layout/footer/Mainfooter";
 import SubscriptionPlanStep from "@components/profile-Step-Form/subscriptionPlanStep";
 import { useRouter } from 'next/router';
+import { Button, Typography } from "@mui/material";
+
 
 
 const UserDashboard = () => {
@@ -253,16 +255,73 @@ const UserDashboard = () => {
 
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500 flex flex-col items-start DashboardTItems">
                     <div className="mb-4">
-                      <h5>Your subscription has expired</h5>
-                      <p className="text-lg font-semibold text-gray-800">
-                        Renew to continue
-                      </p>
+                      {(() => {
+                        const endDate = dashboardData.subscriptionDates.end
+                          ? new Date(dashboardData.subscriptionDates.end)
+                          : null;
+                        const today = new Date();
+
+                        if (endDate && endDate >= today) {
+                          // 🟢 Before expiry
+                          return (
+                            <>
+                              <h5 className="flex items-center gap-2">
+                                ⏰{" "}
+                                <span>
+                                  Your plan expires on{" "}
+                                  {endDate.toLocaleDateString("en-GB", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                  .
+                                </span>
+                              </h5>
+                              <p className="text-gray-700 mt-2">
+                                Renew now to ensure your child continues receiving healthy meals without interruption.
+                              </p>
+                            </>
+                          );
+                        } else if (endDate && endDate < today) {
+                          // 🔴 After expiry
+                          return (
+                            <>
+                              <h5 className="flex items-center gap-2">
+                                🚫{" "}
+                                <span>
+                                  Your plan has expired on{" "}
+                                  {endDate.toLocaleDateString("en-GB", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                  .
+                                </span>
+                              </h5>
+                              <p className="text-gray-700 mt-2">
+                                Renew today to restart meal deliveries and keep your child’s meal plan active.
+                              </p>
+                            </>
+                          );
+                        } else {
+                          // ⚪ No plan available
+                          return (
+                            <>
+                              <h5>No active plan found.</h5>
+                              <p className="text-gray-700 mt-2">
+                                Subscribe now to get started with healthy meal deliveries for your child.
+                              </p>
+                            </>
+                          );
+                        }
+                      })()}
                     </div>
+
                     <Button
                       variant="contained"
                       color="primary"
-                      className="bg-orange-500 hover:bg-orange-600 text-white"
-                      onClick={() => router.push('/user/renew-subscription')}
+                      className="bg-orange-500 hover:bg-orange-600 text-white mt-2"
+                      onClick={() => router.push("/user/renew-subscription")}
                     >
                       Renew Subscription
                     </Button>
@@ -276,19 +335,29 @@ const UserDashboard = () => {
                           {dashboardData.childrenCount}
                         </p>
                       </div>
-                      <Button
-                        variant="contained"
-                        className="p-3 rounded-full bg-purple-100 text-purple-600 cursor-pointer mt-2 btncolrpurple"
-                        onClick={() => router.push("/user/add-child")}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") router.push("/user/add-child");
-                        }}
-                        aria-label="Add Child"
-                      >
-                        Add Child
-                      </Button>
+                      {dashboardData.childrenCount < 3 ? (
+                        <Button
+                          variant="contained"
+                          className="p-3 rounded-full bg-purple-100 text-purple-600 cursor-pointer mt-2 btncolrpurple"
+                          onClick={() => router.push("/user/add-child")}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") router.push("/user/add-child");
+                          }}
+                          aria-label="Add Child"
+                        >
+                          Add Child
+                        </Button>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ mt: 2, fontWeight: 500 }}
+                        >
+                          You’ve already added the maximum of 3 children.
+                        </Typography>
+                      )}
                     </div>
                     <div className="mt-4 text-sm text-gray-500 displaynone">
                       <span>Most recent additions</span>
