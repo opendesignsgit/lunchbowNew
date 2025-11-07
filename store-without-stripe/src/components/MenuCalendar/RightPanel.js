@@ -578,8 +578,9 @@ const RightPanel = ({
         onClose={() => setHolidayPaymentOpen(false)}
         selectedDate={formatDate(selectedDate)}
         childrenData={holidayPaymentData}
-        planId={holidayPaymentData[0]?.planId} // ✅ pass selected planId
+        currentPlanId={subscriptionPlans[selectedPlanIndex]?.id}  // ✅ Pass current planId
       />
+
 
 
       <Snackbar open={showSaveWarning} autoHideDuration={4000} onClose={() => setShowSaveWarning(false)} className="saveworkmenu">
