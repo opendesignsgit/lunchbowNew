@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import useRegistration from "@hooks/useRegistration";
 import { useSession } from "next-auth/react"; // Assuming you're using next-auth
+import lunchbowlloader from "../../../public/lunch-bowl-loader.gif";
+import Image from "next/image";
 
 const DataRoutingPage = () => {
   const router = useRouter();
@@ -56,7 +58,15 @@ const DataRoutingPage = () => {
     return <div>Error: {error.message}</div>;
   }
 
-  return <div>Processing your request...</div>;
+  return (
+
+    <div className='ProcessingMBox'>
+      <h2>Processing your request...</h2>
+      <div className='lbowlLoadBox'>
+        <Image src={lunchbowlloader} priority alt="Icon" className="lbowlLoadimg" />
+      </div>
+    </div>
+  );
 };
 
 export default DataRoutingPage;

@@ -1127,6 +1127,11 @@ html body .MuiPopover-root{z-index: 99999;}
 
 .MCRightPanel .saveworkmenu {left: 50%;transform: translate(-50% , 50%);bottom: 0%;position: absolute;}
 
+.ProcessingMBox{background: #FF6514;display: flex;align-items: center;justify-content: center;position: relative;height:100vh;}
+.ProcessingMBox h2{display: none;}
+.ProcessingMBox .lbowlLoadBox{width:200px;}
+.ProcessingMBox .lbowlLoadBox img{width:100%;}
+
 @media (min-width: 1100px) {
   html body .container {max-width: 980px;  }
 }
