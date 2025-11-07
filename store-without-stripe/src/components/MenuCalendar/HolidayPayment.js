@@ -17,7 +17,7 @@ const HolidayPayment = ({
   onClose,
   selectedDate,
   childrenData = [],
-  planId, // ✅ NEW: Pass planId from parent (activeSubscription or current plan)
+  currentPlanId, // ✅ Current active planId from MenuCalendar
   onSuccess,
 }) => {
   const { data: session } = useSession();
@@ -27,16 +27,17 @@ const HolidayPayment = ({
   const [error, setError] = useState("");
   const { submitHandler } = useRegistration();
 
-  // ✅ Add planId to each child entry before sending
+  // ✅ Always attach current planId to each child entry
   const childrenDataWithPlan = childrenData.map((child) => ({
     ...child,
-    planId: planId || child.planId || "HOLIDAY", // fallback
+    planId: currentPlanId || child.planId || "UNKNOWN_PLAN",
     mealDate: selectedDate,
   }));
 
   const totalAmount = childrenData.length * 200;
   const orderId = `LB-HOLIDAY-${Date.now()}`;
 
+  // ✅ CCAvenue Config
   const ccavenueConfig = {
     merchant_id: "4381442",
     access_code: "AVRM80MF59BY86MRYB",
@@ -50,7 +51,7 @@ const HolidayPayment = ({
       "https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction",
   };
 
-  // Encryption (AES-128-CBC)
+  // ✅ AES-128-CBC Encryption (same as Node.js backend)
   const encrypt = (plainText, workingKey) => {
     const md5Hash = CryptoJS.MD5(CryptoJS.enc.Utf8.parse(workingKey));
     const key = CryptoJS.enc.Hex.parse(md5Hash.toString(CryptoJS.enc.Hex));
@@ -69,6 +70,16 @@ const HolidayPayment = ({
     return encrypted.ciphertext.toString();
   };
 
+  // ✅ UTF-8 Safe Base64 Encode
+  const encodeBase64 = (str) => {
+    try {
+      return btoa(unescape(encodeURIComponent(str)));
+    } catch (err) {
+      console.error("Base64 encoding failed:", err);
+      return "";
+    }
+  };
+
   const initiatePayment = async () => {
     if (!_id) {
       setError("User not logged in. Please login to continue.");
@@ -79,7 +90,7 @@ const HolidayPayment = ({
       setLoading(true);
       setError("");
 
-      // ✅ Fetch user details (for billing info)
+      // ✅ Fetch billing details
       const response = await submitHandler({
         path: "get-customer-form",
         _id,
@@ -92,11 +103,11 @@ const HolidayPayment = ({
       const { user, parentDetails } = response.data || {};
       if (!user) throw new Error("User data missing in API response");
 
-      // ✅ Prepare CCAvenue payment data
+      // ✅ Prepare Payment Payload
       const paymentData = {
         merchant_id: ccavenueConfig.merchant_id,
         order_id: orderId,
-        amount: "1.00", // For testing (replace with totalAmount.toFixed(2) for live)
+        amount: "1.00", // ⚠️ For testing; use totalAmount.toFixed(2) for live
         currency: ccavenueConfig.currency,
         redirect_url: ccavenueConfig.redirect_url,
         cancel_url: ccavenueConfig.cancel_url,
@@ -111,16 +122,19 @@ const HolidayPayment = ({
         billing_zip: (parentDetails?.pincode || "600001").substring(0, 10),
         billing_country: (parentDetails?.country || "India").substring(0, 50),
 
+        // ✅ Custom parameters for backend processing
         merchant_param1: _id, // userId
-        merchant_param2: selectedDate, // meal date
-        merchant_param3: btoa(JSON.stringify(childrenData)), // ✅ now includes planId
+        merchant_param2: selectedDate, // selected date
+        merchant_param3: encodeBase64(JSON.stringify(childrenDataWithPlan)), // includes planId
         merchant_param4: "HOLIDAY_PAYMENT",
       };
 
+      // ✅ Convert to query string
       const plainText = Object.entries(paymentData)
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
         .join("&");
 
+      // ✅ Encrypt using AES (matches backend)
       const encryptedData = encrypt(plainText, ccavenueConfig.working_key);
 
       // ✅ Submit to CCAvenue
@@ -152,7 +166,13 @@ const HolidayPayment = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth className="holidaypaysec">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      className="holidaypaysec"
+    >
       <DialogTitle>Confirm Holiday Payment</DialogTitle>
       <DialogContent dividers>
         {loading && <LinearProgress sx={{ mb: 2 }} />}
