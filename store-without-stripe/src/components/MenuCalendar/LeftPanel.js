@@ -27,6 +27,14 @@ const LeftPanel = ({
 
   const currentChild = dummyChildren?.[activeChild];
 
+  // Helper: format date as "DD-MM-YYYY"
+  const formatDisplayDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    const date = dayjs(dateStr);
+    return date.format("DD-MM-YYYY"); // e.g. 15-11-2025
+  };
+
+
   // Log child name and menu list whenever active child or menu selections change
   useEffect(() => {
     if (!currentChild || !menuSelections) return;
@@ -187,7 +195,7 @@ const LeftPanel = ({
                 borderBottom="1px solid #eee"
                 color={isOutOfRange ? "#bbb" : "inherit"}
               >
-                <Typography variant="body2">{dateKey}</Typography>
+                <Typography variant="body2">{formatDisplayDate(dateKey)}</Typography>
                 <Box display="flex" alignItems="center" maxWidth="140px">
                   <Typography variant="body2" noWrap>
                     {dish}

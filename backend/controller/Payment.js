@@ -795,51 +795,72 @@ exports.localPaymentSuccess = async (req, res) => {
 
 exports.localAddChildPaymentController = async (req, res) => {
   try {
-    const { userId, orderId, transactionId, formData, planId } = req.body;
+    const { userId, childrenData, paymentInfo } = req.body;
 
-    if (!userId || !orderId || !planId) {
-      return res.status(400).json({ success: false, message: "Missing userId, orderId or planId" });
-    }
-    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(planId)) {
-      return res.status(400).json({ success: false, message: "Invalid userId or planId" });
+    if (!userId || !paymentInfo) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: userId or paymentInfo",
+      });
     }
 
+    const { orderId, transactionId, subscriptionId, paymentAmount } = paymentInfo;
+
+    if (!orderId || !subscriptionId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing orderId or subscriptionId in paymentInfo",
+      });
+    }
+
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(subscriptionId)
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid userId or subscriptionId" });
+    }
+
+    // ✅ Fetch user's form
     const form = await Form.findOne({ user: userId }).populate("subscriptions");
     if (!form) {
       return res.status(404).json({ success: false, message: "Form not found" });
     }
 
+    // ✅ Find the subscription
     let subscription = form.subscriptions.find(
-      (sub) => sub._id.toString() === planId.toString()
+      (sub) => sub._id.toString() === subscriptionId.toString()
     );
     if (!subscription) {
-      return res.status(404).json({ success: false, message: "Subscription not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Subscription not found" });
     }
 
+    // ✅ Save / update children
     const savedChildrenIds = [];
-    if (Array.isArray(formData) && formData.length > 0) {
-      for (const child of formData) {
+    if (Array.isArray(childrenData) && childrenData.length > 0) {
+      for (const child of childrenData) {
         if (!child.location || child.location.trim() === "") {
           return res.status(400).json({
             success: false,
             message: `Child location is required for ${child.childFirstName || "unknown"}`,
           });
         }
+
         child.user = userId;
+
         if (child._id && mongoose.Types.ObjectId.isValid(child._id)) {
+          // Update existing child
           const updatedChild = await Child.findOneAndUpdate(
             { _id: child._id, user: userId },
             child,
             { new: true, runValidators: true }
           );
-          if (updatedChild) {
-            savedChildrenIds.push(updatedChild._id);
-          } else {
-            const newChild = new Child(child);
-            await newChild.save();
-            savedChildrenIds.push(newChild._id);
-          }
+          if (updatedChild) savedChildrenIds.push(updatedChild._id);
         } else {
+          // Create new child
           const newChild = new Child(child);
           await newChild.save();
           savedChildrenIds.push(newChild._id);
@@ -847,33 +868,36 @@ exports.localAddChildPaymentController = async (req, res) => {
       }
     }
 
+    // ✅ Attach new children to subscription
     if (!Array.isArray(subscription.children)) {
       subscription.children = [];
     }
 
     savedChildrenIds.forEach((childId) => {
-      if (!subscription.children.some((cId) => cId.toString() === childId.toString())) {
+      if (
+        !subscription.children.some((cId) => cId.toString() === childId.toString())
+      ) {
         subscription.children.push(childId);
       }
     });
 
+    // ✅ Update payment info on subscription
     subscription.orderId = orderId;
     subscription.transactionId = transactionId || null;
     subscription.paymentDate = new Date();
     subscription.paymentMethod = "CCAvenue";
-
     await subscription.save();
 
+    // ✅ Update main form
     form.paymentStatus = "Success";
     form.subscriptionCount = (form.subscriptionCount || 0) + 1;
-
     await form.save();
 
-    // Save payment in UserPayment collection
+    // ✅ Log payment in UserPayment collection
     const paymentTransaction = {
       order_id: orderId,
       tracking_id: transactionId || null,
-      amount: subscription.price || 0,
+      amount: paymentAmount || subscription.price || 0,
       order_status: "Success",
       payment_mode: subscription.paymentMethod || "CCAvenue",
       card_name: "",
@@ -885,9 +909,8 @@ exports.localAddChildPaymentController = async (req, res) => {
       payment_date: new Date(),
       merchant_param1: userId,
       payment_type: "subscription-local-addchild",
-      paidFor: "ADD_CHILD",  // <--- set here
+      paidFor: "ADD_CHILD", // ✅ For payment purpose tracking
     };
-
 
     await UserPayment.findOneAndUpdate(
       { user: userId },
@@ -899,15 +922,23 @@ exports.localAddChildPaymentController = async (req, res) => {
       { upsert: true, new: true, runValidators: true }
     );
 
-    const updatedForm = await Form.findById(form._id)
-      .populate({
-        path: "subscriptions",
-        populate: { path: "children" },
-      });
+    // ✅ Return updated data
+    const updatedForm = await Form.findById(form._id).populate({
+      path: "subscriptions",
+      populate: { path: "children" },
+    });
 
-    return res.json({ success: true, data: updatedForm });
+    return res.json({
+      success: true,
+      message: "Local add child payment processed successfully",
+      data: updatedForm,
+    });
   } catch (err) {
-    console.error("Local add child payment error:", err);
-    return res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error("❌ Local add child payment error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: err.message,
+    });
   }
 };
