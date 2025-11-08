@@ -120,8 +120,7 @@ const AddChildPayment = ({
         const paymentData = {
           merchant_id: ccavenueConfig.merchant_id,
           order_id: orderId,
-          // amount: (totalAmount > 0 ? totalAmount.toFixed(2) : "1.00"),
-          amount: "1.00", // For testing purposes, always charge ₹1
+          amount: totalAmount.toFixed(2),
           currency: ccavenueConfig.currency,
           redirect_url: ccavenueConfig.redirect_url_live,
           cancel_url: ccavenueConfig.cancel_url_live,

@@ -35,20 +35,36 @@ const UserDashboard = () => {
   });
   const [showRenewalForm, setShowRenewalForm] = useState(false);
 
+  // Helper to determine renew eligibility
+  const shouldShowRenewButton = () => {
+    const activeSub = dashboardData.subscriptionDates?.end
+      ? new Date(dashboardData.subscriptionDates.end)
+      : null;
+
+    if (!activeSub) return false;
+
+    const today = new Date();
+    const diffTime = activeSub - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // If plan ends in <= 10 days and no upcoming plans exist
+    const hasUpcomingPlans = dashboardData.hasUpcomingPlans;
+    return diffDays <= 10 && diffDays >= 0 && !hasUpcomingPlans;
+  };
+
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await AccountServices.getAccountDetails(userId);
         const userData = response.data;
 
-        // Find active subscription plan (status === 'active')
         const activeSubscription = userData.subscriptions?.find(sub => sub.status === "active") || null;
+        const hasUpcomingPlans = userData.subscriptions?.some(sub => sub.status === "upcoming");
 
         setDashboardData({
           parentName: `${userData.parentDetails.fatherFirstName} ${userData.parentDetails.fatherLastName}`,
-          subscriptionCount: userData.subscriptions && userData.subscriptions.length > 0
-            ? Math.max(userData.subscriptions.length, 0)
-            : 0,
+          subscriptionCount: userData.subscriptions?.length || 0,
           subscriptionActive: userData.paymentStatus === "Success" && !!activeSubscription,
           subscriptionDates: {
             start: activeSubscription?.startDate || null,
@@ -56,6 +72,7 @@ const UserDashboard = () => {
           },
           childrenCount: activeSubscription?.children?.length || 0,
           recentChildren: activeSubscription?.children?.slice(0, 4) || [],
+          hasUpcomingPlans, // ✅ store upcoming flag
           loading: false,
         });
       } catch (error) {
@@ -63,6 +80,7 @@ const UserDashboard = () => {
         setDashboardData((prev) => ({ ...prev, loading: false }));
       }
     };
+
 
     if (userId) fetchUserData();
   }, [userId]);
@@ -253,6 +271,7 @@ const UserDashboard = () => {
                   </div>
                   {/* )} */}
 
+                  {shouldShowRenewButton() && (
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500 flex flex-col items-start DashboardTItems">
                     <div className="mb-4">
                       {(() => {
@@ -326,6 +345,7 @@ const UserDashboard = () => {
                       Renew Subscription
                     </Button>
                   </div>
+                  )}
 
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500 DashboardTItems">
                     <div className="flex items-start justify-between flex-col">
@@ -335,29 +355,40 @@ const UserDashboard = () => {
                           {dashboardData.childrenCount}
                         </p>
                       </div>
-                      {dashboardData.childrenCount < 3 ? (
-                        <Button
-                          variant="contained"
-                          className="p-3 rounded-full bg-purple-100 text-purple-600 cursor-pointer mt-2 btncolrpurple"
-                          onClick={() => router.push("/user/add-child")}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") router.push("/user/add-child");
-                          }}
-                          aria-label="Add Child"
-                        >
-                          Add Child
-                        </Button>
+                      {dashboardData.subscriptionActive ? (
+                        dashboardData.childrenCount < 3 ? (
+                          <Button
+                            variant="contained"
+                            className="p-3 rounded-full bg-purple-100 text-purple-600 cursor-pointer mt-2 btncolrpurple"
+                            onClick={() => router.push("/user/add-child")}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") router.push("/user/add-child");
+                            }}
+                            aria-label="Add Child"
+                          >
+                            Add Child
+                          </Button>
+                        ) : (
+                          <Typography
+                            variant="body2"
+                            color="textSecondary"
+                            sx={{ mt: 2, fontWeight: 500 }}
+                          >
+                            You’ve already added the maximum of 3 children.
+                          </Typography>
+                        )
                       ) : (
                         <Typography
                           variant="body2"
                           color="textSecondary"
                           sx={{ mt: 2, fontWeight: 500 }}
                         >
-                          You’ve already added the maximum of 3 children.
+                          You need an active plan to add a child.
                         </Typography>
                       )}
+
                     </div>
                     <div className="mt-4 text-sm text-gray-500 displaynone">
                       <span>Most recent additions</span>
