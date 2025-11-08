@@ -1948,10 +1948,13 @@ const accountDetails = async (req, res) => {
 
 const getFormData = async (req, res) => {
   try {
+    // ✅ 1. Fetch form by user ID and populate related fields
     const form = await Form.findOne({ user: req.params.userId })
-      .populate("user")
+      .populate("user")            // Include full user details
+      .populate("subscriptions")   // Include full subscription details
       .lean();
 
+    // ✅ 2. Handle case when no form exists
     if (!form) {
       return res.status(404).json({
         success: false,
@@ -1959,24 +1962,26 @@ const getFormData = async (req, res) => {
       });
     }
 
-    // Find the active subscription plan; fallback to latest if none active
+    // ✅ 3. Always take the last plan in the subscriptions array
     let subscriptionPlan = null;
-    if (Array.isArray(form.subscriptions)) {
-      subscriptionPlan = form.subscriptions.find((sub) => sub.status === "active")
-        || form.subscriptions[form.subscriptions.length - 1]; // fallback
+    if (Array.isArray(form.subscriptions) && form.subscriptions.length > 0) {
+      subscriptionPlan = form.subscriptions[form.subscriptions.length - 1];
     }
 
-    res.status(200).json({
+    // ✅ 4. Return formatted response to the frontend
+    return res.status(200).json({
       success: true,
       data: {
-        subscriptionPlan: subscriptionPlan || {},
-        user: form.user || {},
-        parentDetails: form.parentDetails || {},
+        subscriptionPlan: subscriptionPlan || {}, // Latest subscription or empty object
+        user: form.user || {},                    // Populated user details
+        parentDetails: form.parentDetails || {},  // Parent details if saved
       },
     });
   } catch (error) {
     console.error("Error fetching form data:", error);
-    res.status(500).json({
+
+    // ✅ 5. Proper error handling
+    return res.status(500).json({
       success: false,
       message: "Internal server error",
       error: error.message,
