@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const UserMeal = require("../models/UserMeal");
 const Form = require("../models/Form");
+const Child = require("../models/childModel");
 
 const getAllOrders = async (req, res) => {
   const {
@@ -670,70 +671,88 @@ const getAllFoodOrders = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Fetch all user meals
-    const userMeals = await UserMeal.find({});
+    // ✅ Fetch all user meals
+    const userMeals = await UserMeal.find({}).lean();
 
-    // Collect all userIds and childIds in meals for lookup
+    // ✅ Collect all userIds and childIds across plans
     const userChildPairs = [];
     userMeals.forEach((userMeal) => {
-      userMeal.children.forEach((childEntry) => {
-        userChildPairs.push({
-          userId: userMeal.userId.toString(),
-          childId: childEntry.childId.toString(),
+      if (!userMeal.plans) return;
+      userMeal.plans.forEach((plan) => {
+        if (!plan.children) return;
+        plan.children.forEach((childEntry) => {
+          if (!childEntry.childId) return;
+          userChildPairs.push({
+            userId: userMeal.userId.toString(),
+            childId: childEntry.childId.toString(),
+          });
         });
       });
     });
 
-    // Fetch all relevant forms in one query
-    const userIds = [...new Set(userChildPairs.map((pair) => pair.userId))];
-    const forms = await Form.find({ user: { $in: userIds } }).lean();
+    // ✅ Get all unique child IDs
+    const childIds = [...new Set(userChildPairs.map((p) => p.childId))];
 
-    // Helper: Map userId -> childId -> childDetail
-    const userChildDetailsMap = {};
-    forms.forEach((form) => {
-      const userId = form.user.toString();
-      if (!userChildDetailsMap[userId]) userChildDetailsMap[userId] = {};
-      form.children.forEach((child) => {
-        userChildDetailsMap[userId][child._id.toString()] = child;
-      });
+    // ✅ Fetch all relevant child details
+    const children = await Child.find({ _id: { $in: childIds } }).lean();
+
+    // ✅ Map childId → childDetails
+    const childDetailsMap = {};
+    children.forEach((child) => {
+      childDetailsMap[child._id.toString()] = child;
     });
 
-    // Today's date at midnight
+    // ✅ Today's date at midnight
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Flatten and enrich all orders
+    // ✅ Flatten and enrich all orders
     let orders = [];
     userMeals.forEach((userMeal) => {
-      const userId = userMeal.userId.toString();
-      userMeal.children.forEach((childEntry) => {
-        const childId = childEntry.childId.toString();
-        const childDetails = userChildDetailsMap[userId]?.[childId];
-        childEntry.meals.forEach((meal) => {
-          // Only future or today
-          if (new Date(meal.mealDate) >= today) {
-            orders.push({
-              childId,
-              date: meal.mealDate,
-              food: meal.mealName,
-              // Enriched details
-              childFirstName: childDetails?.childFirstName || "",
-              childLastName: childDetails?.childLastName || "",
-              school: childDetails?.school || "",
-              lunchTime: childDetails?.lunchTime || "",
-              location: childDetails?.location || "",
-            });
-          }
+      const userId = userMeal.userId?.toString();
+      if (!userMeal.plans) return;
+
+      userMeal.plans.forEach((plan) => {
+        if (!plan.children) return;
+
+        plan.children.forEach((childEntry) => {
+          const childId = childEntry.childId?.toString();
+          if (!childEntry.meals || !childId) return;
+
+          const childDetails = childDetailsMap[childId];
+          childEntry.meals.forEach((meal) => {
+            if (!meal.mealDate || !meal.mealName) return;
+
+            // Include only meals from today onwards
+            if (new Date(meal.mealDate) >= today) {
+              orders.push({
+                userId,
+                planId: plan.planId,
+                childId,
+                date: meal.mealDate,
+                food: meal.mealName,
+                // Enriched details
+                childFirstName: childDetails?.childFirstName || "",
+                childLastName: childDetails?.childLastName || "",
+                school: childDetails?.school || "",
+                lunchTime: childDetails?.lunchTime || "",
+                location: childDetails?.location || "",
+                childClass: childDetails?.childClass || "",
+                section: childDetails?.section || "",
+              });
+            }
+          });
         });
       });
     });
 
-    // Sort by date ascending
+    // ✅ Sort by date ascending
     orders.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Paginate
+    // ✅ Pagination
     const paginatedOrders = orders.slice(skip, skip + limit);
 
+    // ✅ Send response
     res.status(200).json({
       orders: paginatedOrders,
       total: orders.length,
@@ -741,6 +760,7 @@ const getAllFoodOrders = async (req, res) => {
       limit,
     });
   } catch (err) {
+    console.error("❌ Error in getAllFoodOrders:", err);
     res.status(500).send({
       message: err.message,
     });
@@ -754,62 +774,78 @@ const searchOrders = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Fetch all user meals
-    const userMeals = await UserMeal.find({});
+    const userMeals = await UserMeal.find({}).lean();
 
-    // Collect all userIds and childIds in meals for lookup
+    // Collect all unique userIds and childIds
     const userChildPairs = [];
     userMeals.forEach((userMeal) => {
-      userMeal.children.forEach((childEntry) => {
-        userChildPairs.push({
-          userId: userMeal.userId.toString(),
-          childId: childEntry.childId.toString(),
+      if (!userMeal.plans) return;
+      userMeal.plans.forEach((plan) => {
+        if (!plan.children) return;
+        plan.children.forEach((childEntry) => {
+          if (!childEntry.childId) return;
+          userChildPairs.push({
+            userId: userMeal.userId.toString(),
+            childId: childEntry.childId.toString(),
+          });
         });
       });
     });
 
-    // Fetch all relevant forms in one query
-    const userIds = [...new Set(userChildPairs.map((pair) => pair.userId))];
-    const forms = await Form.find({ user: { $in: userIds } }).lean();
+    const userIds = [...new Set(userChildPairs.map((p) => p.userId))];
+    const childIds = [...new Set(userChildPairs.map((p) => p.childId))];
 
-    // Helper: Map userId -> childId -> childDetail
-    const userChildDetailsMap = {};
-    forms.forEach((form) => {
-      const userId = form.user.toString();
-      if (!userChildDetailsMap[userId]) userChildDetailsMap[userId] = {};
-      form.children.forEach((child) => {
-        userChildDetailsMap[userId][child._id.toString()] = child;
-      });
+    // Fetch all relevant child details in one go
+    const children = await Child.find({ _id: { $in: childIds } }).lean();
+
+    // Map for quick access
+    const childDetailsMap = {};
+    children.forEach((child) => {
+      childDetailsMap[child._id.toString()] = child;
     });
 
-    // Today's date at midnight
+    // Today's date at midnight (for filtering)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // Flatten and enrich all orders
     let orders = [];
     userMeals.forEach((userMeal) => {
-      const userId = userMeal.userId.toString();
-      userMeal.children.forEach((childEntry) => {
-        const childId = childEntry.childId.toString();
-        const childDetails = userChildDetailsMap[userId]?.[childId];
-        childEntry.meals.forEach((meal) => {
-          if (new Date(meal.mealDate) >= today) {
-            orders.push({
-              childId,
-              date: meal.mealDate,
-              food: meal.mealName,
-              childFirstName: childDetails?.childFirstName || "",
-              childLastName: childDetails?.childLastName || "",
-              school: childDetails?.school || "",
-              lunchTime: childDetails?.lunchTime || "",
-              location: childDetails?.location || "",
-            });
-          }
+      const userId = userMeal.userId?.toString();
+      if (!userMeal.plans) return;
+
+      userMeal.plans.forEach((plan) => {
+        if (!plan.children) return;
+
+        plan.children.forEach((childEntry) => {
+          const childId = childEntry.childId?.toString();
+          if (!childEntry.meals || !childId) return;
+
+          const childDetails = childDetailsMap[childId];
+          childEntry.meals.forEach((meal) => {
+            if (!meal.mealDate || !meal.mealName) return;
+
+            // Include only meals from today onwards
+            if (new Date(meal.mealDate) >= today) {
+              orders.push({
+                userId,
+                planId: plan.planId,
+                childId,
+                date: meal.mealDate,
+                food: meal.mealName,
+                childFirstName: childDetails?.childFirstName || "",
+                childLastName: childDetails?.childLastName || "",
+                school: childDetails?.school || "",
+                lunchTime: childDetails?.lunchTime || "",
+                location: childDetails?.location || "",
+              });
+            }
+          });
         });
       });
     });
 
-    // Filter by child name (case insensitive contains)
+    // Filter by child name (case-insensitive)
     if (childName) {
       const lowerChildName = childName.toLowerCase();
       orders = orders.filter((order) =>
@@ -830,12 +866,9 @@ const searchOrders = async (req, res) => {
       // Dish summary for this date
       const dishCountMap = {};
       orders.forEach((order) => {
-        if (dishCountMap[order.food]) {
-          dishCountMap[order.food]++;
-        } else {
-          dishCountMap[order.food] = 1;
-        }
+        dishCountMap[order.food] = (dishCountMap[order.food] || 0) + 1;
       });
+
       dishSummary = Object.entries(dishCountMap).map(([dish, count]) => ({
         dish,
         count,
@@ -845,7 +878,7 @@ const searchOrders = async (req, res) => {
     // Sort by date ascending
     orders.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Paginate
+    // Pagination
     const paginatedOrders = orders.slice(skip, skip + parseInt(limit));
 
     res.status(200).json({
@@ -853,9 +886,10 @@ const searchOrders = async (req, res) => {
       total: orders.length,
       page: parseInt(page),
       limit: parseInt(limit),
-      dishSummary, // <-- ADD THIS
+      dishSummary,
     });
   } catch (err) {
+    console.error("Error in searchOrders:", err);
     res.status(500).send({
       message: err.message,
     });

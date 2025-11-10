@@ -51,53 +51,30 @@ const Orders = () => {
     setLoading(true);
     setError(null);
     try {
-      let data;
-      if (childNameVal || dateVal) {
-        // Use the new searchOrders method
-        const res = await OrderServices.searchOrders({
-          childName: childNameVal,
-          date: dateVal,
-          page: pageNumber,
-          limit: PAGE_SIZE,
-        });
-        data = res;
-      } else {
-        // Use the new getAllFoodOrders method
-        const res = await OrderServices.getAllFoodOrders({
-          page: pageNumber,
-          limit: PAGE_SIZE,
-        });
-        data = res;
-      }
+    let res;
+    if (childNameVal || dateVal) {
+      res = await OrderServices.searchOrders({
+        childName: childNameVal,
+        date: dateVal,
+        page: pageNumber,
+        limit: PAGE_SIZE,
+      });
+    } else {
+      res = await OrderServices.getAllFoodOrders({
+        page: pageNumber,
+        limit: PAGE_SIZE,
+      });
+    }
 
-      setOrders(data.orders || []);
-      setTotal(data.total || 0);
-      setDishSummary(data.dishSummary || []);
+    // ✅ FIX — properly extract response
+    const data = res?.data || res;
 
-      // Compute dish summary for selected date
-      if (dateVal) {
-        const allOrders = childNameVal || dateVal ? data.orders || [] : orders;
-        const dishCountMap = {};
-        allOrders.forEach((order) => {
-          if (
-            new Date(order.date).toLocaleDateString() ===
-            new Date(dateVal).toLocaleDateString()
-          ) {
-            if (dishCountMap[order.food]) {
-              dishCountMap[order.food]++;
-            } else {
-              dishCountMap[order.food] = 1;
-            }
-          }
-        });
-        const summaryArr = Object.entries(dishCountMap).map(
-          ([dish, count]) => ({ dish, count })
-        );
-        setDishSummary(summaryArr);
-      } else {
-        setDishSummary([]);
-      }
-    } catch (err) {
+    setOrders(data.orders || []);
+    setTotal(data.total || 0);
+    setDishSummary(data.dishSummary || []);
+
+  } catch (err) {
+    console.error("Fetch Orders Error:", err);
       setError(err.response?.data?.message || err.message);
       setOrders([]);
       setTotal(0);
@@ -106,6 +83,7 @@ const Orders = () => {
       setLoading(false);
     }
   };
+
 
   // Load today's orders on first render
   useEffect(() => {
