@@ -37,20 +37,26 @@ const UserDashboard = () => {
 
   // Helper to determine renew eligibility
   const shouldShowRenewButton = () => {
-    const activeSub = dashboardData.subscriptionDates?.end
+    const endDate = dashboardData.subscriptionDates?.end
       ? new Date(dashboardData.subscriptionDates.end)
       : null;
-
-    if (!activeSub) return false;
-
     const today = new Date();
-    const diffTime = activeSub - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    // If plan ends in <= 10 days and no upcoming plans exist
     const hasUpcomingPlans = dashboardData.hasUpcomingPlans;
-    return diffDays <= 10 && diffDays >= 0 && !hasUpcomingPlans;
+
+    // 🟠 CASE 1: No active subscription
+    if (!endDate) return true;
+
+    const diffDays = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+    // 🟢 CASE 2: Subscription ends soon (within 10 days)
+    if (diffDays <= 10 && diffDays >= 0 && !hasUpcomingPlans) return true;
+
+    // 🔴 CASE 3: Subscription already expired
+    if (diffDays < 0 && !hasUpcomingPlans) return true;
+
+    return false;
   };
+
 
 
   useEffect(() => {
