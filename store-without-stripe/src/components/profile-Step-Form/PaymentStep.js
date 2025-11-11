@@ -27,7 +27,7 @@ const PaymentStep = ({ prevStep, _id }) => {
   const getPaymentBaseUrl = () => {
     if (typeof window !== "undefined") {
       const host = window.location.hostname; // hostname excludes port
-      if (host === "localhost" || host === "127.0.0.1") return "http://localhost:5055";
+      if (host === "localhost" || host === "127.0.0.1") return "http://localhost:5056";
       if (host.startsWith("dev.") || host.includes("dev-")) return "https://dev-api.lunchbowl.co.in";
     }
     return "https://api.lunchbowl.co.in";

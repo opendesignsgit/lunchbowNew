@@ -35,7 +35,6 @@ const schema = yup.object().shape({
     .date()
     .nullable()
     .transform((value, originalValue) => {
-      // If the value is an empty string, set to null
       return originalValue === "" ? null : value;
     })
     .required("Date of Birth is required"),
@@ -89,22 +88,59 @@ const ChildDetailsStep = ({
     CategoryServices.getChildren(_id)
   );
 
+  // ✅ 1️⃣ Fetch children safely and update after render
   useEffect(() => {
-    console.log("fetchedChildren--->", fetchedChildren.children);
-    if (fetchedChildren && fetchedChildren.children && fetchedChildren.children.length > 0) {
-      setChildren(fetchedChildren.children);
-      setFormData((prev) => ({ ...prev, children: fetchedChildren.children }));
-      setChildCount(fetchedChildren.children.length);
-    }
-  }, [fetchedChildren, setFormData, setChildCount]);
+    if (
+      fetchedChildren &&
+      fetchedChildren.children &&
+      fetchedChildren.children.length > 0
+    ) {
+      const fetchedIds = fetchedChildren.children.map((c) => c._id).join(",");
+      const localIds = children.map((c) => c._id).join(",");
+      if (fetchedIds !== localIds) {
+        // update local state
+        setChildren(fetchedChildren.children);
 
-  // State for filtered locations
+        // defer parent state updates until next tick
+        setTimeout(() => {
+          setFormData((prev) => ({
+            ...prev,
+            children: fetchedChildren.children,
+          }));
+          setChildCount(fetchedChildren.children.length);
+        }, 0);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchedChildren]);
+
+  // ✅ 1.2️⃣ Reset form when fetched data arrives (prefill on refresh)
+  useEffect(() => {
+    if (
+      fetchedChildren &&
+      fetchedChildren.children &&
+      fetchedChildren.children.length > 0
+    ) {
+      const firstChild = fetchedChildren.children[0];
+      const normalized = {
+        ...firstChild,
+        dob: firstChild?.dob
+          ? typeof firstChild.dob === "string"
+            ? firstChild.dob.slice(0, 10)
+            : ""
+          : "",
+      };
+      reset(normalized);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchedChildren]);
+
   const [filteredLocations, setFilteredLocations] = useState([]);
 
   const getYesterdayDateString = () => {
     const now = new Date();
-    now.setDate(now.getDate() - 1); // Move one day back
-    return now.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+    now.setDate(now.getDate() - 1);
+    return now.toISOString().slice(0, 10);
   };
 
   const {
@@ -129,79 +165,57 @@ const ChildDetailsStep = ({
     mode: "onTouched",
   });
 
-  // Watch school and location changes 
   const watchSchool = watch("school");
-  const watchLocation = watch("location");
 
-  // Ensure dropdowns and date field correctly reflect DB data on mount/tab change
+  // ✅ 2️⃣ Reset form when children data changes or tab switches
   useEffect(() => {
     if (children.length > 0 && children[activeTab]) {
-      const child = {
-        ...children[activeTab],
-        dob: children[activeTab]?.dob
-          ? typeof children[activeTab].dob === "string"
-            ? children[activeTab].dob.slice(0, 10)
+      const child = children[activeTab];
+      const normalized = {
+        ...child,
+        dob: child?.dob
+          ? typeof child.dob === "string"
+            ? child.dob.slice(0, 10)
             : ""
           : "",
       };
-      // Preserve form errors/touched/dirty so validation messages don't flash
-      reset(child, { keepErrors: true, keepDirty: true, keepTouched: true });
+      reset(normalized, { keepErrors: true, keepDirty: false });
     }
-  }, [children, activeTab, reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, children.length]);
 
+  // ✅ 3️⃣ Avoid infinite loop in location filter
   useEffect(() => {
-    if (formData.children && formData.children.length > 0) {
-      setChildren(formData.children);
-      setChildCount(formData.children.length);
-    }
-  }, [formData.children, setChildCount]);
-
-  // Update filtered locations when school changes
-  useEffect(() => {
-    if (watchSchool && schools) {
+    if (!schools) return;
+    if (watchSchool) {
       const schoolLocations = schools
         .filter((school) => school.name === watchSchool)
         .map((school) => school.location);
-
       const uniqueLocations = [...new Set(schoolLocations)];
-      setFilteredLocations(uniqueLocations);
-
-      // Only reset location if non-matching and schools are LOADED
-      const currentLocation = watch("location");
-      if (
-        currentLocation &&
-        uniqueLocations.length > 0 &&
-        !uniqueLocations.includes(currentLocation)
-      ) {
-        setValue("location", "");
-      } else if (
-        currentLocation &&
-        uniqueLocations.includes(currentLocation)
-      ) {
-        // Ensure react-hook-form knows to keep user's value
-        setValue("location", currentLocation);
-      }
-    } else if (watchSchool) {
-      // If schools not loaded yet, let location persist (do NOT clear)
-      setFilteredLocations([]);
+      setFilteredLocations((prev) =>
+        JSON.stringify(prev) !== JSON.stringify(uniqueLocations)
+          ? uniqueLocations
+          : prev
+      );
     } else {
-      // If school not selected at all, clear location
       setFilteredLocations([]);
       setValue("location", "");
     }
-  }, [watchSchool, schools, setValue, watch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchSchool, schools]);
 
-  // Sync form with children state
+  // ✅ 4️⃣ Watch form values and sync with children state
   useEffect(() => {
     const subscription = watch((values) => {
-      setChildren((prevChildren) => {
-        const updated = [...prevChildren];
+      setChildren((prev) => {
+        const updated = [...prev];
         updated[activeTab] = { ...updated[activeTab], ...values };
         return updated;
       });
     });
     return () => subscription.unsubscribe();
-  }, [watch, activeTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -238,7 +252,6 @@ const ChildDetailsStep = ({
 
   const onSubmit = async () => {
     try {
-      // Validate all children first
       await Promise.all(
         children.map((child) => schema.validate(child, { abortEarly: false }))
       );
@@ -256,7 +269,6 @@ const ChildDetailsStep = ({
         nextStep();
       }
     } catch (err) {
-      console.log("Validation errors:", err.inner);
       if (err.name === "ValidationError") {
         const invalidIndex = children.findIndex((child) => {
           try {
@@ -281,7 +293,6 @@ const ChildDetailsStep = ({
     }
   };
 
-  // Generate unique schools list
   const uniqueSchools = schools
     ? [...new Set(schools.map((school) => school.name))]
     : [];
@@ -297,7 +308,6 @@ const ChildDetailsStep = ({
         gap: 2,
       }}
     >
-      {/* Image Side */}
       <Box
         className="spboximg"
         sx={{
@@ -310,11 +320,9 @@ const ChildDetailsStep = ({
         }}
       />
 
-      {/* Form Side */}
       <Box className="spboxCont" sx={{ width: { xs: "100%", md: "55%" } }}>
         <div className="steptitles">
           <Typography variant="h5">CHILD DETAILS :</Typography>
-          {/* Tabs */}
           <Box
             sx={{ display: "flex", alignItems: "center", mb: 2 }}
             className="adchildnav"
@@ -350,29 +358,25 @@ const ChildDetailsStep = ({
                     color: activeTab === index ? "#fff" : "inherit",
                   }}
                 />
-              ))} 
+              ))}
             </Tabs>
             {children.length < 3 && (
-            <Button
-              variant="outlined"
-              onClick={addChild}
-              className="addanochildbtn"
+              <Button
+                variant="outlined"
+                onClick={addChild}
+                className="addanochildbtn"
                 disabled={children.length >= 3}
-            >
-              Add Another Child
-            </Button>
+              >
+                Add Another Child
+              </Button>
             )}
           </Box>
         </div>
 
         <Grid container className="formboxrow">
-          {/* Child First/Last Name */}
+          {/* First and Last Name */}
           {[
-            [
-              "CHILD'S FIRST NAME*",
-              "childFirstName",
-              "Enter Child's First Name",
-            ],
+            ["CHILD'S FIRST NAME*", "childFirstName", "Enter Child's First Name"],
             ["CHILD'S LAST NAME*", "childLastName", "Enter Child's Last Name"],
           ].map(([label, name, placeholder]) => (
             <Grid item className="formboxcol" key={name}>
@@ -393,7 +397,7 @@ const ChildDetailsStep = ({
             </Grid>
           ))}
 
-          {/* Date Picker */}
+          {/* Date of Birth */}
           <Grid item className="formboxcol" key="dob">
             <Typography
               variant="subtitle2"
@@ -420,10 +424,7 @@ const ChildDetailsStep = ({
                         : ""
                       : ""
                   }
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    field.onChange(val ? val : "");
-                  }}
+                  onChange={(e) => field.onChange(e.target.value || "")}
                   inputProps={{ max: getYesterdayDateString() }}
                 />
               )}
@@ -504,7 +505,7 @@ const ChildDetailsStep = ({
             />
           </Grid>
 
-          {/* Lunch Time Dropdown (STATIC & mapped with DB values) */}
+          {/* Lunch Time */}
           <Grid item className="formboxcol" key="lunchTime">
             <Typography
               variant="subtitle2"
@@ -538,7 +539,7 @@ const ChildDetailsStep = ({
             />
           </Grid>
 
-          {/* Class Dropdown */}
+          {/* Class */}
           <Grid item className="formboxcol" key="childClass">
             <Typography
               variant="subtitle2"
@@ -587,7 +588,7 @@ const ChildDetailsStep = ({
             />
           </Grid>
 
-          {/* Section Dropdown */}
+          {/* Section */}
           <Grid item className="formboxcol" key="section">
             <Typography
               variant="subtitle2"
