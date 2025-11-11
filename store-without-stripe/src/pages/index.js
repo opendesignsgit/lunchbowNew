@@ -190,7 +190,7 @@ const Home = () => {
                             <span className='block'>Child's Mind</span>
                         </h1>
                         <h3>During School Lunch Time!</h3>
-                          <p>Healthy, delectable alternatives that are loaded with <br />vital vitamins and minerals.</p><p className="parabtn flex"><Link href="/Menulist" className="emenulink relative" ><span className='block flex items-center relative'>Explore Menu</span></Link></p>
+                <p>Healthy, delectable alternatives that are loaded with <br />vital vitamins and minerals.</p><p className="parabtn flex"><Link href="/kids-nutritious-lunch-subscription-menu" className="emenulink relative" ><span className='block flex items-center relative'>Explore Menu</span></Link></p>
                           <div className='hbanIconss'>
                               <div className='hbicn iconone absolute'><Image src={banicon1} priority alt='Icon' /></div>
                               <div className='hbicn icontwo absolute'><Image src={banicon2} priority alt='Icon' className='iconrotates' /></div>
@@ -262,7 +262,7 @@ const Home = () => {
                         <HomeProductCard limit={6}/>
                     </div>
               <div className='hProbutSec combtntb comtilte textcenter mt-[5vh]'>                    
-                        <p className="parabtn flex"><Link href="/Menulist" className="emenulink relative" ><span className='block flex items-center relative'>Explore Menu</span></Link></p>
+                  <p className="parabtn flex"><Link href="/kids-nutritious-lunch-subscription-menu" className="emenulink relative" ><span className='block flex items-center relative'>Explore Menu</span></Link></p>
                     </div>
 
               <div className='hMenusIconss'>
