@@ -217,54 +217,44 @@ const SubscriptionPlanStep = ({
 
 
   useEffect(() => {
-    // ---- CHANGE START: recalc plans based on selected children ----
+    if (!holidays.length) return; // wait until holidays are fetched
+
+    // Calculate base plans first
     const computedPlans = calculatePlans(holidays, numberOfChildren, customStartDates);
+    setPlans(computedPlans);
 
-    // Initialize customStartDates from initialSubscriptionPlan startDate if plan is not 'byDate'
-    let savedCustomStartDates = {};
+    // Only initialize custom start dates once (avoid infinite loop)
     if (
-      initialSubscriptionPlan &&
-      initialSubscriptionPlan.planId &&
-      initialSubscriptionPlan.planId !== "byDate" &&
-      initialSubscriptionPlan.startDate
-    ) {
-      // Map saved start date for the selected plan id (assuming it's numeric)
-      savedCustomStartDates[parseInt(initialSubscriptionPlan.planId, 10)] = dayjs(initialSubscriptionPlan.startDate);
-    }
-
+    Object.keys(customStartDates).length === 0 &&
+    initialSubscriptionPlan &&
+    initialSubscriptionPlan.planId &&
+    initialSubscriptionPlan.planId !== "byDate" &&
+    initialSubscriptionPlan.startDate
+  ) {
+    const savedCustomStartDates = {
+      [parseInt(initialSubscriptionPlan.planId, 10)]: dayjs(initialSubscriptionPlan.startDate),
+    };
     setCustomStartDates(savedCustomStartDates);
-
-    const plansWithSavedDates = calculatePlans(holidays, numberOfChildren, savedCustomStartDates);
-    setPlans(plansWithSavedDates);
+  }
 
     // Plan selection logic
-    if (
-      initialSubscriptionPlan &&
-      initialSubscriptionPlan.planId
-    ) {
-      setSelectedPlan(initialSubscriptionPlan.planId.toString());
+    if (initialSubscriptionPlan && initialSubscriptionPlan.planId && !selectedPlan) {
+      const planId = initialSubscriptionPlan.planId.toString();
+      setSelectedPlan(planId);
 
-      if (initialSubscriptionPlan.planId === "byDate") {
-        setStartDate(
-          initialSubscriptionPlan.startDate
-            ? dayjs(initialSubscriptionPlan.startDate)
-            : null
-        );
-        setEndDate(
-          initialSubscriptionPlan.endDate ? dayjs(initialSubscriptionPlan.endDate) : null
-        );
-      } else {
-        const selectedPlanObj = plansWithSavedDates.find(
-          (plan) => plan.id.toString() === initialSubscriptionPlan.planId.toString()
-        );
-        if (selectedPlanObj) {
-          setStartDate(selectedPlanObj.startDate);
-          setEndDate(selectedPlanObj.endDate);
-        }
+    if (planId === "byDate") {
+      setStartDate(initialSubscriptionPlan.startDate ? dayjs(initialSubscriptionPlan.startDate) : null);
+      setEndDate(initialSubscriptionPlan.endDate ? dayjs(initialSubscriptionPlan.endDate) : null);
+    } else {
+      const selectedPlanObj = computedPlans.find(p => p.id.toString() === planId);
+      if (selectedPlanObj) {
+        setStartDate(selectedPlanObj.startDate);
+        setEndDate(selectedPlanObj.endDate);
       }
     }
-    // ---- CHANGE END ----
-  }, [holidays, numberOfChildren, initialSubscriptionPlan, customStartDates, selectedChildren]);
+  }
+  }, [holidays, numberOfChildren, initialSubscriptionPlan]);
+
 
 
 
