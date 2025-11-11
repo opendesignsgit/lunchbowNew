@@ -277,7 +277,7 @@ const UserDashboard = () => {
                   </div>
                   {/* )} */}
 
-                  {/* {shouldShowRenewButton() && ( */}
+                  {shouldShowRenewButton() && (
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500 flex flex-col items-start DashboardTItems">
                     <div className="mb-4">
                       {(() => {
@@ -351,7 +351,7 @@ const UserDashboard = () => {
                       Renew Subscription
                     </Button>
                   </div>
-                  {/* )} */}
+                  )}
 
                   <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500 DashboardTItems">
                     <div className="flex items-start justify-between flex-col">
