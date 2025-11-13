@@ -2,10 +2,12 @@ import CustomerServices from "@services/CustomerServices";
 import { useState } from "react";
 import { useRouter } from "next/router";
 
+
 const useRegistration = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
 
   const submitHandler = async ({
     formData,
@@ -16,6 +18,7 @@ const useRegistration = () => {
     data,
   }) => {
     setLoading(true);
+
 
     try {
       if (
@@ -33,11 +36,11 @@ const useRegistration = () => {
         });
         return res;
 
+
       } else if (path == "get-holiday-payments") {
         const res = await CustomerServices.getHolidayPayments(data);
         return res;
       } else if (path == "get-paid-holidays") {
-        // New case for paid holidays API call
         const res = await CustomerServices.getPaidHolidays({ userId: _id });
         return res;
       } else if (path == "get-customer-form") {
@@ -59,6 +62,27 @@ const useRegistration = () => {
           path,
         });
         return res;
+      } else if (path == "get-deleted-meals") {
+        // ✅ NEW: Get deleted meals for wallet
+        const res = await CustomerServices.getDeletedMenus({ userId: _id });
+        return res;
+      } else if (path == "delete-child-menu") {
+        // ✅ NEW: Delete menu and send to wallet
+        const res = await CustomerServices.deleteChildMenu({
+          _id,
+          path,
+          data,
+        });
+        return res;
+      } else if (path == "get-wallet-details") {
+        const res = await CustomerServices.getWalletDetails({ userId: _id });
+        return res;
+      } else if (path == "get-wallet-by-subscription") {
+        const res = await CustomerServices.getWalletBySubscription({
+          userId: _id,
+          subscriptionId: data?.subscriptionId,
+        });
+        return res;
       } else if (path == "Step-Check") {
         const res = await CustomerServices.checkStep({
           _id,
@@ -72,12 +96,18 @@ const useRegistration = () => {
     } catch (error) {
       setError(error.message);
       console.error("Error during registration:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
+
   return {
     submitHandler,
+    loading,
+    error,
   };
 };
+
 
 export default useRegistration;

@@ -24,6 +24,8 @@ const Form = require("../models/Form");
 const Child = require("../models/childModel");
 const Subscription = require("../models/subscriptionModel");
 const UserPayment = require('../models/Payment');
+const DeletedMeal = require("../models/deletedMealSchema");
+const WalletTransaction = require("../models/WalletTransaction");
 const { Types: { ObjectId } } = mongoose;
 
 const verifyEmailAddress = async (req, res) => {
@@ -1990,6 +1992,292 @@ const getFormData = async (req, res) => {
 };
 
 
+// ✅ UPDATED: Delete child menu with plan tracking
+const deleteChildMenu = async (req, res) => {
+  const { userId, childId, childName, date, menu, subscriptionId, planId } = req.body.data;
+
+  // Defensive checks
+  if (!userId || !childId || !date || !subscriptionId || !planId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing required fields." });
+  }
+
+  try {
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(childId) || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ObjectId format." });
+    }
+
+    const userObjectId = mongoose.Types.ObjectId(userId);
+    const childObjectId = mongoose.Types.ObjectId(childId);
+    const subscriptionObjectId = mongoose.Types.ObjectId(subscriptionId);
+
+    // 1. Verify subscription belongs to user
+    const subscription = await Subscription.findOne({
+      _id: subscriptionObjectId,
+      user: userObjectId
+    });
+
+    if (!subscription) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Subscription not found for this user." });
+    }
+
+    // 2. Add 200 points to user wallet
+    const customer = await Customer.findByIdAndUpdate(
+      userObjectId,
+      { $inc: { walletPoints: 200 } },
+      { new: true }
+    );
+
+    if (!customer) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Customer not found." });
+    }
+
+    // 3. Create wallet transaction record
+    const transaction = await WalletTransaction.create({
+      userId: userObjectId,
+      subscriptionId: subscriptionObjectId,
+      transactionType: 'credited',
+      points: 200,
+      reason: 'meal_deleted',
+      description: `Meal deleted for ${childName} on ${date}`,
+      status: 'active',
+      expiryDate: dayjs().add(6, 'months').toDate() // Expire after 6 months
+    });
+
+    // Add transaction to wallet history
+    await Customer.findByIdAndUpdate(
+      userObjectId,
+      { $push: { walletHistory: transaction._id } }
+    );
+
+    // 4. Find or create DeletedMeal record (per subscription/plan)
+    let deletedMealRecord = await DeletedMeal.findOne({
+      userId: userObjectId,
+      subscriptionId: subscriptionObjectId,
+      planId: planId
+    });
+
+    if (!deletedMealRecord) {
+      deletedMealRecord = new DeletedMeal({
+        userId: userObjectId,
+        subscriptionId: subscriptionObjectId,
+        planId: planId,
+        deletedMenus: [],
+        totalWalletPointsEarned: 0
+      });
+    }
+
+    // Prevent duplicates
+    const exists = deletedMealRecord.deletedMenus.some(
+      (item) => item.childId.toString() === childObjectId.toString() && item.date === date
+    );
+
+    if (!exists) {
+      deletedMealRecord.deletedMenus.push({
+        childId: childObjectId,
+        date,
+        childName,
+        mealName: menu
+      });
+      deletedMealRecord.totalWalletPointsEarned += 200;
+      await deletedMealRecord.save();
+    }
+
+    // 5. Remove the meal from UserMeal collection
+    const userMeal = await UserMeal.findOne({ userId: userObjectId });
+    if (userMeal && Array.isArray(userMeal.plans)) {
+      userMeal.plans.forEach((plan) => {
+        // Only update if it's the right subscription
+        if (plan.subscriptionId?.toString() === subscriptionObjectId.toString()) {
+          plan.children = plan.children.filter((child) => {
+            if (child.childId.toString() === childObjectId.toString()) {
+              child.meals = child.meals.filter((meal) => {
+                const mealDateStr = dayjs(meal.mealDate).format("YYYY-MM-DD");
+                return !(mealDateStr === date && meal.mealName === menu);
+              });
+            }
+            return true;
+          });
+        }
+      });
+      await userMeal.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Menu deleted, points credited and record logged.",
+      walletPoints: customer.walletPoints,
+      transactionId: transaction._id
+    });
+  } catch (error) {
+    console.error("Error in deleteChildMenu:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// ✅ UPDATED: Get deleted meals for specific subscription/plan
+const getDeletedMeals = async (req, res) => {
+  try {
+    console.log("====================================");
+    console.log("getDeletedMeals request");
+    console.log("====================================");
+
+    const { userId, subscriptionId, planId } = req.body;
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "UserId required" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid userId format" });
+    }
+
+    const userObjectId = mongoose.Types.ObjectId(userId);
+
+    // Build query filter
+    let query = { userId: userObjectId };
+    if (subscriptionId && mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      query.subscriptionId = mongoose.Types.ObjectId(subscriptionId);
+    }
+    if (planId) {
+      query.planId = planId;
+    }
+
+    const records = await DeletedMeal.find(query);
+
+    if (!records || records.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // Flatten all deleted menus from all plans
+    const result = records.flatMap((record) =>
+      record.deletedMenus.map((item) => ({
+        childId: item.childId.toString(),
+        date: item.date,
+        childName: item.childName || "Unknown",
+        mealName: item.mealName || "Unknown",
+        subscriptionId: record.subscriptionId.toString(),
+        planId: record.planId
+      }))
+    );
+
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    console.error("getDeletedMeals error", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ✅ NEW: Get wallet balance and history
+const getWalletDetails = async (req, res) => {
+  try {
+    const userId = req.body.userId;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid userId" });
+    }
+
+    const userObjectId = mongoose.Types.ObjectId(userId);
+
+    const customer = await Customer.findById(userObjectId).populate('walletHistory');
+
+    if (!customer) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Customer not found" });
+    }
+
+    // Filter active transactions only
+    const activeTransactions = customer.walletHistory.filter(
+      (tx) => tx.status === 'active' && (!tx.expiryDate || dayjs(tx.expiryDate).isAfter(dayjs()))
+    );
+
+    const totalActivePoints = activeTransactions.reduce((sum, tx) => sum + tx.points, 0);
+
+    return res.json({
+      success: true,
+      data: {
+        walletPoints: customer.walletPoints,
+        activePoints: totalActivePoints,
+        history: activeTransactions,
+        totalTransactions: customer.walletHistory.length
+      }
+    });
+  } catch (err) {
+    console.error("getWalletDetails error", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ✅ NEW: Get wallet summary per subscription
+const getWalletBySubscription = async (req, res) => {
+  try {
+    const { userId, subscriptionId } = req.body;
+
+    if (!userId || !subscriptionId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "userId and subscriptionId required" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ObjectId format" });
+    }
+
+    const userObjectId = mongoose.Types.ObjectId(userId);
+    const subscriptionObjectId = mongoose.Types.ObjectId(subscriptionId);
+
+    const deletedMealRecord = await DeletedMeal.findOne({
+      userId: userObjectId,
+      subscriptionId: subscriptionObjectId
+    });
+
+    if (!deletedMealRecord) {
+      return res.json({
+        success: true,
+        data: {
+          subscriptionId: subscriptionId,
+          totalDeleted: 0,
+          totalPointsEarned: 0,
+          deletedMeals: []
+        }
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        subscriptionId: subscriptionId,
+        planId: deletedMealRecord.planId,
+        totalDeleted: deletedMealRecord.deletedMenus.length,
+        totalPointsEarned: deletedMealRecord.totalWalletPointsEarned,
+        deletedMeals: deletedMealRecord.deletedMenus
+      }
+    });
+  } catch (err) {
+    console.error("getWalletBySubscription error", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 const getPaidHolidays = async (req, res) => {
   try {
     const userId = req.body.userId;
@@ -2069,4 +2357,8 @@ module.exports = {
   localPaymentSuccess,
   localAddChildPaymentController,
   getPaymentsForUser,
+  deleteChildMenu,
+  getDeletedMeals,
+  getWalletDetails,
+  getWalletBySubscription,
 };

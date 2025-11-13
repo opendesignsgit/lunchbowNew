@@ -1,9 +1,11 @@
 import requests from "./httpServices";
 
+
 const CustomerServices = {
   loginCustomer: async (body) => {
     return requests.post("/customer/login", body);
   },
+
 
   verifyEmailAddress: async (body) => {
     return requests.post("/customer/verify-email", body);
@@ -12,37 +14,46 @@ const CustomerServices = {
     return requests.post("/customer/verify-phone", body);
   },
 
+
   registerCustomer: async (token, body) => {
     return requests.post(`/customer/register/${token}`, body);
   },
+
 
   signUpWithOauthProvider: async (body) => {
     return requests.post(`/customer/signup/oauth`, body);
   },
 
+
   signUpWithProvider(token, body) {
     return requests.post(`/customer/signup/${token}`, body);
   },
+
 
   forgetPassword: async (body) => {
     return requests.put("/customer/forget-password", body);
   },
 
+
   resetPassword: async (body) => {
     return requests.put("/customer/reset-password", body);
   },
+
 
   changePassword: async (body) => {
     return requests.post("/customer/change-password", body);
   },
 
+
   updateCustomer: async (id, body) => {
     return requests.put(`/customer/${id}`, body);
   },
 
+
   getShippingAddress: async ({ userId = "" }) => {
     return requests.get(`/customer/shipping/address/${userId}`);
   },
+
 
   addShippingAddress: async ({ userId = "", shippingAddressData }) => {
     return requests.post(
@@ -51,45 +62,75 @@ const CustomerServices = {
     );
   },
 
+
   sendOtp: async (body) => {
     return requests.post("/customer/sendOtp", body);
   },
+
 
   verifyOtp: async (body) => {
     return requests.post("/customer/verifyOtp", body);
   },
 
+
   stepFormRegister: async (body) => {
     return requests.post("/customer/stepForm-Register", body);
   },
+
 
   checkStep: async (body) => {
     return requests.post("/customer/Step-Check", body);
   },
 
+
   getMenuCalendar: async (body) => {
     return requests.post("/customer/get-Menu-Calendar", body);
   },
+
 
   saveMenuCalendar: async (body) => {
     return requests.post("/customer/save-Menu-Calendar", body);
   },
 
+
   getSavedMeals: async (body) => {
     return requests.post("/customer/get-saved-meals", body);
   },
 
+
   getHolidayPayments: async (body) => {
-  return requests.post("/ccavenue/holiday-payments", body);
-},
+    return requests.post("/ccavenue/holiday-payments", body);
+  },
+
 
   getPaidHolidays: async (body) => {
     return requests.post("/customer/get-paid-holidays", body);
   },
 
+
   getCustomerFormData: async (id) => {
     return requests.get(`/customer/form/${id}`);
   },
+
+  // ✅ NEW: Get deleted meals for wallet feature
+  getDeletedMenus: async (body) => {
+    return requests.post("/customer/deleted-menus", body);
+  },
+
+  // ✅ NEW: Delete menu and send to wallet
+  deleteChildMenu: async (body) => {
+    return requests.post("/customer/delete-child-menu", body);
+  },
+
+  getWalletDetails: async (body) => {
+    return requests.post("/customer/wallet-details", body);
+  },
+
+  getWalletBySubscription: async (body) => {
+    return requests.post("/customer/wallet-by-subscription", body);
+  },
+
 };
+
 
 export default CustomerServices;

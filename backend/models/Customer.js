@@ -85,6 +85,18 @@ const customerSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    // ✅ NEW: Wallet management
+    walletPoints: {
+      type: Number,
+      default: 0,
+    },
+    // ✅ NEW: Track wallet history
+    walletHistory: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'WalletTransaction',
+      }
+    ],
   },
   {
     timestamps: true,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Box,
   Typography,
@@ -14,21 +14,21 @@ import {
   Link,
   Snackbar,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
-import { ChevronLeft, ChevronRight, Close } from "@mui/icons-material";
+import { ChevronLeft, ChevronRight, Close, Delete as DeleteIcon } from "@mui/icons-material";
 import dayjs from "dayjs";
 import MealPlanDialog from "./MealPlanDialog";
 import HolidayPayment from "./HolidayPayment";
 import mealPlanData from "../../jsonHelper/meal_plan.json";
 import dietitianMealPlanData from "../../jsonHelper/Dietitian_meal_plan.json";
-
 import { useSession } from "next-auth/react";
-import useRegistration from "@hooks/useRegistration";
-
 
 const mealPlanArray = mealPlanData.meal_plan;
 const dietitianMealPlanArray = dietitianMealPlanData.meal_plan;
-
 
 const RightPanel = ({
   isSmall,
@@ -55,43 +55,77 @@ const RightPanel = ({
   selectedPlans,
   setSelectedPlans,
   canPay,
-  subscriptionStart,   // ⬅️ add this
-  subscriptionEnd,     // ⬅️ add this
-  goToPrevDate,   // ✅ add
-  goToNextDate,   // ✅ add
-  subscriptionPlans,       // ✅ add this
+  subscriptionStart,
+  subscriptionEnd,
+  goToPrevDate,
+  goToNextDate,
+  subscriptionPlans,
   selectedPlanIndex,
+  blockedMenus,
+  userId,
+  submitHandler,
+  fetchDeletedMenus,
+  currentMonth,
+  currentYear,
 }) => {
   const { data: session } = useSession();
 
-  // const [useMealPlan, setUseMealPlan] = useState(false);
-  // const [selectedPlans, setSelectedPlans] = useState({});
   const [applyToAll, setApplyToAll] = useState(false);
   const [dialogOpen1, setDialogOpen1] = useState(false);
-  const [dialogOpen2, setDialogOpen2] = useState(false);
   const [holidayPaymentOpen, setHolidayPaymentOpen] = useState(false);
   const [holidayPaymentData, setHolidayPaymentData] = useState([]);
   const [paidHolidayMeals, setPaidHolidayMeals] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const selectedDateObj = dayjs(formatDate(selectedDate));
-  const holiday = isHoliday(selectedDate);
-  const isSelectedHoliday = !!holiday;
-  const isWithin48Hours = selectedDateObj.diff(dayjs(), "hour") < 24;
-  const isSunday = selectedDateObj.day() === 0;
-  const { submitHandler, loading } = useRegistration();
-
-  const isSaturday = selectedDateObj.day() === 6;
-
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [showSaveWarning, setShowSaveWarning] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
+  // ✅ FIX: Use useRef to track if already fetched
+  const hasFetchedRef = useRef({});
 
+  // Create local formatDate function
+  const localFormatDate = (day) =>
+    `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(
+      day
+    ).padStart(2, "0")}`;
 
+  const dateFormatter = formatDate || localFormatDate;
 
-  // Load paid meal data from API, fallback to localStorage
+  // Use useMemo to safely compute memoized values
+  const selectedDateObj = useMemo(() =>
+    dayjs(dateFormatter(selectedDate)),
+    [selectedDate, dateFormatter]
+  );
+
+  const isSelectedHoliday = useMemo(() =>
+    !!isHoliday(selectedDate),
+    [selectedDate, isHoliday]
+  );
+
+  const isWithin48Hours = useMemo(() =>
+    selectedDateObj.diff(dayjs(), "hour") < 48,
+    [selectedDateObj]
+  );
+
+  const isSunday = useMemo(() =>
+    selectedDateObj.day() === 0,
+    [selectedDateObj]
+  );
+
+  const isSaturday = useMemo(() =>
+    selectedDateObj.day() === 6,
+    [selectedDateObj]
+  );
+
+  // ✅ FIXED: Only fetch once per date with useRef
   useEffect(() => {
-    const dateKey = formatDate(selectedDate);
     if (!session?.user?.id) return;
+
+    const dateKey = dateFormatter(selectedDate);
+
+    // Check if already fetched this date
+    if (hasFetchedRef.current[dateKey]) return;
 
     const fetchPaidMeals = async () => {
       try {
@@ -105,6 +139,9 @@ const RightPanel = ({
         } else {
           setPaidHolidayMeals([]);
         }
+
+        // Mark as fetched
+        hasFetchedRef.current[dateKey] = true;
       } catch (err) {
         console.error("Error fetching paid holiday data:", err);
         setPaidHolidayMeals([]);
@@ -112,7 +149,8 @@ const RightPanel = ({
     };
 
     fetchPaidMeals();
-  }, [selectedDate, formatDate, session?.user?.id]);
+    // ✅ Removed submitHandler from dependencies to prevent infinite loop
+  }, [selectedDate, dateFormatter, session?.user?.id]);
 
   const getDayMenu = (selectedDate) => {
     if (!mealPlanArray || mealPlanArray.length === 0) return [];
@@ -125,7 +163,6 @@ const RightPanel = ({
       id: 1,
       name: "Meal Plan ",
       meals: dietitianMealPlanArray.map((day) => day.meal),
-
     },
   ];
 
@@ -139,12 +176,11 @@ const RightPanel = ({
       const year = currentDate.year();
       const dateKey = currentDate.format("YYYY-MM-DD");
 
-      // skip weekends and holidays
       if (!isHoliday(day, month, year)) {
         for (const child of dummyChildren) {
           const meal = menuSelections[dateKey]?.[child.id];
           if (!meal) {
-            return false; // missing a meal
+            return false;
           }
         }
       }
@@ -153,19 +189,16 @@ const RightPanel = ({
     return true;
   };
 
-
   const handlePlanChange = (childId, planId) => {
-    const dateObj = dayjs(formatDate(selectedDate));
+    if (!dateFormatter) return;
+    const dateObj = dayjs(dateFormatter(selectedDate));
 
-    // Block within 48 hours
     if (isWithin48Hours) return;
 
-    // ✅ Only apply inside subscription period
     if (
       dateObj.isBefore(dayjs(subscriptionStart), "day") ||
       dateObj.isAfter(dayjs(subscriptionEnd), "day")
     ) {
-      console.log("❌ Selected date outside subscription range, skipping");
       return;
     }
 
@@ -174,7 +207,6 @@ const RightPanel = ({
     const childIndex = dummyChildren.findIndex((child) => child.id === childId);
     if (childIndex !== -1) setActiveChild(childIndex);
 
-    // 🔎 Apply Meal Plan but filter by subscription range
     if (applyMealPlan) {
       applyMealPlan(planId, childId, subscriptionStart, subscriptionEnd);
     }
@@ -184,9 +216,6 @@ const RightPanel = ({
     }
   };
 
-
-
-
   const handleApplyToAllChange = (e) => {
     if (isWithin48Hours) return;
     const { checked } = e.target;
@@ -194,7 +223,7 @@ const RightPanel = ({
     if (checked && dummyChildren.length > 1) {
       const firstChildId = dummyChildren[0].id;
       const firstChildSelection =
-        menuSelections[formatDate(selectedDate)]?.[firstChildId];
+        menuSelections[dateFormatter(selectedDate)]?.[firstChildId];
       dummyChildren.slice(1).forEach((child) => {
         handleMenuChange(child.id, firstChildSelection || "");
       });
@@ -218,12 +247,71 @@ const RightPanel = ({
 
   const isChildPaid = (childId) => {
     return paidHolidayMeals.some(
-      (p) => p.childId === childId && p.mealDate === formatDate(selectedDate)
+      (p) => p.childId === childId && p.mealDate === dateFormatter(selectedDate)
     );
   };
 
+  const isChildDateBlocked = (childId, formattedDate) => {
+    return blockedMenus?.some(
+      (bm) => bm.childId === childId && bm.date === formattedDate
+    );
+  };
+
+  const handleDeleteClick = (child, date, dish) => {
+    setDeleteTarget({ child, date, dish });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    const { child, date, dish } = deleteTarget;
+
+    const currentSub = subscriptionPlans?.[selectedPlanIndex];
+    if (!currentSub) {
+      setSnackbarMessage("❌ Subscription data not available. Please refresh.");
+      setSnackbarOpen(true);
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+      return;
+    }
+
+    try {
+      await submitHandler({
+        path: "delete-child-menu",
+        data: {
+          userId,
+          childId: child.id,
+          childName: child.name,
+          date,
+          menu: dish,
+          subscriptionId: currentSub._id,
+          planId: currentSub.planId
+        },
+      });
+
+      handleMenuChange(child.id, "");
+
+      if (fetchDeletedMenus) {
+        try {
+          await fetchDeletedMenus();
+        } catch (err) {
+          console.error("Error refreshing deleted menus:", err);
+        }
+      }
+
+      setSnackbarMessage("✅ Meal deleted successfully and added to your wallet!");
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error("Failed to delete menu:", err);
+      setSnackbarMessage("❌ Failed to delete meal. Please try again.");
+      setSnackbarOpen(true);
+    }
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+  };
+
   const childrenWithSelectedMeals = dummyChildren.filter((child) => {
-    const meal = menuSelections[formatDate(selectedDate)]?.[child.id];
+    const meal = menuSelections[dateFormatter(selectedDate)]?.[child.id];
     return meal && meal !== "";
   });
 
@@ -232,7 +320,7 @@ const RightPanel = ({
     childrenWithSelectedMeals.every((child) => isChildPaid(child.id));
 
   const handleSaveClick = () => {
-    const dateKey = formatDate(selectedDate);
+    const dateKey = dateFormatter(selectedDate);
     const allMenusEmpty = dummyChildren.every(
       (child) =>
         !menuSelections[dateKey] ||
@@ -241,10 +329,8 @@ const RightPanel = ({
     );
 
     if (allMenusEmpty) {
-      // setSnackbarMessage("Please select at least one menu to save");
-      // setSnackbarOpen(true);
       alert("Please select at least one menu to save");
-      return; // Prevent save if nothing is selected
+      return;
     }
 
     const allWorkingDaysFilled = checkAllWorkingDaysFilled();
@@ -259,7 +345,6 @@ const RightPanel = ({
       setSnackbarOpen(true);
     }
   };
-
 
   const handleSnackbarClose = (event, reason) => {
     if (reason === "clickaway") return;
@@ -291,6 +376,8 @@ const RightPanel = ({
           <FormControlLabel
             control={
               <Checkbox
+                id="meal-plan-checkbox"
+                name="mealplan-toggle"
                 checked={useMealPlan}
                 onChange={(e) => !isWithin48Hours && setUseMealPlan(e.target.checked)}
                 sx={{ color: "#fff" }}
@@ -306,35 +393,28 @@ const RightPanel = ({
           />
         </div>
       )}
-      <div className="fixdatesboxwarrow">
-      {isSmall && (
-        <Box display="flex" justifyContent="space-between" alignItems="center" className="datearrow">
-          <IconButton onClick={goToPrevDate} sx={{ color: "#fff" }} className="arrowprew">
-            <ChevronLeft />
-          </IconButton>
-          {/* <IconButton onClick={onClose} sx={{ color: "#fff" }}>
-                      <Close />
-                    </IconButton> */}
-          <IconButton onClick={goToNextDate} sx={{ color: "#fff" }} className="arrownext">
-            <ChevronRight />
-          </IconButton>
-        </Box>
-      )}
-      <div className="fixdatesboxs">
-        {isSmall ? (
-          // 📱 Mobile → Full Date
-          <h2>
-            {dayjs(formatDate(selectedDate)).format("DD MMM YYYY")}
-          </h2>
-        ) : (
-        // 💻 Desktop → Only Day Number
-            <h2>{String(selectedDate).padStart(2, "0")}</h2>
-        )}
-        <h4>{getDayName(selectedDate).toUpperCase()}</h4>
-        <h5>SELECT YOUR CHILD'S MENU</h5>
-      </div>
-      </div>
 
+      <div className="fixdatesboxwarrow">
+        {isSmall && (
+          <Box display="flex" justifyContent="space-between" alignItems="center" className="datearrow">
+            <IconButton onClick={goToPrevDate} sx={{ color: "#fff" }} className="arrowprew">
+              <ChevronLeft />
+            </IconButton>
+            <IconButton onClick={goToNextDate} sx={{ color: "#fff" }} className="arrownext">
+              <ChevronRight />
+            </IconButton>
+          </Box>
+        )}
+        <div className="fixdatesboxs">
+          {isSmall ? (
+            <h2>{dayjs(dateFormatter(selectedDate)).format("DD MMM YYYY")}</h2>
+          ) : (
+            <h2>{String(selectedDate).padStart(2, "0")}</h2>
+          )}
+          <h4>{getDayName(selectedDate).toUpperCase()}</h4>
+          <h5>SELECT YOUR CHILD'S MENU</h5>
+        </div>
+      </div>
 
       {isWithin48Hours ? (
         <Box bgcolor="#fff" color="#000" borderRadius={2} p={2} textAlign="center" mb={2}>
@@ -368,6 +448,8 @@ const RightPanel = ({
                         fullWidth
                       >
                         <RadioGroup
+                          id={`mealplan-${child.id}`}
+                          name={`mealplan-${child.id}`}
                           value={selectedPlans[child.id] || ""}
                           onChange={(e) => {
                             handlePlanChange(
@@ -378,8 +460,7 @@ const RightPanel = ({
                           }}
                           className="RGradiobtnSSS"
                         >
-                          {mealPlans.map((plan) => {
-                            return (
+                          {mealPlans.map((plan) => (
                               <Box
                                 key={plan.id}
                                 display="flex"
@@ -391,6 +472,7 @@ const RightPanel = ({
                                   value={plan.id}
                                   size="small"
                                   className="radiobtnsinput"
+                                  id={`radio-${child.id}-${plan.id}`}
                                 />
                                 <Typography
                                   fontSize="0.8rem"
@@ -417,9 +499,7 @@ const RightPanel = ({
                                   View Plan
                                 </Link>
                               </Box>
-                            );
-                          })}
-
+                            ))}
                         </RadioGroup>
                       </FormControl>
                     </Box>
@@ -427,8 +507,9 @@ const RightPanel = ({
                 ))
                 : dummyChildren.map((child, childIndex) => {
                   const isPaid = paidHolidayMeals.some(
-                    (p) => p.childId === child.id && p.mealDate === formatDate(selectedDate)
-                  );
+                      (p) => p.childId === child.id && p.mealDate === dateFormatter(selectedDate)
+                    );
+                  const blocked = isChildDateBlocked(child.id, dateFormatter(selectedDate));
 
                   return (
                     <Box key={child.id} className="childmlist">
@@ -436,112 +517,128 @@ const RightPanel = ({
                         {(child.name || "").toUpperCase()}
                       </Typography>
 
-                      <Box
-                        className="menuddlistbox"
-                        bgcolor="#fff"
-                        borderRadius={2}
-                        px={1}
-                        py={0.5}
-                      >
-                        <Select
-                          value={menuSelections[formatDate(selectedDate)]?.[child.id] || ""}
-                          onChange={(e) => {
-                            childIndex === 0
-                              ? handleFirstChildMenuChange(child.id, e.target.value)
-                              : handleMenuSelectionChange(child.id, e.target.value);
-                            setActiveChild(childIndex);
-                          }}
-                          fullWidth
-                          variant="standard"
-                          disableUnderline
-                          MenuProps={{ PaperProps: { style: { maxHeight: 48 * 4.5 } } }}
+                        <Box
+                          className="menuddlistbox"
+                          bgcolor="#fff"
+                          borderRadius={2}
+                          px={1}
+                          py={0.5}
                         >
-                          <MenuItem value="">Select Dish</MenuItem>
-
-                          {/* ✅ Always include saved dish (paid holiday meal) */}
-                          {(() => {
-                            const savedDish =
-                              menuSelections[formatDate(selectedDate)]?.[child.id];
-                            if (
-                              savedDish &&
-                              !getDayMenu(selectedDate).includes(savedDish)
-                            ) {
-                              return (
-                                <MenuItem key="saved" value={savedDish}>
-                                  {savedDish} (Paid)
-                                </MenuItem>
-                              );
-                            }
-                            return null;
-                          })()}
-
-                          {/* Normal day menus */}
-                          {getDayMenu(selectedDate).map((menu, i) => (
-                            <MenuItem key={i} value={menu}>
-                              {menu}
-                            </MenuItem>
-                          ))}
-                        </Select>
-
-                      </Box>
-
-                      {isSelectedHoliday && !isSunday && (
-                        <Box display="flex" gap={2} className="btngroups" mt={1}>
-                          {!isPaid && (
-                            <Button
-                              variant="contained"
-                              className="paysavebtn"
-                              color="warning"
-                              onClick={() => {
-                                if (canPay) {
-                                  setShowSaveWarning(true);
-                                  return;
-                                }
-                                const dish = menuSelections[formatDate(selectedDate)]?.[child.id];
-                                if (!dish) {
-                                  alert("Select a dish first");
-                                  return;
-                                }
-                                setHolidayPaymentData([
-                                  {
-                                    childId: child.id,
-                                    dish,
-                                    mealDate: formatDate(selectedDate),
-                                    planId: selectedPlans[child.id] || "HOLIDAY", // ✅ Correct line
-                                  },
-                                ]);
-
-
-                                setHolidayPaymentOpen(true);
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Select
+                              id={`meal-select-${child.id}`}
+                              name={`meal-${child.id}`}
+                              value={menuSelections[dateFormatter(selectedDate)]?.[child.id] || ""}
+                              onChange={(e) => {
+                                childIndex === 0
+                                  ? handleFirstChildMenuChange(child.id, e.target.value)
+                                  : handleMenuSelectionChange(child.id, e.target.value);
+                                setActiveChild(childIndex);
                               }}
+                              fullWidth
+                              variant="standard"
+                              disableUnderline
+                              MenuProps={{ PaperProps: { style: { maxHeight: 48 * 4.5 } } }}
                             >
-                              <span>Pay ₹200</span>
-                            </Button>
-                          )}
+                              <MenuItem value="">Select Dish</MenuItem>
+
+                              {(() => {
+                                const savedDish =
+                                  menuSelections[dateFormatter(selectedDate)]?.[child.id];
+                                if (
+                                  savedDish &&
+                                  !getDayMenu(selectedDate).includes(savedDish)
+                                ) {
+                                  return (
+                                    <MenuItem key="saved" value={savedDish}>
+                                      {savedDish} (Paid)
+                                    </MenuItem>
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                              {getDayMenu(selectedDate).map((menu, i) => (
+                                <MenuItem key={i} value={menu}>
+                                  {menu}
+                                </MenuItem>
+                              ))}
+                            </Select>
+
+                            {menuSelections[dateFormatter(selectedDate)]?.[child.id] && !blocked && !isWithin48Hours && (
+                              <IconButton
+                                onClick={() => handleDeleteClick(
+                                  child,
+                                  dateFormatter(selectedDate),
+                                  menuSelections[dateFormatter(selectedDate)][child.id]
+                                )}
+                                size="small"
+                                sx={{ color: "#d32f2f", minWidth: "40px" }}
+                                title="Delete meal and add to wallet"
+                                id={`delete-btn-${child.id}`}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </Box>
                         </Box>
-                      )}
 
+                        {isSelectedHoliday && !isSunday && (
+                          <Box display="flex" gap={2} className="btngroups" mt={1}>
+                            {!isPaid && (
+                              <Button
+                                variant="contained"
+                                className="paysavebtn"
+                                color="warning"
+                                onClick={() => {
+                                  if (canPay) {
+                                    setShowSaveWarning(true);
+                                    return;
+                                  }
+                                  const dish = menuSelections[dateFormatter(selectedDate)]?.[child.id];
+                                  if (!dish) {
+                                    alert("Select a dish first");
+                                    return;
+                                  }
+                                  setHolidayPaymentData([
+                                    {
+                                      childId: child.id,
+                                      dish,
+                                      mealDate: dateFormatter(selectedDate),
+                                      planId: selectedPlans[child.id] || "HOLIDAY",
+                                    },
+                                  ]);
+                                  setHolidayPaymentOpen(true);
+                                }}
+                                id={`pay-btn-${child.id}`}
+                              >
+                                <span>Pay ₹200</span>
+                              </Button>
+                            )}
+                          </Box>
+                        )}
 
-                      {childIndex === 0 && !isSelectedHoliday && dummyChildren.length > 1 && (
-                        <Box sx={{ mt: 1 }}>
-                          <FormControlLabel
-                            className="cbapplysbtn"
-                            control={
-                              <Checkbox
-                                checked={applyToAll}
-                                onChange={handleApplyToAllChange}
-                                sx={{ color: "#fff" }}
-                              />
-                            }
-                            label={
-                              <Typography fontSize="0.8rem" color="#fff">
-                                Apply the same menu for all children
-                              </Typography>
-                            }
-                          />
-                        </Box>
-                      )}
-
+                        {childIndex === 0 && !isSelectedHoliday && dummyChildren.length > 1 && (
+                          <Box sx={{ mt: 1 }}>
+                            <FormControlLabel
+                              className="cbapplysbtn"
+                              control={
+                                <Checkbox
+                                  id="apply-all-checkbox"
+                                  name={`applyall-${dateFormatter(selectedDate)}`}
+                                  checked={applyToAll}
+                                  onChange={handleApplyToAllChange}
+                                  sx={{ color: "#fff" }}
+                                />
+                              }
+                              label={
+                                <Typography fontSize="0.8rem" color="#fff">
+                                  Apply the same menu for all children
+                                </Typography>
+                              }
+                            />
+                          </Box>
+                        )}
                     </Box>
                   );
                 })}
@@ -561,31 +658,67 @@ const RightPanel = ({
                     variant="outlined"
                     className="paysavebtn"
                     onClick={handleSaveClick}
+                        id="save-meals-btn"
                   >
                     <span>Save</span>
                   </Button>
                 )}
               </Box>
-            </div>
-
+                </div>
           </div>
         </>
       )}
 
-      <MealPlanDialog open={dialogOpen1} onClose={() => setDialogOpen1(false)} planId={1} startDate={formatDate(selectedDate)} />
-      {/* <MealPlanDialog open={dialogOpen2} onClose={() => setDialogOpen2(false)} planId={2} startDate={formatDate(selectedDate)} /> */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Delete Meal</DialogTitle>
+        <DialogContent>
+          {deleteTarget && (
+            <Typography>
+              Are you sure you want to delete the meal for{" "}
+              <b>{deleteTarget.child.name}</b> on <b>{deleteTarget.date}</b> (
+              <b>{deleteTarget.dish}</b>)? This will be credited to your wallet.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            id="confirm-delete-btn"
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <MealPlanDialog
+        open={dialogOpen1}
+        onClose={() => setDialogOpen1(false)}
+        planId={1}
+        startDate={dateFormatter(selectedDate)}
+      />
 
       <HolidayPayment
         open={holidayPaymentOpen}
         onClose={() => setHolidayPaymentOpen(false)}
-        selectedDate={formatDate(selectedDate)}
+        selectedDate={dateFormatter(selectedDate)}
         childrenData={holidayPaymentData}
-        currentPlanId={subscriptionPlans[selectedPlanIndex]?.id} // ✅ Now it’s defined
+        currentPlanId={subscriptionPlans[selectedPlanIndex]?.id}
       />
 
-
-
-      <Snackbar open={showSaveWarning} autoHideDuration={4000} onClose={() => setShowSaveWarning(false)} className="saveworkmenu">
+      <Snackbar
+        open={showSaveWarning}
+        autoHideDuration={4000}
+        onClose={() => setShowSaveWarning(false)}
+        className="saveworkmenu"
+      >
         <Alert severity="warning" sx={{ width: '100%' }}>
           Please save working days menu before paying holidays.
         </Alert>

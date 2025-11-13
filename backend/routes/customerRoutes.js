@@ -35,6 +35,10 @@ const {
   localPaymentSuccess,
   localAddChildPaymentController,
   getPaymentsForUser,
+  deleteChildMenu,
+  getDeletedMeals,
+  getWalletDetails,
+  getWalletBySubscription,
 } = require("../controller/customerController");
 const {
   passwordVerificationLimit,
@@ -138,6 +142,13 @@ router.post("/local-success", localPaymentSuccess);
 router.post("/local-success/local-add-childPayment", localAddChildPaymentController);
 
 router.post("/get-payments", getPaymentsForUser);
+
+// Add to your customer routes
+router.post("/delete-child-menu", deleteChildMenu);
+router.post("/deleted-menus", getDeletedMeals);
+router.post("/wallet-details", getWalletDetails);          // ✅ NEW
+router.post("/wallet-by-subscription", getWalletBySubscription); // ✅ NEW
+
 
 
 
