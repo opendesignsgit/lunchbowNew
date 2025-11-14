@@ -137,7 +137,7 @@ const Mainfooter = () => {
       {session && stepCheck !== 4 && (
         <div className="incomplete-registration-msg">
           <div className="incregbox">
-            If you don’t complete your registration?{" "}
+            If you didn’t complete your registration?{" "}
             <button
               onClick={() => router.push("/user/profile-Step-Form")}
               className="theme-link"
