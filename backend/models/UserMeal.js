@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 const mealSchema = new mongoose.Schema({
   mealDate: { type: Date, required: true },
-  mealName: { type: String, required: true }
+  mealName: { type: String, required: true },
+  deleted: { type: Boolean, default: false }
 });
 
 const childMealEntrySchema = new mongoose.Schema({

@@ -31,6 +31,19 @@ const FormSchema = new mongoose.Schema({
   subscriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Subscription" }],
   paymentStatus: { type: String, required: true },
   subscriptionCount: { type: Number, default: 0, required: true },
+  // ⭐ NEW WALLET FIELD
+  wallet: {
+    points: { type: Number, default: 0 },
+    history: [
+      {
+        date: { type: Date, default: Date.now },
+        change: { type: Number },             // +200, -100 etc.
+        reason: { type: String },             // "meal deleted"
+        childName: { type: String },          // ⭐ NEW
+        mealName: { type: String },           // ⭐ NEW
+      }
+    ]
+  }
 });
 
 const Form = mongoose.model("Form", FormSchema);

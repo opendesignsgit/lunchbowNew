@@ -93,7 +93,7 @@ const CustomerServices = {
 
   deleteMeal: async (body) => {
     // return requests.post("/customer/delete-meal", body);
-    console.log("Deleting meal with data:", body);
+    // console.log("Deleting meal with data:", body);
     return requests.post("/customer/delete-meal", body);
   },
 

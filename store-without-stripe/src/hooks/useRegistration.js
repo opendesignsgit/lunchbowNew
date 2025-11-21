@@ -74,13 +74,14 @@ const useRegistration = () => {
       }
 
     } catch (error) {
-      setError(error.message);
+      setError(error);
       console.error("Error during registration:", error);
     }
   };
 
   return {
     submitHandler,
+    error,
   };
 };
 
