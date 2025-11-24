@@ -22,6 +22,15 @@ import useRegistration from "@hooks/useRegistration";
 import AttributeServices from "../../services/AttributeServices";
 import useAsync from "../../hooks/useAsync";
 import CategoryServices from "../../services/CategoryServices";
+import { useSession } from "next-auth/react";
+import AccountServices from "@services/AccountServices";
+import PriceBreakdownModal from "./PriceBreakdownModal";
+import { Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import Tooltip from "@mui/material/Tooltip";
+
+
+
 
 const BASE_PRICE_PER_DAY = 200;
 
@@ -139,8 +148,52 @@ const RenewSubscriptionPlanStep = ({
     [holidays]
   );
   const { submitHandler, loading } = useRegistration();
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const [activeSubscriptionEndDate, setActiveSubscriptionEndDate] = useState(null);
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
+  // ---------------------- ACCOUNT FETCH -----------------------
+  const [accountDetails, setAccountDetails] = useState(null);
+  const [accountLoading, setAccountLoading] = useState(true);
+
+  const walletPoints = accountDetails?.wallet?.points || 0;
+
+  const [useWallet, setUseWallet] = useState(false);
+
+  const fetchAccountDetails = async () => {
+    if (!userId) return;
+
+    setAccountLoading(true);
+    try {
+      const res = await AccountServices.getAccountDetails(userId);
+
+      const raw = res?.data ?? res;
+      const payload =
+        (raw && typeof raw === "object" && ("parentDetails" in raw || "subscriptions" in raw))
+          ? raw
+          : (raw?.data && typeof raw.data === "object" &&
+            ("parentDetails" in raw.data || "subscriptions" in raw.data))
+            ? raw.data
+            : null;
+
+      setAccountDetails(payload);
+    } catch (err) {
+      console.error("Account details fetch failed:", err);
+      setAccountDetails(null);
+    } finally {
+      setAccountLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userId) {
+      fetchAccountDetails();
+    }
+  }, [userId]);
+
+  // ------------------------------------------------------------
 
   // Fetch children for current user
   const { data: childrenList = [], loading: childrenLoading } = useAsync(() =>
@@ -165,7 +218,6 @@ const RenewSubscriptionPlanStep = ({
   // Utility function to find next working day
   const getNextWorkingDay = (date, holidays) => {
     let current = dayjs(date);
-    // keep moving forward until it's a valid working day
     while (!isWorkingDay(current, holidays)) {
       current = current.add(1, "day");
     }
@@ -174,30 +226,25 @@ const RenewSubscriptionPlanStep = ({
 
   // Calculate minStartDate
   const afterEnd = activeSubscriptionEndDate
-  ? activeSubscriptionEndDate.add(1, "day") // next day after current plan
-  : null;
+    ? activeSubscriptionEndDate.add(1, "day")
+    : null;
 
   const todayPlusTwo = dayjs().add(2, "day");
 
-  // Now apply your condition
   let tentativeStartDate;
 
   if (afterEnd) {
-    // old plan still active
     if (afterEnd.isAfter(todayPlusTwo)) {
-      tentativeStartDate = afterEnd; // plan still active → start after it ends
+      tentativeStartDate = afterEnd;
     } else {
-      tentativeStartDate = todayPlusTwo; // plan ended → wait 2 days from today
+      tentativeStartDate = todayPlusTwo;
     }
   } else {
-    // no old plan at all
     tentativeStartDate = todayPlusTwo;
   }
 
-  // finally, ensure the start date is a working day
   const minStartDate = getNextWorkingDay(tentativeStartDate, holidays);
 
-  // const [plans, setPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [startDate, setStartDate] = useState(minStartDate);
   const [endDate, setEndDate] = useState(null);
@@ -213,7 +260,6 @@ const RenewSubscriptionPlanStep = ({
   const [childError, setChildError] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  // Number of children selected or default to 1
   const numberOfChildren =
     selectedChildren.length > 0 ? selectedChildren.length : 1;
 
@@ -222,16 +268,13 @@ const RenewSubscriptionPlanStep = ({
     [holidays, numberOfChildren, minStartDate]
   );
 
-  // Effect for setting start/end dates when selected plan changes
   useEffect(() => {
     if (selectedPlan !== "byDate") {
       const selectedPlanObj = plans.find((plan) => plan.id.toString() === selectedPlan);
       if (selectedPlanObj) {
-        // Only update if dates actually changed to avoid infinite loops
         if (!dayjs(startDate).isSame(selectedPlanObj.startDate) || !dayjs(endDate).isSame(selectedPlanObj.endDate)) {
           setStartDate(selectedPlanObj.startDate);
           setEndDate(selectedPlanObj.endDate);
-          // Optionally call onSubscriptionPlanChange here if its reference is stable
         }
       }
     }
@@ -242,7 +285,7 @@ const RenewSubscriptionPlanStep = ({
       const isSelected = prev.includes(childId);
       if (isSelected) {
         if (prev.length === 1) {
-          return prev; // Do not uncheck last child
+          return prev;
         }
         return prev.filter((id) => id !== childId);
       } else {
@@ -253,7 +296,7 @@ const RenewSubscriptionPlanStep = ({
 
   const handlePlanChange = (e) => {
     const newPlanId = e.target.value;
-    if (selectedPlan === newPlanId) return; // prevents redundant state call
+    if (selectedPlan === newPlanId) return;
 
     setSelectedPlan(newPlanId);
     setPlanError(false);
@@ -270,7 +313,7 @@ const RenewSubscriptionPlanStep = ({
     }
   };
 
-  // Handle Next click
+  // ---------------------- HANDLE NEXT ----------------------
   const handleNext = async () => {
     if (!selectedPlan) {
       setPlanError(true);
@@ -291,6 +334,7 @@ const RenewSubscriptionPlanStep = ({
     setChildError(false);
 
     let totalWorkingDays, totalPrice, useStartDate, useEndDate;
+
     if (selectedPlan !== "byDate") {
       const currentPlan = plans.find(
         (plan) => plan.id.toString() === selectedPlan
@@ -300,12 +344,31 @@ const RenewSubscriptionPlanStep = ({
       useStartDate = currentPlan?.startDate;
       useEndDate = currentPlan?.endDate;
     } else {
-      // If you still support custom date plan, handle here; else remove
       totalWorkingDays = calculateWorkingDays(startDate, endDate, holidays);
       totalPrice = totalWorkingDays * BASE_PRICE_PER_DAY * numberOfChildren;
       useStartDate = startDate;
       useEndDate = endDate;
     }
+
+    // -------------- WALLET DEDUCTION ADDED HERE ----------------
+    let walletUsed = 0;
+    let remainingWallet = walletPoints;
+
+    if (useWallet && walletPoints > 0) {
+
+      // 80% MAX REDEEM RULE
+      const maxRedeemable = totalPrice * 0.8;
+
+      // Wallet can be used up to min(walletPoints, maxRedeemable)
+      walletUsed = Math.min(walletPoints, maxRedeemable);
+
+      // Deduct only allowed wallet from payable
+      totalPrice = totalPrice - walletUsed;
+      remainingWallet = walletPoints - walletUsed;
+
+    }
+
+    // ------------------------------------------------------------
 
     const payload = {
       selectedPlan,
@@ -314,17 +377,20 @@ const RenewSubscriptionPlanStep = ({
       startDate: dayjs(useStartDate).format("YYYY-MM-DD"),
       endDate: dayjs(useEndDate).format("YYYY-MM-DD"),
       children: selectedChildren,
+
+      // ADDED FIELD
+      walletUsed,
     };
 
     try {
       const res = await submitHandler({
         payload,
-        // step: 3,
         path: "step-Form-Renew-SubscriptionPlan",
         _id,
       });
       if (res) {
-        nextStep();
+        nextStep(walletUsed, remainingWallet);
+
       }
     } catch (error) {
       console.error("Error during subscription plan selection:", error);
@@ -364,20 +430,20 @@ const RenewSubscriptionPlanStep = ({
             <Box mb={2} className="renewptitlebox">
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }} className="renewplantitle">Select Child*</Typography>
               <div className="childalllistboxs flex items-center">
-              {childrenList?.children?.map(child => (
-                <div className="childlistboxs flex items-center">
-                  <FormControlLabel className="childlistfbox"
-                    key={child._id}
-                    control={
-                      <Checkbox
-                        checked={selectedChildren.includes(child._id)}
-                        onChange={() => handleChildCheckbox(child._id)}
-                      />
-                    }
-                    label={`${child.childFirstName} ${child.childLastName}`}
-                  />
-                </div>
-              ))}
+                {childrenList?.children?.map(child => (
+                  <div className="childlistboxs flex items-center">
+                    <FormControlLabel className="childlistfbox"
+                      key={child._id}
+                      control={
+                        <Checkbox
+                          checked={selectedChildren.includes(child._id)}
+                          onChange={() => handleChildCheckbox(child._id)}
+                        />
+                      }
+                      label={`${child.childFirstName} ${child.childLastName}`}
+                    />
+                  </div>
+                ))}
               </div>
               {childError && (
                 <FormHelperText error>
@@ -458,45 +524,184 @@ const RenewSubscriptionPlanStep = ({
                 </Box>
                 {selectedPlan === plan.id.toString() && (
                   <Box mt={2} sx={{ width: "100%" }} className="eachplansOthbox">
-                      <Typography fontSize={13} color="#232323">
-                        <strong>Start Date:</strong> {plan.startDate && dayjs(plan.startDate).format("DD MMM YYYY")}
-                      </Typography>
-                      <Typography fontSize={13} color="#232323">
-                        <strong>End Date:</strong> {plan.endDate && dayjs(plan.endDate).format("DD MMM YYYY")}
-                      </Typography>
-                      <Typography fontSize={13} color="#232323">
-                        <strong>Total Working Days:</strong> {plan.workingDays}
-                      </Typography>
-                      <Typography fontSize={13} color="#232323">
-                        <strong>Price per day per child:</strong> Rs. {BASE_PRICE_PER_DAY}
-                      </Typography>
-                      {numberOfChildren > 1 && (
-                        <>
-                          <Typography fontSize={13} color="#232323">
-                            <strong>Number of Children:</strong> {numberOfChildren}
-                          </Typography>
-                          <Typography fontSize={13} color="#232323">
-                            <strong>Total Price Calculation:</strong> {plan.workingDays} days × Rs.{" "}
-                            {BASE_PRICE_PER_DAY} × {numberOfChildren}
-                          </Typography>
-                        </>
-                      )}
-                      {plan.discount > 0 && (
-                        <Typography fontSize={13} color="#FF6A00" sx={{ mt: 1, fontWeight: 600 }}>
-                          Saved Rs.{" "}
-                          {Math.round(
-                            plan.workingDays *
-                            BASE_PRICE_PER_DAY *
-                            numberOfChildren *
-                            plan.discount
-                          ).toLocaleString("en-IN")}
+                    <Typography fontSize={13} color="#232323">
+                      <strong>Start Date:</strong> {plan.startDate && dayjs(plan.startDate).format("DD MMM YYYY")}
+                    </Typography>
+                    <Typography fontSize={13} color="#232323">
+                      <strong>End Date:</strong> {plan.endDate && dayjs(plan.endDate).format("DD MMM YYYY")}
+                    </Typography>
+                    <Typography fontSize={13} color="#232323">
+                      <strong>Total Working Days:</strong> {plan.workingDays}
+                    </Typography>
+                    {/* <Typography fontSize={13} color="#232323">
+                      <strong>Price per day per child:</strong> Rs. {BASE_PRICE_PER_DAY}
+                    </Typography> */}
+                    {/* {numberOfChildren > 1 && (
+                      <>
+                        <Typography fontSize={13} color="#232323">
+                          <strong>Number of Children:</strong> {numberOfChildren}
                         </Typography>
-                      )}
+                        <Typography fontSize={13} color="#232323">
+                          <strong>Total Price Calculation:</strong> {plan.workingDays} days × Rs.{" "}
+                          {BASE_PRICE_PER_DAY} × {numberOfChildren}
+                        </Typography>
+                      </>
+                    )} */}
+                    {plan.discount > 0 && (
+                      <Typography fontSize={13} color="#FF6A00" sx={{ mt: 1, fontWeight: 600 }}>
+                        Saved Rs.{" "}
+                        {Math.round(
+                          plan.workingDays *
+                          BASE_PRICE_PER_DAY *
+                          numberOfChildren *
+                          plan.discount
+                        ).toLocaleString("en-IN")}
+                      </Typography>
+                    )}
                   </Box>
                 )}
               </Paper>
             ))}
           </RadioGroup>
+
+          {/* ---------------- WALLET UI SECTION ---------------- */}
+          {walletPoints > 0 && selectedPlan && (
+            <Box
+              mt={2}
+              p={2}
+              sx={{
+                border: "1px solid #ddd",
+                borderRadius: "12px",
+                background: "#FFFAF4"
+              }}
+            >
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={useWallet}
+                    onChange={(e) => setUseWallet(e.target.checked)}
+                    sx={{ color: "#FF6A00", "&.Mui-checked": { color: "#FF6A00" } }}
+                  />
+                }
+                label={
+                  <Typography fontSize={14} sx={{ fontWeight: 600 }}>
+                    Redeem Wallet Points (Available:{" "}
+                    <span style={{ color: "#FF6A00" }}>{walletPoints} points</span>)
+                  </Typography>
+                }
+              />
+
+              {useWallet && (
+                <Typography mt={1} fontSize={12} color="#232323">
+                  <strong>Note:</strong> Wallet points will be applied automatically to reduce your final payable amount.
+                </Typography>
+              )}
+            </Box>
+          )}
+          {/* --------------------------------------------------- */}
+
+          {/* --- SUMMARY TABLE --- */}
+          <Box mt={3}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #ddd",
+                fontSize: "14px",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td style={{ padding: "10px", borderRight: "1px solid #ddd", width: "35%" }}>
+                    <strong>No. Of Children’s</strong>
+                  </td>
+                  <td style={{ padding: "10px" }}>{numberOfChildren}</td>
+                </tr>
+
+                <tr>
+                  <td style={{ padding: "10px", borderRight: "1px solid #ddd" }}>
+                    <strong>Total - Day / Price</strong>
+                  </td>
+                  <td style={{ padding: "10px" }}>
+                    {currentPlan?.workingDays} Days / ₹
+                    {(currentPlan?.workingDays * BASE_PRICE_PER_DAY * numberOfChildren).toLocaleString("en-IN")}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style={{ padding: "10px", borderRight: "1px solid #ddd" }}>
+                    <strong>Offer</strong>
+                  </td>
+                  <td style={{ padding: "10px" }}>
+                    {currentPlan?.discount > 0
+                      ? `${currentPlan.discount * 100}% OFF`
+                      : "No offer"}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style={{ padding: "10px", borderRight: "1px solid #ddd" }}>
+                    <strong>Wallet</strong>
+                  </td>
+                  <td style={{ padding: "10px" }}>
+                    {useWallet
+                      ? `Using ${(
+                        Math.min(
+                          walletPoints,
+                          (currentPlan?.price || 0) * 0.8
+                        )
+                      ).toLocaleString("en-IN")} points`
+                      : `${walletPoints.toLocaleString("en-IN")} points available`}
+
+                  </td>
+                </tr>
+
+                {/* NEW FIELD → TOTAL TO PAY */}
+                <tr>
+                  <td
+                    style={{
+                      padding: "10px",
+                      borderRight: "1px solid #ddd",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <strong>Total Amount To Pay</strong>
+
+                    {/* Show icon only if plan selected + at least one child */}
+                    {selectedPlan && (
+                      <Tooltip title="View Detailed Price Breakdown" arrow>
+                        <InfoOutlinedIcon
+                          onClick={() => setShowBreakdown(true)}
+                          sx={{
+                            fontSize: 18,
+                            color: "#FF6A00",
+                            cursor: "pointer",
+                            "&:hover": { color: "#ff914d" },
+                          }}
+                        />
+                      </Tooltip>
+                    )}
+                  </td>
+
+                  <td style={{ padding: "10px", fontWeight: 600, color: "#FF6A00" }}>
+                    ₹
+                    {(
+                      (currentPlan?.price || 0) -
+                      (useWallet
+                        ? Math.min(walletPoints, (currentPlan?.price || 0) * 0.8)
+                        : 0)
+                    ).toLocaleString("en-IN")}
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </Box>
+          {/* --- END SUMMARY TABLE --- */}
+
+
 
           <OffersSection numberOfChildren={numberOfChildren} />
 
@@ -572,6 +777,14 @@ const RenewSubscriptionPlanStep = ({
             >
               <span className="nextspan">Next</span>
             </Button>
+            <Button
+              variant="outlined"
+              sx={{ color: "#FF6A00", borderColor: "#FF6A00" }}
+              onClick={() => setShowBreakdown(true)}
+            >
+              View Detailed Price Breakdown
+            </Button>
+
           </Box>
         </Box>
       </Box>
@@ -586,6 +799,15 @@ const RenewSubscriptionPlanStep = ({
         }
         holidays={holidays}
         hideMessage={hideMessage}
+      />
+      <PriceBreakdownModal
+        open={showBreakdown}
+        onClose={() => setShowBreakdown(false)}
+        numberOfChildren={numberOfChildren}
+        currentPlan={currentPlan}
+        walletPoints={walletPoints}
+        useWallet={useWallet}
+        BASE_PRICE_PER_DAY={BASE_PRICE_PER_DAY}
       />
     </LocalizationProvider>
   );

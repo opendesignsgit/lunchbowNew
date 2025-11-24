@@ -30,6 +30,10 @@ const RenewSubscriptionPage = () => {
   const [showPaymentStep, setShowPaymentStep] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [childFormData, setChildFormData] = useState({ children: [] });
+  const [walletUsed, setWalletUsed] = useState(0);
+  const [remainingWallet, setRemainingWallet] = useState(0);
+
+
 
   // ✅ Handle plan change
   const handlePlanChange = useCallback((plan) => {
@@ -159,7 +163,12 @@ const RenewSubscriptionPage = () => {
 
             {showPlanStep && (
               <RenewSubscriptionPlanStep
-                nextStep={handlePlanNext}
+                nextStep={(walletUsed, remainingWallet) => {
+                  setWalletUsed(walletUsed);
+                  setRemainingWallet(remainingWallet);
+                  setShowPlanStep(false);
+                  setShowPaymentStep(true);
+                }}
                 prevStep={handlePrev}
                 _id={_id}
                 initialSubscriptionPlan={selectedPlan}
@@ -172,8 +181,10 @@ const RenewSubscriptionPage = () => {
               <RenewPaymentStep
                 prevStep={handlePrev}
                 _id={_id}
-                selectedPlan={selectedPlan}
+                walletUsed={walletUsed}
+                remainingWallet={remainingWallet}
               />
+
             )}
           </div>
         </section>
