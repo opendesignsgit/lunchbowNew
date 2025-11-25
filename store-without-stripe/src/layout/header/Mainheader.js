@@ -221,6 +221,9 @@ useEffect(() => {
                         <Link href="/user/my-account">My Profile</Link>
                       </li>
                       <li>
+                        <Link href="/user/wallet">My Wallet</Link>
+                      </li>
+                      <li>
                         <Link href="/user/transaction-page">Transactions</Link>
                       </li>
                       <li>
