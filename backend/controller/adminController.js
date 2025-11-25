@@ -612,8 +612,7 @@ const talkNutrition = async (req, res) => {
   // Compose the admin/team email
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "yourpersonalrd.sujatha@gmail.com, sujatha@nutritureclinic.com",
-    cc: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
+    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com, yourpersonalrd.sujatha@gmail.com, sujatha@nutritureclinic.com",
     subject: "New Nutrition Enquiry Received",
     html: `
       <h2>Nutrition Enquiry Details</h2>
@@ -713,7 +712,7 @@ const freeTrialEnquiry = async (req, res) => {
   // Compose admin notification email
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com, conceptsearthtech@gmail.com",
+    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
     subject: "New Free Trial Enquiry",
     html: `
       <h2>Free Trial Enquiry Received</h2>

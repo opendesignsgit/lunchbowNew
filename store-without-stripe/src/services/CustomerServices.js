@@ -90,6 +90,13 @@ const CustomerServices = {
   getCustomerFormData: async (id) => {
     return requests.get(`/customer/form/${id}`);
   },
+
+  deleteMeal: async (body) => {
+    // return requests.post("/customer/delete-meal", body);
+    // console.log("Deleting meal with data:", body);
+    return requests.post("/customer/delete-meal", body);
+  },
+
 };
 
 export default CustomerServices;

@@ -68,15 +68,20 @@ const useRegistration = () => {
         console.log("Step Check Result:", res);
         console.log("====================================");
         return res;
+      } else if (path == "delete-meal") {
+        const res = await CustomerServices.deleteMeal(data);
+        return res;
       }
+
     } catch (error) {
-      setError(error.message);
+      setError(error);
       console.error("Error during registration:", error);
     }
   };
 
   return {
     submitHandler,
+    error,
   };
 };
 

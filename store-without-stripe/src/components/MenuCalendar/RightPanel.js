@@ -85,6 +85,12 @@ const RightPanel = ({
   const [showSaveWarning, setShowSaveWarning] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
+  const anyChildMealDeleted = dummyChildren.some((child) => {
+    const dish = menuSelections[formatDate(selectedDate)]?.[child.id];
+    return dish && dish.deleted === true;
+  });
+
+
 
 
 
@@ -189,32 +195,52 @@ const RightPanel = ({
 
   const handleApplyToAllChange = (e) => {
     if (isWithin48Hours) return;
+
     const { checked } = e.target;
     setApplyToAll(checked);
+
     if (checked && dummyChildren.length > 1) {
       const firstChildId = dummyChildren[0].id;
-      const firstChildSelection =
-        menuSelections[formatDate(selectedDate)]?.[firstChildId];
+      const firstChildSelection = menuSelections[formatDate(selectedDate)]?.[firstChildId];
+
+      const dishObj = firstChildSelection
+        ? {
+          mealName: firstChildSelection.mealName || firstChildSelection,
+          deleted: firstChildSelection.deleted ?? false,
+        }
+        : {
+          mealName: "",
+          deleted: false,
+        };
+
       dummyChildren.slice(1).forEach((child) => {
-        handleMenuChange(child.id, firstChildSelection || "");
+        handleMenuChange(child.id, dishObj);
       });
     }
   };
+
 
   const handleFirstChildMenuChange = (childId, value) => {
     if (isWithin48Hours) return;
-    handleMenuChange(childId, value);
+
+    handleMenuChange(childId, value); // pass only string
+
     if (applyToAll && dummyChildren.length > 1) {
       dummyChildren.slice(1).forEach((child) => {
-        handleMenuChange(child.id, value);
+        handleMenuChange(child.id, value); // pass only string
       });
     }
   };
 
+
+
   const handleMenuSelectionChange = (childId, value) => {
     if (isWithin48Hours) return;
-    handleMenuChange(childId, value);
+
+    handleMenuChange(childId, value); // pass only string
   };
+
+
 
   const isChildPaid = (childId) => {
     return paidHolidayMeals.some(
@@ -430,6 +456,10 @@ const RightPanel = ({
                     (p) => p.childId === child.id && p.mealDate === formatDate(selectedDate)
                   );
 
+                  const dishObj = menuSelections[formatDate(selectedDate)]?.[child.id];
+                  const dishValue = dishObj?.mealName || dishObj || ""; // gracefully handle 
+                  const isDeletedMeal = dishObj && dishObj.deleted;
+
                   return (
                     <Box key={child.id} className="childmlist">
                       <Typography className="menuddtitle">
@@ -443,46 +473,53 @@ const RightPanel = ({
                         px={1}
                         py={0.5}
                       >
-                        <Select
-                          value={menuSelections[formatDate(selectedDate)]?.[child.id] || ""}
-                          onChange={(e) => {
-                            childIndex === 0
-                              ? handleFirstChildMenuChange(child.id, e.target.value)
-                              : handleMenuSelectionChange(child.id, e.target.value);
-                            setActiveChild(childIndex);
-                          }}
-                          fullWidth
-                          variant="standard"
-                          disableUnderline
-                          MenuProps={{ PaperProps: { style: { maxHeight: 48 * 4.5 } } }}
-                        >
-                          <MenuItem value="">Select Dish</MenuItem>
+                        {isDeletedMeal ? (
+                          <Typography
+                            fontSize="0.8rem"
+                            color="#ffeb3b"
+                            fontStyle="italic"
+                            fontWeight="bold"
+                            sx={{ py: 1 }}
+                          >
+                            This meal is deleted.
+                          </Typography>
+                        ) : (
+                            <Select
+                              value={dishObj?.mealName || ""}
 
-                          {/* ✅ Always include saved dish (paid holiday meal) */}
-                          {(() => {
-                            const savedDish =
-                              menuSelections[formatDate(selectedDate)]?.[child.id];
-                            if (
-                              savedDish &&
-                              !getDayMenu(selectedDate).includes(savedDish)
-                            ) {
-                              return (
-                                <MenuItem key="saved" value={savedDish}>
-                                  {savedDish} (Paid)
+                              onChange={(e) => {
+                                childIndex === 0
+                                  ? handleFirstChildMenuChange(child.id, e.target.value)
+
+                                  : handleMenuSelectionChange(child.id, e.target.value)
+
+                                setActiveChild(childIndex);
+                              }}
+                              fullWidth
+                              variant="standard"
+                              disableUnderline
+                              MenuProps={{ PaperProps: { style: { maxHeight: 48 * 4.5 } } }}
+                            >
+                              <MenuItem value="">Select Dish</MenuItem>
+
+                              {(() => {
+                                if (dishObj && dishObj.mealName && !getDayMenu(selectedDate).includes(dishObj.mealName)) {
+                                  return (
+                                    <MenuItem key="saved" value={dishObj.mealName}>
+                                      {dishObj.mealName} (Paid)
+                                    </MenuItem>
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                              {getDayMenu(selectedDate).map((menu, i) => (
+                                <MenuItem key={i} value={menu}>
+                                  {menu}
                                 </MenuItem>
-                              );
-                            }
-                            return null;
-                          })()}
-
-                          {/* Normal day menus */}
-                          {getDayMenu(selectedDate).map((menu, i) => (
-                            <MenuItem key={i} value={menu}>
-                              {menu}
-                            </MenuItem>
-                          ))}
-                        </Select>
-
+                              ))}
+                            </Select>
+                        )}
                       </Box>
 
                       {isSelectedHoliday && !isSunday && (
@@ -522,7 +559,10 @@ const RightPanel = ({
                       )}
 
 
-                      {childIndex === 0 && !isSelectedHoliday && dummyChildren.length > 1 && (
+                      {childIndex === 0 &&
+                        !isSelectedHoliday &&
+                        dummyChildren.length > 1 &&
+                        !anyChildMealDeleted && (
                         <Box sx={{ mt: 1 }}>
                           <FormControlLabel
                             className="cbapplysbtn"

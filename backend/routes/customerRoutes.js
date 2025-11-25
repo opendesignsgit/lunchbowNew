@@ -35,6 +35,7 @@ const {
   localPaymentSuccess,
   localAddChildPaymentController,
   getPaymentsForUser,
+  deleteMeal,
 } = require("../controller/customerController");
 const {
   passwordVerificationLimit,
@@ -138,6 +139,9 @@ router.post("/local-success", localPaymentSuccess);
 router.post("/local-success/local-add-childPayment", localAddChildPaymentController);
 
 router.post("/get-payments", getPaymentsForUser);
+
+router.post("/delete-meal", deleteMeal);
+
 
 
 

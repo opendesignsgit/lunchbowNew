@@ -237,7 +237,8 @@ const MenuCalendar = () => {
           // ✅ Normal working day → allow saving
           childData.meals.push({
             mealDate: currentDate.toDate(),
-            mealName: dish,
+            mealName: typeof dish === "string" ? dish : dish.mealName,
+            deleted: typeof dish === "string" ? false : dish.deleted ?? false,
           });
         } else {
           // ✅ Holiday/weekend → only save if it’s in paidHolidays
@@ -249,7 +250,8 @@ const MenuCalendar = () => {
           if (isPaid) {
             childData.meals.push({
               mealDate: currentDate.toDate(),
-              mealName: dish,
+              mealName: typeof dish === "string" ? dish : dish.mealName,
+              deleted: typeof dish === "string" ? false : dish.deleted ?? false,
             });
           }
         }
@@ -284,7 +286,11 @@ const MenuCalendar = () => {
       planId: currentPlanId,
       children: allMenuData.map((child) => ({
         childId: child.childId,
-        meals: child.meals,
+        meals: child.meals.map((m) => ({
+          mealDate: m.mealDate,
+          mealName: m.mealName,        // always use string directly
+          deleted: m.deleted === true, // preserve deleted status exactly
+        })),
       })),
     };
 
@@ -304,45 +310,45 @@ const MenuCalendar = () => {
           let currentDate = dayjs(subscriptionStart);
           const endDate = dayjs(subscriptionEnd);
 
-          while (currentDate.isBefore(endDate) || currentDate.isSame(endDate, "day")) {
+          while (
+            currentDate.isBefore(endDate, "day") ||
+            currentDate.isSame(endDate, "day")
+          ) {
             const day = currentDate.date();
             const month = currentDate.month();
             const year = currentDate.year();
             const dateKey = currentDate.format("YYYY-MM-DD");
 
-            // Only clear if it's a holiday and NOT paid for this child
+            // Only clear if holiday and NOT paid
             if (isHoliday(day, month, year)) {
-              // For each child, check payment
-              for (const child of children) {
-                const isPaid = paidHolidays.some(
-                  (ph) =>
-                    ph.childId === child.id &&
-                    dayjs(ph.mealDate).isSame(currentDate, "day")
-                );
+            for (const child of children) {
+              const isPaid = paidHolidays.some(
+                (ph) =>
+                  ph.childId === child.id &&
+                  dayjs(ph.mealDate).isSame(currentDate, "day")
+              );
 
-                if (!isPaid) {
-                  // If unpaid, clear the dish for this child on this holiday
-                  if (updatedSelections[dateKey]?.[child.id]) {
-                    updatedSelections[dateKey][child.id] = "";
-                  }
+              if (!isPaid) {
+                if (updatedSelections[dateKey]?.[child.id]) {
+                  updatedSelections[dateKey][child.id] = "";
                 }
               }
             }
+          }
 
             currentDate = currentDate.add(1, "day");
           }
           return updatedSelections;
         });
-        // Show success notification
+
       } else {
         console.error("Failed to save meals:", res.message);
-        // Show error notification
       }
     } catch (error) {
       console.error("Error saving meals:", error);
-      // Show error notification
     }
   };
+
 
   // 2. For normal save button, just call saveSelectedMeals
   const handleSave = async () => {
@@ -379,7 +385,9 @@ const MenuCalendar = () => {
       ...prev,
       [dateKey]: {
         ...(prev[dateKey] || {}),
-        [childId]: dish,
+        [childId]: typeof dish === "string"
+          ? { mealName: dish, deleted: false }
+          : dish,
       },
     }));
     if (editMode) {
@@ -410,64 +418,61 @@ const MenuCalendar = () => {
     let selectedPlanMeals;
 
     if (planId === 1) {
-      // ✅ Use dietitian meals
       selectedPlanMeals = dietitianMealPlanData.meal_plan.map((day) => day.meal);
     } else {
-    selectedPlanMeals = [...menus].reverse(); // fallback
+      selectedPlanMeals = [...menus].reverse();
   }
 
     const updates = {};
     const firstDayOfMonth = dayjs(`${currentYear}-${currentMonth + 1}-01`);
     const daysInMonth = firstDayOfMonth.daysInMonth();
-    const now = dayjs(); // current time
+    const now = dayjs();
 
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = dayjs(
         `${currentYear}-${currentMonth + 1}-${String(day).padStart(2, "0")}`
       );
 
-    // ⛔ Skip if outside subscription window
+      const mealDate = currentDate.format("YYYY-MM-DD");
+
+      // ⛔ SKIP: outside subscription range
     if (
       currentDate.isBefore(subscriptionStart, "day") ||
       currentDate.isAfter(subscriptionEnd, "day")
-    ) {
+      ) continue;
+
+      // ⛔ SKIP: holidays
+      if (isHoliday(day, currentMonth, currentYear)) continue;
+
+      // ⛔ SKIP: locked days
+      if (currentDate.diff(now, "hour") < 48) continue;
+
+      // ⛔ SKIP: deleted meals
+      const existing = menuSelections[mealDate]?.[childId];
+      if (existing && existing.deleted === true) {
+        console.log("Skipping deleted day:", mealDate);
       continue;
     }
 
-    // ⛔ Skip holidays
-    if (isHoliday(day, currentMonth, currentYear)) {
-      continue;
-    }
-
-    // ⛔ Skip locked days (within 48 hrs)
-    const hoursDiff = currentDate.diff(now, "hour");
-    if (hoursDiff < 48) {
-      console.log(`Skipping locked date ${currentDate.format("YYYY-MM-DD")} (within 48 hrs)`);
-      continue;
-    }
-
-    // ✅ Apply dietitian meal for available days only
-    const mealDate = currentDate.format("YYYY-MM-DD");
+      // ✅ apply meal
     const meal = selectedPlanMeals[(day - 1) % selectedPlanMeals.length];
 
     updates[mealDate] = {
       ...(menuSelections[mealDate] || {}),
-      [childId]: meal,
+      [childId]: { mealName: meal, deleted: false },
     };
   }
 
-    // ✅ Update only unlocked days
     setMenuSelections((prev) => ({
       ...prev,
       ...updates,
     }));
 
-    // 🧠 Optional: show warning if all skipped
-    const unlockedDays = Object.keys(updates).length;
-    if (unlockedDays === 0) {
-      alert("All days are locked within 48 hours. No meals were applied.");
+    if (Object.keys(updates).length === 0) {
+      alert("Nothing applied: All available days are locked, holidays, or deleted.");
     }
   };
+
 
 
 
@@ -591,6 +596,7 @@ const MenuCalendar = () => {
           isSmall={isSmall}
           currentYear={currentYear}
           currentMonth={currentMonth}
+            isHoliday={isHoliday}
           activeChild={activeChild}
           setActiveChild={setActiveChild}
           dummyChildren={children}
@@ -599,8 +605,11 @@ const MenuCalendar = () => {
           subscriptionEnd={subscriptionEnd}
           onEditClick={handleEditClick}
           onMenuDataChange={handleMenuDataChange}
+            reloadSavedMeals={fetchSavedMealPlans}
           setUseMealPlan={setUseMealPlan}
           setSelectedPlans={setSelectedPlans}
+            subscriptionId={subscriptionPlans[selectedPlanIndex]?.id}
+            userId={_id}  
         />
       )}
 
@@ -612,15 +621,19 @@ const MenuCalendar = () => {
             currentMonth={currentMonth}
             activeChild={activeChild}
             setActiveChild={setActiveChild}
+              isHoliday={isHoliday}
             dummyChildren={children}
             menuSelections={menuSelections}
             subscriptionStart={subscriptionStart}
             subscriptionEnd={subscriptionEnd}
             onEditClick={handleEditClick}
             onMenuDataChange={handleMenuDataChange}
+              reloadSavedMeals={fetchSavedMealPlans}
             sx={{ width: "29%" }}
             setUseMealPlan={setUseMealPlan}
             setSelectedPlans={setSelectedPlans}
+              subscriptionId={subscriptionPlans[selectedPlanIndex]?.id}
+              userId={_id} 
           />
 
           <CenterPanel
@@ -647,6 +660,7 @@ const MenuCalendar = () => {
             dummyChildren={children}
             menuSelections={menuSelections}
             handleMenuChange={handleMenuChange}
+              reloadSavedMeals={fetchSavedMealPlans}
             dummyMenus={menus}
             formatDate={formatDate}
             editMode={editMode}
@@ -686,6 +700,7 @@ const MenuCalendar = () => {
           isHoliday={isHoliday}
           dummyChildren={children}
           menuSelections={menuSelections}
+            reloadSavedMeals={fetchSavedMealPlans}
           handleMenuChange={handleMenuChange}
           dummyMenus={menus}
           formatDate={formatDate}

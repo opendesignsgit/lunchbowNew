@@ -1,0 +1,225 @@
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
+import {
+  Box,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
+import Mainheader from "@layout/header/Mainheader";
+import Mainfooter from "@layout/footer/Mainfooter";
+import { useSession } from "next-auth/react";
+import AccountServices from "@services/AccountServices";
+
+const StepHeader = ({ label }) => (
+  <Box className="SetpTabNav" sx={{ textAlign: "center", mb: 6 }}>
+    <Box
+      className="SetpTabul"
+      sx={{
+        display: "flex",
+        columnGap: 2,
+        justifyContent: "space-between",
+        paddingBottom: 2,
+        borderBottom: "1px dashed #C0C0C0"
+      }}
+    >
+      <Box className="SetpTabli" sx={{ bgcolor: "#FF6A00" }}>
+        <Typography sx={{ color: "#fff" }}>{label}</Typography>
+      </Box>
+    </Box>
+
+    <Box sx={{ height: "2px", borderRadius: "4px", mt: "-2px" }}>
+      <Box
+        sx={{
+          height: "100%",
+          width: "100%",
+          backgroundColor: "#FF6A00",
+        }}
+      />
+    </Box>
+  </Box>
+);
+
+const WalletPage = () => {
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
+  const [wallet, setWallet] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Format date like "20 Nov 2025"
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = date.toLocaleString("default", { month: "short" });
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
+
+  // Fetch wallet data
+  const loadWallet = async () => {
+    setLoading(true);
+    try {
+      const res = await AccountServices.getAccountDetails(userId);
+      const raw = res?.data ?? res;
+
+      const data =
+        raw?.data && raw.data.wallet
+          ? raw.data
+          : raw.wallet
+          ? raw
+          : null;
+
+      setWallet(data.wallet);
+    } catch (e) {
+      console.error("Failed to load wallet:", e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (userId) loadWallet();
+  }, [userId]);
+
+  return (
+    <div className="myaccontpage">
+      <Mainheader title="Wallet" description="User Wallet Details" />
+
+      <div className="pagebody">
+        {/* Banner Section */}
+        <section className="pagebansec MyAccbanersec relative">
+          <div className="container mx-auto h-full">
+            <div className="pageinconter h-full flex items-center justify-center text-center">
+              <div className="hworkTitle combtntb comtilte relative">
+                <h1 className="flex flex-row textFF6514">
+                  <span>Your</span>
+                  <span className="ml-2">Wallet</span>
+                </h1>
+                <p>View your available points and activity.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="myaccContainer secpaddblock">
+          <Box className="container mx-auto relative">
+            <StepHeader label="WALLET DETAILS" />
+
+            {loading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
+                <CircularProgress />
+              </Box>
+            ) : wallet ? (
+              <Box className="walletSection">
+                {/* AVAILABLE POINTS CARD */}
+                <Box
+                  className="walletPointsBox"
+                  sx={{
+                    background: "#FFF4E9",
+                    padding: "2rem",
+                    borderRadius: "12px",
+                    width: "300px",
+                    textAlign: "center",
+                    margin: "0 auto",
+                    boxShadow: "0px 3px 10px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  <Typography sx={{ color: "#777", fontSize: "14px" }}>
+                    AVAILABLE POINTS
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      fontSize: "64px",
+                      fontWeight: 700,
+                      color: "#FF6A00",
+                      lineHeight: "64px",
+                      mt: 1,
+                    }}
+                  >
+                    {wallet.points}
+                  </Typography>
+
+                  <Typography sx={{ fontSize: "18px", fontWeight: 600 }}>
+                    POINTS
+                  </Typography>
+                </Box>
+
+                {/* RECENT ACTIVITY TABLE */}
+                <Box
+                  className="activityBox"
+                  sx={{
+                    marginTop: "3rem",
+                    background: "#fff",
+                    padding: "2rem",
+                    borderRadius: "12px",
+                    boxShadow: "0px 3px 10px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <h4 className="mb-4">Recent Activity</h4>
+
+                  <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ backgroundColor: "#F9F9F9" }}>
+                        <th className="text-left p-3">DATE</th>
+                        <th className="text-left p-3">CHILD NAME</th>
+                        <th className="text-left p-3">CANCELLED MEAL</th>
+                        <th className="text-left p-3">POINTS</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {wallet.history.map((item) => (
+                        <tr key={item._id} style={{ borderBottom: "1px solid #eee" }}>
+                          <td className="p-3">{formatDate(item.date)}</td>
+                          <td className="p-3">{item.childName || "-"}</td>
+                          <td className="p-3">{item.mealName || "-"}</td>
+                          <td
+                            className="p-3"
+                            style={{
+                              color: item.change > 0 ? "#2ECC71" : "#E74C3C",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {item.change > 0 ? `+${item.change}` : item.change}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Box>
+
+                {/* HOW IT WORKS */}
+                <Box
+                  sx={{
+                    marginTop: "3rem",
+                    padding: "1.5rem",
+                    background: "#FFF7D9",
+                    borderRadius: "12px",
+                    maxWidth: "500px",
+                    marginLeft: "auto",
+                    marginRight: "auto",
+                  }}
+                >
+                  <h4 className="mb-2">How It Works</h4>
+                  <ul style={{ lineHeight: "1.8" }}>
+                    <li>Points are added when you cancel a meal.</li>
+                    <li>Saved points can be redeemed on your next subscription.</li>
+                    <li>Points are not transferable or exchangeable for cash.</li>
+                  </ul>
+                </Box>
+              </Box>
+            ) : (
+              <Box sx={{ textAlign: "center", mt: 4 }}>
+                <h4>No wallet details available.</h4>
+              </Box>
+            )}
+          </Box>
+        </section>
+      </div>
+
+      <Mainfooter />
+    </div>
+  );
+};
+
+export default WalletPage;

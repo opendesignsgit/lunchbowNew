@@ -9,12 +9,14 @@ import axios from "axios";
 const generateOrderId = () =>
   `RENEW${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
+const RenewPaymentStep = ({ prevStep, _id, orderId, walletUsed, remainingWallet }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { submitHandler } = useRegistration();
   const [isLocalhost, setIsLocalhost] = useState(false);
+
+  console.log("Wallet Used:", walletUsed, "Remaining Wallet:", remainingWallet);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -36,13 +38,16 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
     return "https://api.lunchbowl.co.in";
   };
 
-  const simulatePaymentSuccess = async ({ userId, orderId, transactionId }) => {
+  const simulatePaymentSuccess = async ({ userId, orderId, transactionId, walletUsed, remainingWallet }) => {
+
     try {
       const baseUrl = getPaymentBaseUrl();
       const response = await axios.post(`${baseUrl}/api/ccavenue/local-success`, {
         userId,
         orderId,
         transactionId,
+        walletUsed,
+        remainingWallet,
       });
       return response.data; // Axios parses the response automatically
     } catch (error) {
@@ -141,6 +146,9 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
         merchant_param1: _id,
         merchant_param2: subscriptionPlan.planId,
         merchant_param3: currentOrderId,
+        merchant_param4: walletUsed,
+        merchant_param5: remainingWallet,
+
       };
 
       // Create request string
@@ -240,7 +248,10 @@ const RenewPaymentStep = ({ prevStep, _id, orderId }) => {
                   userId: _id,
                   orderId: currentOrderId,
                   transactionId: "LOCAL_TXN",
+                  walletUsed,
+                  remainingWallet,
                 });
+
                 setLoading(false);
                 if (result.success) {
                   router.push("/user/menuCalendarPage");

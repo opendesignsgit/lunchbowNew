@@ -161,6 +161,23 @@ exports.ccavenueResponse = async (req, res) => {
           form.paymentStatus = "Success";
           form.subscriptionCount = (form.subscriptionCount || 0) + 1;
           form.step = 4;
+
+          // ⭐ UPDATE WALLET POINTS
+          const walletUsed = Number(responseData.merchant_param4 || 0);
+          const remainingWallet = Number(responseData.merchant_param5 || 0);
+
+          if (form.wallet) {
+            const previous = form.wallet.points || 0;
+            form.wallet.points = remainingWallet;
+
+            form.wallet.history.push({
+              date: new Date(),
+              change: -walletUsed,
+              reason: "Subscription Renewal Redeemed",
+              childName: "",
+              mealName: ""
+            });
+          }
           await form.save();
 
           // 5️⃣ Send success email + SMS (reuse your existing logic)
@@ -639,7 +656,7 @@ exports.addChildPaymentController = async (req, res) => {
 
 exports.localPaymentSuccess = async (req, res) => {
   try {
-    const { userId, orderId, transactionId } = req.body;
+    const { userId, orderId, transactionId, walletUsed, remainingWallet } = req.body;
 
     if (!userId || !orderId) {
       return res.status(400).json({ success: false, message: "Missing userId or orderId" });
@@ -690,6 +707,19 @@ exports.localPaymentSuccess = async (req, res) => {
       form.paymentStatus = "Success";
       form.step = 4;
       form.subscriptionCount = (form.subscriptionCount || 0) + 1;
+
+      // ⭐ UPDATE WALLET POINTS FOR LOCAL PAYMENT
+      if (form.wallet) {
+        form.wallet.points = remainingWallet;
+
+        form.wallet.history.push({
+          date: new Date(),
+          change: -walletUsed,
+          reason: "Subscription Renewal Redeemed",
+          childName: "",
+          mealName: ""
+        });
+      }
       await form.save();
 
       // 5️⃣ Save in UserPayment collection

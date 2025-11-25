@@ -1771,10 +1771,17 @@ const saveMealPlans = async (req, res) => {
         childId: mongoose.Types.ObjectId(child.childId),
         meals: child.meals.map(meal => {
           if (!meal.mealDate || !meal.mealName) throw new Error("Invalid meal data");
+
           const mealDate = new Date(meal.mealDate);
           if (isNaN(mealDate.getTime())) throw new Error("Invalid date format");
-          return { mealDate, mealName: meal.mealName };
+
+          return {
+            mealDate,
+            mealName: meal.mealName,
+            deleted: meal.deleted === true  // <-- FIX
+          };
         })
+
       };
     });
 
@@ -1797,7 +1804,11 @@ const saveMealPlans = async (req, res) => {
               +new Date(m.mealDate) === +new Date(newMeal.mealDate)
             );
             if (mealIndex >= 0) {
-              plan.children[childIndex].meals[mealIndex] = newMeal;
+              plan.children[childIndex].meals[mealIndex] = {
+                ...plan.children[childIndex].meals[mealIndex],
+                ...newMeal
+              };
+
             } else {
               plan.children[childIndex].meals.push(newMeal);
             }
@@ -1817,47 +1828,198 @@ const saveMealPlans = async (req, res) => {
   }
 };
 
+const deleteMeal = async (req, res) => {
+  try {
+    const { userId, subscriptionId, childId, date } = req.body;
+
+    if (!userId || !subscriptionId || !childId || !date) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: userId, subscriptionId, childId, date",
+      });
+    }
+
+    const normalize = (d) => {
+      const nd = new Date(d);
+      nd.setHours(0, 0, 0, 0);
+      return nd.getTime();
+    };
+
+    // ------------------
+    // 1. FIND USER MEAL DOCUMENT
+    // ------------------
+    const userMeal = await UserMeal.findOne({ userId });
+    if (!userMeal) {
+      return res.status(404).json({
+        success: false,
+        message: "Meal data not found for this user",
+      });
+    }
+
+    // ------------------
+    // 2. FIND PLAN BY subscriptionId
+    // ------------------
+    const plan = userMeal.plans.find(p => p.planId === String(subscriptionId));
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        message: "Subscription (plan) not found",
+      });
+    }
+
+    // ------------------
+    // 3. FIND CHILD ENTRY
+    // ------------------
+    const childEntry = plan.children.find(c => c.childId.equals(childId));
+    if (!childEntry) {
+      return res.status(404).json({
+        success: false,
+        message: "Child not found in this plan",
+      });
+    }
+
+    // ------------------
+    // 4. FIND MEAL ENTRY BY DATE
+    // ------------------
+    const meal = childEntry.meals.find(
+      (m) => normalize(m.mealDate) === normalize(date)
+    );
+
+    if (!meal) {
+      return res.status(404).json({
+        success: false,
+        message: "Meal not found for the selected date",
+      });
+    }
+
+    // Mark the meal as deleted
+    meal.deleted = true;
+
+    // ------------------
+    // 5. Fetch Child Name from Child Schema
+    // ------------------
+    let childName = "Unknown Child";
+
+    try {
+      const child = await Child.findById(childId);
+
+      if (child) {
+        childName = `${child.childFirstName} ${child.childLastName}`;
+      }
+    } catch (err) {
+      console.log("Warning: Failed to fetch child name from Child model");
+    }
+
+    // ------------------
+    // 6. WALLET UPDATE (ADD +200)
+    // ------------------
+    const form = await Form.findOne({ user: userId });
+
+    if (form) {
+      form.wallet.points += 200;
+
+      form.wallet.history.push({
+        change: +200,
+        reason: "Meal deleted",
+        childName,
+        mealName: meal.mealName,
+        date: new Date(),
+      });
+
+      await form.save();
+    }
+
+    // ------------------
+    // 7. SAVE CHANGES
+    // ------------------
+    await userMeal.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Meal deleted successfully",
+      data: userMeal,
+    });
+
+  } catch (error) {
+    console.error("Error deleting meal:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
 const getSavedMeals = async (req, res) => {
   try {
     const { _id, planId } = req.body;
+
     if (!mongoose.Types.ObjectId.isValid(_id)) {
-      return res.status(400).json({ success: false, message: "Invalid user ID" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
     }
 
-    const userMeals = await UserMeal.findOne({ userId: mongoose.Types.ObjectId(_id) });
+    const userMeals = await UserMeal.findOne({
+      userId: mongoose.Types.ObjectId(_id),
+    });
 
     if (!userMeals || !userMeals.plans.length) {
-      return res.status(404).json({ success: false, message: "No saved meals found" });
+      return res.status(404).json({
+        success: false,
+        message: "No saved meals found",
+      });
     }
 
     let plansToReturn = userMeals.plans;
+
     if (planId) {
-      plansToReturn = plansToReturn.filter(p => p.planId === String(planId));
+      plansToReturn = plansToReturn.filter(
+        (p) => p.planId === String(planId)
+      );
+
       if (!plansToReturn.length) {
-        return res.status(404).json({ success: false, message: "No meals found for this plan" });
+        return res.status(404).json({
+          success: false,
+          message: "No meals found for this plan",
+        });
       }
     }
 
     const data = {};
-    plansToReturn.forEach(plan => {
+
+    plansToReturn.forEach((plan) => {
       const menuSelections = {};
-      plan.children.forEach(child => {
-        child.meals.forEach(meal => {
+
+      plan.children.forEach((child) => {
+        child.meals.forEach((meal) => {
           const dateKey = dayjs(meal.mealDate).format("YYYY-MM-DD");
-          if (!menuSelections[dateKey]) menuSelections[dateKey] = {};
-          menuSelections[dateKey][child.childId.toString()] = meal.mealName;
+
+          if (!menuSelections[dateKey]) {
+            menuSelections[dateKey] = {};
+          }
+
+          menuSelections[dateKey][child.childId.toString()] = {
+            mealName: meal.mealName,
+            deleted: meal.deleted || false, // ⭐ INCLUDE DELETED FLAG
+          };
         });
       });
+
       data[plan.planId] = menuSelections;
     });
 
     return res.status(200).json({ success: true, data });
-
   } catch (error) {
     console.error("Error in getSavedMeals:", error);
-    return res.status(500).json({ success: false, message: error.message || "Server error" });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Server error",
+    });
   }
 };
+
 
 const accountDetails = async (req, res) => {
   try {
@@ -2069,4 +2231,5 @@ module.exports = {
   localPaymentSuccess,
   localAddChildPaymentController,
   getPaymentsForUser,
+  deleteMeal,
 };
