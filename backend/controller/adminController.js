@@ -297,7 +297,7 @@ const addSchool = async (req, res) => {
 
 const getAllSchools = async (req, res) => {
   try {
-    const schools = await School.find({});
+    const schools = await School.find({}).sort({ name: 1 });
     res.json(schools);
   } catch (error) {
     res.status(500).json({ message: error.message });
