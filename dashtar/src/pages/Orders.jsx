@@ -137,8 +137,8 @@ const Orders = () => {
     const headers = [
       "#",
       "Child Name",
+      "Class & Section",
       "School",
-      "Lunch Time",
       "Location",
       "Date",
       "Food",
@@ -149,8 +149,8 @@ const Orders = () => {
       [
         (page - 1) * PAGE_SIZE + idx + 1,
         `${order.childFirstName} ${order.childLastName}`,
+        order.childClass + " - " + order.section,
         order.school,
-        order.lunchTime,
         order.location,
         order.date ? new Date(order.date).toLocaleDateString() : "",
         order.food,
@@ -265,8 +265,9 @@ const Orders = () => {
                   <tr>
                     <TableCell>#</TableCell>
                     <TableCell>Child Name</TableCell>
+                      <TableCell>Class & Section</TableCell>
                     <TableCell>School</TableCell>
-                    <TableCell>Lunch Time</TableCell>
+                      {/* <TableCell>Lunch Time</TableCell> */}
                     <TableCell>Location</TableCell>
                     <TableCell>Date</TableCell>
                     <TableCell>Food</TableCell>
@@ -279,8 +280,9 @@ const Orders = () => {
                       <TableCell>
                         {order.childFirstName} {order.childLastName}
                       </TableCell>
+                      <TableCell>{order.childClass} - {order.section}</TableCell>
                       <TableCell>{order.school}</TableCell>
-                      <TableCell>{order.lunchTime}</TableCell>
+                      {/* <TableCell>{order.lunchTime}</TableCell> */}  
                       <TableCell>{order.location}</TableCell>
                       <TableCell>
                         {order.date

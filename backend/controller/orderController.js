@@ -838,6 +838,8 @@ const searchOrders = async (req, res) => {
                 school: childDetails?.school || "",
                 lunchTime: childDetails?.lunchTime || "",
                 location: childDetails?.location || "",
+                childClass: childDetails?.childClass || "",
+                section: childDetails?.section || "",
               });
             }
           });
