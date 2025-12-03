@@ -4,6 +4,7 @@ import {
   Box,
   Typography,
   CircularProgress,
+  Pagination,
 } from "@mui/material";
 import Mainheader from "@layout/header/Mainheader";
 import Mainfooter from "@layout/footer/Mainfooter";
@@ -45,6 +46,9 @@ const WalletPage = () => {
 
   const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+
 
   // Format date like "20 Nov 2025"
   const formatDate = (dateStr) => {
@@ -56,20 +60,26 @@ const WalletPage = () => {
   };
 
   // Fetch wallet data
-  const loadWallet = async () => {
+  const loadWallet = async (page = 1) => {
     setLoading(true);
     try {
-      const res = await AccountServices.getAccountDetails(userId);
-      const raw = res?.data ?? res;
+    const res = await AccountServices.getAccountDetails(userId, null, {
+      page,
+      limit: 10,
+    });
+    const raw = res?.data ?? res;
 
-      const data =
-        raw?.data && raw.data.wallet
-          ? raw.data
-          : raw.wallet
+    const data =
+      raw?.data && raw.data.wallet
+        ? raw.data
+        : raw.wallet
           ? raw
           : null;
 
-      setWallet(data.wallet);
+    setWallet(data.wallet);
+    if (res.pagination) {
+      setPagination(res.pagination);
+    }
     } catch (e) {
       console.error("Failed to load wallet:", e);
     }
@@ -77,8 +87,13 @@ const WalletPage = () => {
   };
 
   useEffect(() => {
-    if (userId) loadWallet();
-  }, [userId]);
+    if (userId) loadWallet(currentPage);
+  }, [userId, currentPage]);
+
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
 
   return (
     <div className="myaccontpage">
@@ -186,6 +201,18 @@ const WalletPage = () => {
                       ))}
                     </tbody>
                   </table>
+                    {/* PAGINATION */}
+                    {pagination && pagination.totalPages > 1 && (
+                      <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+                        <Pagination
+                          count={pagination.totalPages}
+                          page={currentPage}
+                          onChange={handlePageChange}
+                          color="primary"
+                        />
+                      </Box>
+                    )}
+
                 </Box>
 
                 {/* HOW IT WORKS */}
