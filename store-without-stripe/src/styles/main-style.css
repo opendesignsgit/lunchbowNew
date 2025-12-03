@@ -1163,6 +1163,22 @@ html body .MuiPopover-root{z-index: 99999;}
 .walletSection .activityBox table thead tr th:last-child{text-align: center;}
 .walletSection .activityBox table tbody tr td{color: #777777;font-weight: 500;}
 .walletSection .activityBox table tbody tr td:last-child{color: #4AB138;font-weight: 700;text-align: center;}
+.walletSection .activityBox .paginationbox {width: 100%;display: flex;justify-content: center;margin-top: 20px;}
+.walletSection .activityBox .paginationbox nav{}
+.walletSection .activityBox .paginationbox nav ul{}
+.walletSection .activityBox .paginationbox nav ul li{}
+.walletSection .activityBox .paginationbox nav ul li button{}
+.walletSection .activityBox .paginationbox nav ul li button.Mui-selected{background: #4AB138;}
+
+.subplnBoxssrenew .overaldetiltable {margin-block: 20px;}
+.subplnBoxssrenew .overaldetiltable table{width: 100%;font-size: 14px;line-height: 1; border: 1px solid #eeeeee;padding: 4px;}
+.subplnBoxssrenew .overaldetiltable table tbody{}
+.subplnBoxssrenew .overaldetiltable table tbody tr{border-bottom: 1px solid #eeeeee;}
+.subplnBoxssrenew .overaldetiltable table tbody tr:last-child{border-bottom: 0px solid #eeeeee;}
+.subplnBoxssrenew .overaldetiltable table tbody tr td{padding: 8px;border-right: 1px solid #eeeeee;width: 50%;}
+.subplnBoxssrenew .overaldetiltable table tbody tr td:last-child{border-right: 0px solid #eeeeee;}
+.subplnBoxssrenew .overaldetiltable button{display: flex;align-items: center;line-height: 1;}
+
 
 @media (min-width: 1100px) {
   html body .container {max-width: 980px;  }

@@ -601,28 +601,21 @@ const RenewSubscriptionPlanStep = ({
           {/* --------------------------------------------------- */}
 
           {/* --- SUMMARY TABLE --- */}
-          <Box mt={3}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                border: "1px solid #ddd",
-                fontSize: "14px",
-              }}
-            >
+          <Box className="overaldetiltable">
+            <table >
               <tbody>
                 <tr>
-                  <td style={{ padding: "10px", borderRight: "1px solid #ddd", width: "35%" }}>
+                  <td >
                     <strong>No. Of Children’s</strong>
                   </td>
-                  <td style={{ padding: "10px" }}>{numberOfChildren}</td>
+                  <td >{numberOfChildren}</td>
                 </tr>
 
                 <tr>
-                  <td style={{ padding: "10px", borderRight: "1px solid #ddd" }}>
+                  <td >
                     <strong>Total - Day / Price</strong>
                   </td>
-                  <td style={{ padding: "10px" }}>
+                  <td >
                     {currentPlan?.workingDays} Days / ₹
                     {(currentPlan?.workingDays * BASE_PRICE_PER_DAY * numberOfChildren).toLocaleString("en-IN")}
                   </td>
@@ -640,10 +633,10 @@ const RenewSubscriptionPlanStep = ({
                 </tr> */}
 
                 <tr>
-                  <td style={{ padding: "10px", borderRight: "1px solid #ddd" }}>
+                  <td >
                     <strong>Wallet</strong>
                   </td>
-                  <td style={{ padding: "10px" }}>
+                  <td >
                     {useWallet
                       ? `Using ${(
                         Math.min(
@@ -658,15 +651,7 @@ const RenewSubscriptionPlanStep = ({
 
                 {/* NEW FIELD → TOTAL TO PAY */}
                 <tr>
-                  <td
-                    style={{
-                      padding: "10px",
-                      borderRight: "1px solid #ddd",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
+                  <td >
                     <strong>Total Amount To Pay</strong>
 
                     {/* Show icon only if plan selected + at least one child */}
@@ -685,7 +670,7 @@ const RenewSubscriptionPlanStep = ({
                     )} */}
                   </td>
 
-                  <td style={{ padding: "10px", fontWeight: 600, color: "#FF6A00" }}>
+                  <td>
                     ₹
                     {(
                       (currentPlan?.price || 0) -
@@ -710,7 +695,7 @@ const RenewSubscriptionPlanStep = ({
                   '&:hover': { borderColor: "#ff914d", color: "#ff914d" },
                 }}
               >
-                View Detailed Price Breakdown
+                <span>View Detailed Price Breakdown</span>
               </Button>
             )}
 
