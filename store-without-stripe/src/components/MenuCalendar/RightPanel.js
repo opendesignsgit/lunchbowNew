@@ -467,21 +467,15 @@ const RightPanel = ({
                       </Typography>
 
                       <Box
-                        className="menuddlistbox"
+                        className={`menuddlistbox ${isDeletedMeal ? "mealdeletbox" : ""}`}
                         bgcolor="#fff"
                         borderRadius={2}
                         px={1}
                         py={0.5}
                       >
                         {isDeletedMeal ? (
-                          <Typography
-                            fontSize="0.8rem"
-                            color="#ffeb3b"
-                            fontStyle="italic"
-                            fontWeight="bold"
-                            sx={{ py: 1 }}
-                          >
-                            This meal is deleted.
+                          <Typography className="mealdelettag">
+                            This Meal is Deleted.
                           </Typography>
                         ) : (
                             <Select

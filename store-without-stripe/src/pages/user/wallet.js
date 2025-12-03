@@ -96,7 +96,7 @@ const WalletPage = () => {
 
 
   return (
-    <div className="myaccontpage">
+    <div className="mywalletpage">
       <Mainheader title="Wallet" description="User Wallet Details" />
 
       <div className="pagebody">
@@ -115,125 +115,79 @@ const WalletPage = () => {
           </div>
         </section>
 
-        <section className="myaccContainer secpaddblock">
+        <section className="mywalletContainer secpaddblock">
           <Box className="container mx-auto relative">
             <StepHeader label="WALLET DETAILS" />
 
             {loading ? (
-              <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
+              <Box className="cirprogrbox">
                 <CircularProgress />
               </Box>
             ) : wallet ? (
               <Box className="walletSection">
-                {/* AVAILABLE POINTS CARD */}
-                <Box
-                  className="walletPointsBox"
-                  sx={{
-                    background: "#FFF4E9",
-                    padding: "2rem",
-                    borderRadius: "12px",
-                    width: "300px",
-                    textAlign: "center",
-                    margin: "0 auto",
-                    boxShadow: "0px 3px 10px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  <Typography sx={{ color: "#777", fontSize: "14px" }}>
-                    AVAILABLE POINTS
-                  </Typography>
+                  <div className="walLeftcol">
+                    {/* AVAILABLE POINTS CARD */}
+                    <Box className="walletPointsBox">
+                      <h4> AVAILABLE POINTS </h4>
+                      <h2>{wallet.points}</h2>
+                      <h5>POINTS</h5>
+                    </Box>
 
-                  <Typography
-                    sx={{
-                      fontSize: "64px",
-                      fontWeight: 700,
-                      color: "#FF6A00",
-                      lineHeight: "64px",
-                      mt: 1,
-                    }}
-                  >
-                    {wallet.points}
-                  </Typography>
+                    {/* HOW IT WORKS */}
+                    <Box className="walletnote">
+                      <h4 className="mb-2">How It Works</h4>
+                      <div className="notelistul">
+                        <ul style={{ lineHeight: "1.8" }}>
+                          <li>Points are added when you <strong>cancel</strong> a meal.</li>
+                          <li>Saved points can be redeemed on your <strong>next subscription</strong>.</li>
+                          <li><strong>1Point = ₹1.</strong></li>
+                          <li>Points are <strong>not transferable</strong> or <strong>exchangeable</strong> for cash.</li>
+                        </ul>
+                      </div>
+                    </Box>
+                  </div>
+                  <div className="walRightcol">
+                    {/* RECENT ACTIVITY TABLE */}
+                    <Box
+                      className="activityBox"
+                    >
+                      <h4 className="mb-4">Recent Activity</h4>
+                      <div className="tablescroll">
+                        <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ backgroundColor: "#F9F9F9" }}>
+                              <th className="text-left p-3">DATE</th>
+                              <th className="text-left p-3">CHILD NAME</th>
+                              <th className="text-left p-3">CANCELLED MEAL</th>
+                              <th className="text-left p-3">POINTS</th>
+                            </tr>
+                          </thead>
 
-                  <Typography sx={{ fontSize: "18px", fontWeight: 600 }}>
-                    POINTS
-                  </Typography>
-                </Box>
-
-                {/* RECENT ACTIVITY TABLE */}
-                <Box
-                  className="activityBox"
-                  sx={{
-                    marginTop: "3rem",
-                    background: "#fff",
-                    padding: "2rem",
-                    borderRadius: "12px",
-                    boxShadow: "0px 3px 10px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <h4 className="mb-4">Recent Activity</h4>
-
-                  <table className="w-full" style={{ borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ backgroundColor: "#F9F9F9" }}>
-                        <th className="text-left p-3">DATE</th>
-                        <th className="text-left p-3">CHILD NAME</th>
-                        <th className="text-left p-3">CANCELLED MEAL</th>
-                        <th className="text-left p-3">POINTS</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {wallet.history.map((item) => (
-                        <tr key={item._id} style={{ borderBottom: "1px solid #eee" }}>
-                          <td className="p-3">{formatDate(item.date)}</td>
-                          <td className="p-3">{item.childName || "-"}</td>
-                          <td className="p-3">{item.mealName || "-"}</td>
-                          <td
-                            className="p-3"
-                            style={{
-                              color: item.change > 0 ? "#2ECC71" : "#E74C3C",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {item.change > 0 ? `+${item.change}` : item.change}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                    {/* PAGINATION */}
-                    {pagination && pagination.totalPages > 1 && (
-                      <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-                        <Pagination
-                          count={pagination.totalPages}
-                          page={currentPage}
-                          onChange={handlePageChange}
-                          color="primary"
-                        />
-                      </Box>
-                    )}
-
-                </Box>
-
-                {/* HOW IT WORKS */}
-                <Box
-                  sx={{
-                    marginTop: "3rem",
-                    padding: "1.5rem",
-                    background: "#FFF7D9",
-                    borderRadius: "12px",
-                    maxWidth: "500px",
-                    marginLeft: "auto",
-                    marginRight: "auto",
-                  }}
-                >
-                  <h4 className="mb-2">How It Works</h4>
-                  <ul style={{ lineHeight: "1.8" }}>
-                    <li>Points are added when you cancel a meal.</li>
-                    <li>Saved points can be redeemed on your next subscription.</li>
-                    <li>Points are not transferable or exchangeable for cash.</li>
-                  </ul>
-                </Box>
+                          <tbody>
+                            {wallet.history.map((item) => (
+                              <tr key={item._id} style={{ borderBottom: "1px solid #eee" }}>
+                                <td className="p-3">{formatDate(item.date)}</td>
+                                <td className="p-3">{item.childName || "-"}</td>
+                                <td className="p-3">{item.mealName || "-"}</td>
+                                <td className="p-3">{item.change > 0 ? `+${item.change}` : item.change}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table> 
+                        {/* PAGINATION */}
+                        {pagination && pagination.totalPages > 1 && (
+                          <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+                            <Pagination
+                              count={pagination.totalPages}
+                              page={currentPage}
+                              onChange={handlePageChange}
+                              color="primary"
+                            />
+                          </Box>
+                        )}
+                      </div>
+                    </Box>
+                  </div>
               </Box>
             ) : (
               <Box sx={{ textAlign: "center", mt: 4 }}>
