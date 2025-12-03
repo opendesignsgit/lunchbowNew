@@ -628,7 +628,7 @@ const RenewSubscriptionPlanStep = ({
                   </td>
                 </tr>
 
-                <tr>
+                {/* <tr>
                   <td style={{ padding: "10px", borderRight: "1px solid #ddd" }}>
                     <strong>Offer</strong>
                   </td>
@@ -637,7 +637,7 @@ const RenewSubscriptionPlanStep = ({
                       ? `${currentPlan.discount * 100}% OFF`
                       : "No offer"}
                   </td>
-                </tr>
+                </tr> */}
 
                 <tr>
                   <td style={{ padding: "10px", borderRight: "1px solid #ddd" }}>
@@ -670,7 +670,7 @@ const RenewSubscriptionPlanStep = ({
                     <strong>Total Amount To Pay</strong>
 
                     {/* Show icon only if plan selected + at least one child */}
-                    {selectedPlan && (
+                    {/* {selectedPlan && (
                       <Tooltip title="View Detailed Price Breakdown" arrow>
                         <InfoOutlinedIcon
                           onClick={() => setShowBreakdown(true)}
@@ -682,7 +682,7 @@ const RenewSubscriptionPlanStep = ({
                           }}
                         />
                       </Tooltip>
-                    )}
+                    )} */}
                   </td>
 
                   <td style={{ padding: "10px", fontWeight: 600, color: "#FF6A00" }}>
@@ -698,6 +698,22 @@ const RenewSubscriptionPlanStep = ({
 
               </tbody>
             </table>
+            {selectedPlan && (
+              <Button
+                variant="outlined"
+                startIcon={<InfoOutlinedIcon />}
+                onClick={() => setShowBreakdown(true)}
+                sx={{
+                  mt: 2,
+                  borderColor: "#FF6A00",
+                  color: "#FF6A00",
+                  '&:hover': { borderColor: "#ff914d", color: "#ff914d" },
+                }}
+              >
+                View Detailed Price Breakdown
+              </Button>
+            )}
+
           </Box>
           {/* --- END SUMMARY TABLE --- */}
 
@@ -777,13 +793,13 @@ const RenewSubscriptionPlanStep = ({
             >
               <span className="nextspan">Next</span>
             </Button>
-            <Button
+            {/* <Button
               variant="outlined"
               sx={{ color: "#FF6A00", borderColor: "#FF6A00" }}
               onClick={() => setShowBreakdown(true)}
             >
               View Detailed Price Breakdown
-            </Button>
+            </Button> */}
 
           </Box>
         </Box>

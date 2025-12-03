@@ -1965,10 +1965,12 @@ const getSavedMeals = async (req, res) => {
       userId: mongoose.Types.ObjectId(_id),
     });
 
+    // ⭐ If user has no meal doc — return empty data (NOT 404)
     if (!userMeals || !userMeals.plans.length) {
-      return res.status(404).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
         message: "No saved meals found",
+        data: {},
       });
     }
 
@@ -1979,10 +1981,12 @@ const getSavedMeals = async (req, res) => {
         (p) => p.planId === String(planId)
       );
 
+      // ⭐ If zero meals for this plan — return empty object
       if (!plansToReturn.length) {
-        return res.status(404).json({
-          success: false,
+        return res.status(200).json({
+          success: true,
           message: "No meals found for this plan",
+          data: {},
         });
       }
     }
@@ -2023,7 +2027,7 @@ const getSavedMeals = async (req, res) => {
 
 const accountDetails = async (req, res) => {
   try {
-    const { userId, updateField, updateValue } = req.body;
+    const { userId, updateField, updateValue, wallet, page = 1, limit = 10 } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
@@ -2078,12 +2082,24 @@ const accountDetails = async (req, res) => {
       }
     }
 
-    // 🧠 STEP 3: Fetch updated Form with subscriptions + children
-    const user = await Form.findOne({ user: userId })
-      .populate({
+    let queryOptions;  // ✅ Add this line
+    if (wallet) {
+      const skip = (page - 1) * limit;
+      queryOptions = {
         path: "subscriptions",
         populate: { path: "children" },
-      })
+        options: { skip, limit },
+      };
+    } else {
+      queryOptions = {
+        path: "subscriptions",
+        populate: { path: "children" },
+      };
+    }
+
+    // 🧠 STEP 3: Fetch updated Form with subscriptions + children
+    const user = await Form.findOne({ user: userId })
+      .populate(queryOptions)  // ✅ Use queryOptions instead of hardcoded config
       .populate("user");
 
     if (!user) {
@@ -2093,9 +2109,30 @@ const accountDetails = async (req, res) => {
       });
     }
 
+    // 📊 Calculate total pages if wallet flag is set
+    // 📊 Calculate total pages if wallet flag is set
+    let pagination = null;
+    if (wallet && user.wallet && user.wallet.history) {
+      const totalWalletRecords = user.wallet.history.length;  // ✅ 22
+      const totalPages = Math.ceil(totalWalletRecords / limit);  // ✅ 3 pages
+
+      // ✅ Paginate the history array
+      const skip = (page - 1) * limit;
+      user.wallet.history = user.wallet.history.slice(skip, skip + limit);
+
+      pagination = {
+        currentPage: page,
+        totalPages,
+        limit,
+        totalRecords: totalWalletRecords,  // ✅ 22 (not 3!)
+      };
+    }
+
+
     return res.status(200).json({
       success: true,
       data: user,
+      ...(pagination && { pagination }),
     });
   } catch (error) {
     console.error("Error fetching/updating account details:", error);

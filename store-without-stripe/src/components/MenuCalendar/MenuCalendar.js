@@ -32,6 +32,7 @@ const MenuCalendar = () => {
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
   const { data, reload } = useAsync(AttributeServices.getAllHolidays);
+  // const [initialLoading, setInitialLoading] = useState(true);
 
   // New for multi-plan support
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
@@ -166,6 +167,10 @@ const MenuCalendar = () => {
       ]);
     } catch (error) {
       console.error("Error fetching data:", error);
+    } finally {
+      setInitialLoadComplete(true);
+    // 🔥 COMPLETE: API finished, now allow components to render
+    // setInitialLoading(false);
     }
   };
 
@@ -543,9 +548,26 @@ const MenuCalendar = () => {
 
   const savedMenuDates = getSavedMenuDatesForChild(children[activeChild]?.id);
 
-  if (loading || !children.length) {
-    return <CircularProgress />;
+  // if (loading || !children.length) {
+  //   return <CircularProgress />;
+  // }
+
+  // if (initialLoading) {
+  //   return (
+  //     <Box display="flex" justifyContent="center" mt={5}>
+  //       <CircularProgress />
+  //     </Box>
+  //   );
+  // }
+
+  if (!initialLoadComplete) {
+    return (
+      <Box display="flex" justifyContent="center" mt={5}>
+        <CircularProgress />
+      </Box>
+    );
   }
+
 
   return (
     <>
