@@ -246,7 +246,7 @@ const LeftPanel = ({
 
                   {/* show deleted label if meal is marked deleted */}
                   {isDeleted && (
-                    <Typography variant="caption" color="textSecondary" sx={{ ml: 1 }}>
+                    <Typography variant="caption" color="textSecondary" sx={{ ml: 1 }} className="deletbox">
                       Deleted
                     </Typography>
                   )}

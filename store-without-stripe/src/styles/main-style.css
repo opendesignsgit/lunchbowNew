@@ -696,8 +696,12 @@ transform: translateY(100%);z-index: 9;animation: slide 50s linear infinite;-web
 .MCcalendy .FLtable{}
 .MCcalendy .FLtable .FLbody{}
 .MCcalendy .FLtable .flitems {padding-block: 8px;}
+.MCcalendy .FLtable .flitems .deletbox {background: red;color: #fff;text-transform: uppercase;font-weight: 500;padding-inline: 10px;padding-block: 3px;line-height: 1;}
 .MCcalendy .FLtable .flitems p{color: #777777;font-weight: 600;}
 .MCcalendy .FLtable .flitems .editbtn {margin-left: 10px;}
+.MCcalendy .FLtable .flitems .deletebtn  {}
+.MCcalendy .FLtable .flitems .deletebtn svg{}
+.MCcalendy .FLtable .flitems .deletebtn svg path{}
 .MCcalendy .MCMiddlePanel{padding: 2vw;}
 .MCcalendy .MCMiddlePanel .childslidebox {margin-bottom: 2vh;}
 .MCcalendy .MCMiddlePanel .childslidebox p{font-family: 'Baloo';font-size: 1vw;font-weight: 100;}
@@ -749,6 +753,7 @@ ul.holylisul li::before{content:"";position: absolute;width: 6px;height: 6px;bac
 .childinputbox .childmlist:last-child{margin-bottom: 0px;}
 .childmlist p.menuddtitle {margin-bottom: 8px;font-family: 'Baloo';font-weight: 200;line-height: 1;}
 .childmlist .menuddlistbox {}
+.childmlist .menuddlistbox.mealdeletbox{background: red;border-radius: 0;text-align: center;font-weight: 700;}
 .childlistbox .checkboxbtn{margin: 0 0 10px;}
 .childlistbox .checkboxbtn span{padding: 0;margin-right: 5px;}
 .childlistbox .checkboxbtn span input[type='checkbox']{position: relative;width: 15px;height: 15px;border-color: #777777;border-radius: 4px;opacity: 1;}
@@ -1132,6 +1137,33 @@ html body .MuiPopover-root{z-index: 99999;}
 .ProcessingMBox .lbowlLoadBox{width:200px;}
 .ProcessingMBox .lbowlLoadBox img{width:100%;}
 
+.mywalletContainer{background: #ffffff;}
+.walletSection{display: flex;}
+.walletSection .walLeftcol{width: 45%;}
+.walletSection .walRightcol{width: calc(55% - 24px);margin-left: auto;}
+.walletSection .walletPointsBox{background:#FFF4D7;border-radius: 20px;text-align: center;padding:50px 30px;color:#FF6514;border:1px solid rgb(255 101 20 / 20%);margin-bottom: 24px;}
+.walletSection .walletPointsBox h4{font-family: 'Baloo';font-size: 1.1vw;line-height: 1;font-weight: 400;}
+.walletSection .walletPointsBox h2{font-family: 'Baloo';font-size: 6.3vw;line-height: 1;font-weight: 400;}
+.walletSection .walletPointsBox h5{line-height: 1;font-weight: 500;font-size: 1.1vw;}
+.walletSection .walletnote{}
+.walletSection .walletnote h4{font-family: 'Baloo';font-size: 1.1vw;line-height: 1;font-weight: 400;color:#FF6514;}
+.walletSection .walletnote .notelistul{background: #F7F7F7;border-radius: 20px;border:1px solid #EAEAEC;padding: 20px 30px;}
+.walletSection .walletnote .notelistul ul{list-style: disc;padding-left: 20px;}
+.walletSection .walletnote .notelistul ul li{font-size: 18px;font-weight: 400;}
+.walletSection .walletnote .notelistul ul li strong{color:#FF6514;}
+.walletSection .activityBox{border-radius: 20px;border:1px solid #EAEAEC;padding: 25px 30px;display: flex;flex-direction: column;align-items: center;position: relative;height: 100%;}
+.walletSection .activityBox h4{padding-block: 10px;padding-inline: 2vw; font-family: 'Baloo';font-size: 1.1vw;color: #000000;position: relative;}
+.walletSection .activityBox h4:before{content: '';position: absolute;width: 100%;height: 2px;left: 0;top: 0;background: #FFFFFF;background: linear-gradient(0deg,rgba(255, 255, 255, 1) 0%, rgba(204, 204, 204, 1) 50%, rgba(255, 255, 255, 1) 100%);}
+.walletSection .activityBox h4:after{content: '';position: absolute;width: 100%;height: 2px;left: 0;bottom: 0;background: #FFFFFF;background: linear-gradient(0deg,rgba(255, 255, 255, 1) 0%, rgba(204, 204, 204, 1) 50%, rgba(255, 255, 255, 1) 100%);}
+.walletSection .activityBox .tablescroll{width: 100%;position: relative;height: 100%;overflow-x: hidden;overflow-y: auto;}
+.walletSection .activityBox table{font-size: 16px;}
+.walletSection .activityBox table thead{}
+.walletSection .activityBox table thead tr{}
+.walletSection .activityBox table thead tr th{font-family: 'Baloo';color: #000000;font-weight: 400;}
+.walletSection .activityBox table thead tr th:last-child{text-align: center;}
+.walletSection .activityBox table tbody tr td{color: #777777;font-weight: 500;}
+.walletSection .activityBox table tbody tr td:last-child{color: #4AB138;font-weight: 700;text-align: center;}
+
 @media (min-width: 1100px) {
   html body .container {max-width: 980px;  }
 }
@@ -1165,6 +1197,13 @@ html body .MuiPopover-root{z-index: 99999;}
   .logsinul>li a,.logsinul .submenuul li button{padding-inline: 24px;font-size: 15px;line-height: 45px;}
   .menulistpage .hworkTitle {width:40%;}
   .menulistpage .hworkTitle p br{display: none;}
+  .walletSection .walletnote .notelistul ul li {font-size: 15px;}
+  .walletSection .walletnote .notelistul{padding: 20px;}
+  .walletSection .activityBox{padding: 20px;}
+  .walletSection .activityBox table {font-size: 14px;}
+  .walletSection .walletPointsBox{padding: 30px;}
+  .walletSection .activityBox table tbody tr td{padding: 8px;line-height: 1;}
+  .walletSection .activityBox table thead tr th{padding: 8px;line-height: 1;}
 }
 
 @media screen and (max-width:1520px) {
@@ -1178,6 +1217,7 @@ html body .MuiPopover-root{z-index: 99999;}
   .DetlsSepBox .subbtnrow button.backbtn span,  .DetlsSepBox .subbtnrow button.nextbtn span {    line-height: 40px;    font-size: 14px;  }
   .ProdfilterBox ul li button{padding-inline: 14px;font-size: 16px;}
   .pagebansec {height: 430px;}
+  .walletSection .walletnote .notelistul ul li {font-size: 14px;}
 }
 
 @media screen and (max-width:1420px) {
@@ -1211,8 +1251,11 @@ html body .MuiPopover-root{z-index: 99999;}
   .radiogroub>.MuiBox-root {padding: 8px 20px;}
   .ProdfilterBox ul li button {  font-size: 15px;}
 }
-
+@media screen and (max-width:1300px) {
+  .walletSection .activityBox table {font-size: 13px;}
+}
 @media screen and (max-width:1200px) {
+
   html body {font-size: 15px;  }
   .HLFOlistSec {padding-block: 80px;}
   .logsinul li button, .combtntb p.parabtn a span {line-height: 32px;padding-inline: 15px;font-size: 13px;}
@@ -1336,7 +1379,7 @@ html body .MuiPopover-root{z-index: 99999;}
   .overenewSec .renewcompaySec .spboxCont {width: 100%;}
   .subplnBoxssrenew h5.renewplantitle{    font-size: 18px;}
   .renewchildboxs h5.renewchildtitle{font-size: 18px;}
-
+  .mywalletContainer {padding-inline: 30px;}
 }
 
 @media screen and (max-width:1023px){
@@ -1530,6 +1573,11 @@ html body .MuiPopover-root{z-index: 99999;}
   .overenewSec .SetpTabNav .SetpTabul>div.css-xiyi76:before{color: #ffffff;}
   .overenewSec .SetpTabNav .SetpTabul>div p{font-size: 0;display: none;}
 
+  .walletSection{flex-wrap: wrap;}
+  .walletSection .walLeftcol {width: 100%;margin-bottom: 20px;}
+  .walletSection .walRightcol{width: 100%;}
+  .walletSection .walletPointsBox h4,.walletSection .walletPointsBox h5,.walletSection .walletnote h4,.walletSection .activityBox h4{font-size: 16px;}
+  .walletSection .walletPointsBox h2{font-size: 50px;}
 }
 
 @media screen and (min-width:651px){
@@ -1837,6 +1885,9 @@ html body .MuiPopover-root{z-index: 99999;}
   .overenewSec .renewcompaySec .spboximg {width: 100%;}
   .subplnBoxssrenew .navbtnbox{flex-direction: column;align-items: flex-start;}
   .addchildformbox .navbtnbox{flex-direction: column;align-items: flex-start;}
+  .walletSection .activityBox,.walletSection .walletnote .notelistul,.walletSection .walletPointsBox {padding: 15px;border-radius: 10px;}
+
+
 }
 @media screen and (min-width:501px) and (max-width:650px){ 
    .produtMobView {width: 80%;margin-inline: auto;}
@@ -1851,6 +1902,12 @@ html body .MuiPopover-root{z-index: 99999;}
   .addchildformbox  .childtabox{flex-direction: column;align-items: flex-start;gap: 10px;}
   .childtabox>button{margin-left: 0;}
   .childtabox .childtabs .childtablabel p {font-size: 14px;}
+  .walletSection .activityBox table {white-space: nowrap;}
+  .walletSection .activityBox .tablescroll{height: auto;overflow-x: auto;padding-bottom: 15px;}
+  .mywalletContainer .SetpTabul {justify-content: center;}
+  .mywalletpage .HctaSec{background: #fafafa;}
+  .walletSection .walletPointsBox h2 {font-size: 100px;}
+  .walletSection .activityBox table {font-size: 14.5px;}
 }
 
 @media screen and (max-width:500px){
