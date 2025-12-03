@@ -174,18 +174,18 @@ const WalletPage = () => {
                             ))}
                           </tbody>
                         </table> 
+                      </div>
                         {/* PAGINATION */}
                         {pagination && pagination.totalPages > 1 && (
-                          <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+                        <Box className="paginationbox">
                             <Pagination
                               count={pagination.totalPages}
                               page={currentPage}
                               onChange={handlePageChange}
-                              color="primary"
+                            color="primary" className="paginationSec"
                             />
                           </Box>
-                        )}
-                      </div>
+                      )}
                     </Box>
                   </div>
               </Box>
