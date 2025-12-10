@@ -101,10 +101,10 @@ const PriceBreakdownModal = ({
             </tr>
 
             {/* --- WALLET --- */}
-            <tr>
+            {/* <tr>
               <td><strong>Max Wallet Redeem (80% rule)</strong></td>
               <td>₹ {maxWalletRedeem.toLocaleString("en-IN")}</td>
-            </tr>
+            </tr> */}
 
             <tr>
               <td><strong>Wallet Used</strong></td>
