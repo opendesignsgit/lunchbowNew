@@ -753,7 +753,12 @@ ul.holylisul li::before{content:"";position: absolute;width: 6px;height: 6px;bac
 .childinputbox .childmlist:last-child{margin-bottom: 0px;}
 .childmlist p.menuddtitle {margin-bottom: 8px;font-family: 'Baloo';font-weight: 200;line-height: 1;}
 .childmlist .menuddlistbox {}
-.childmlist .menuddlistbox.mealdeletbox{background: red;border-radius: 0;text-align: center;font-weight: 700;}
+.childmlist .menuddlistbox.mealdeletbox {
+  background: #b3b1b0;
+  border-radius: 0;
+  text-align: center;
+  font-weight: 700;
+}
 .childlistbox .checkboxbtn{margin: 0 0 10px;}
 .childlistbox .checkboxbtn span{padding: 0;margin-right: 5px;}
 .childlistbox .checkboxbtn span input[type='checkbox']{position: relative;width: 15px;height: 15px;border-color: #777777;border-radius: 4px;opacity: 1;}
