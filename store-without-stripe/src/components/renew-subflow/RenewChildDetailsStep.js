@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   TextField,
   Button,
@@ -18,11 +18,9 @@ import useRegistration from "@hooks/useRegistration";
 import CategoryServices from "@services/CategoryServices";
 import useAsync from "@hooks/useAsync";
 import stepTwo from "../../../public/profileStepImages/stepTwo.png";
-// import stepTwo from "../../../public/profileStepImages/s"
 
 const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
-// Validation schema
 const schema = yup.object().shape({
   childFirstName: yup
     .string()
@@ -85,26 +83,14 @@ const RenewChildDetailsStep = ({
     CategoryServices.getChildren(_id)
   );
 
-  useEffect(() => {
-    if (fetchedChildren?.children?.length > 0) {
-      // Mark existing children with isExisting: true
-      const existingKids = fetchedChildren.children.map((child) => ({
-        ...child,
-        isExisting: true,
-      }));
-      setChildren(existingKids);
-      setFormData((prev) => ({ ...prev, children: existingKids }));
-      setChildCount(existingKids.length);
-    }
-  }, [fetchedChildren, setFormData, setChildCount]);
-
-  // Fetch schools list
   const { data: schools, loading: schoolsLoading } = useAsync(
     CategoryServices.getAllSchools
   );
 
-  // Filtered locations for selected school
   const [filteredLocations, setFilteredLocations] = useState([]);
+
+  // Use ref to track if initial load is complete
+  const isInitialLoadComplete = useRef(false);
 
   const getYesterdayDateString = () => {
     const now = new Date();
@@ -123,59 +109,80 @@ const RenewChildDetailsStep = ({
     setError,
   } = useForm({
     defaultValues: {
-      ...children[activeTab],
-      dob: children[activeTab]?.dob
-        ? typeof children[activeTab].dob === "string"
-          ? children[activeTab].dob.slice(0, 10)
-          : ""
-        : "",
+      childFirstName: "",
+      childLastName: "",
+      dob: "",
+      lunchTime: "",
+      school: "",
+      location: "",
+      childClass: "",
+      section: "",
+      allergies: "",
     },
     resolver: yupResolver(schema),
     mode: "onTouched",
   });
 
-  // Watch school and location form fields
   const watchSchool = watch("school");
+  const watchLocation = watch("location");
 
+  // FIXED: Separate useEffect for initial data load from async sources
   useEffect(() => {
     if (
       fetchedChildren?.children?.length > 0 &&
       schools &&
       schools.length > 0 &&
-      children.length > 0 &&
-      children[activeTab]
+      !isInitialLoadComplete.current
     ) {
-      const child = {
-        ...children[activeTab],
-        dob: children[activeTab]?.dob
-          ? typeof children[activeTab].dob === "string"
-            ? children[activeTab].dob.slice(0, 10)
-            : ""
-          : "",
-      };
+      isInitialLoadComplete.current = true;
 
-      const schoolLocations = schools
-        .filter((s) => s.name === child.school)
-        .map((s) => s.location);
-      const uniqueLocations = [...new Set(schoolLocations)];
-      setFilteredLocations(uniqueLocations);
+      const existingKids = fetchedChildren.children.map((child) => ({
+        ...child,
+        isExisting: true,
+      }));
 
-      reset(child, { keepErrors: true, keepDirty: true, keepTouched: true });
+      setChildren(existingKids);
+      setFormData((prev) => ({ ...prev, children: existingKids }));
+      setChildCount(existingKids.length);
+
+      // Set the first child's data
+      const currentChild = existingKids[0];
+      resetFormWithChild(currentChild);
     }
-  }, [fetchedChildren, children, activeTab, schools, reset]);
+  }, [fetchedChildren, schools, setFormData, setChildCount]);
 
-
-
+  // FIXED: Separate useEffect for tab changes
   useEffect(() => {
-    if (formData.children && formData.children.length > 0) {
-      setChildren(formData.children);
-      setChildCount(formData.children.length);
+    if (children.length > activeTab && isInitialLoadComplete.current) {
+      resetFormWithChild(children[activeTab]);
     }
-  }, [formData.children, setChildCount]);
+  }, [activeTab, children]);
 
-  // Update filtered locations when school changes
+  // Helper function to safely reset form with child data
+  const resetFormWithChild = (child) => {
+    if (!child) return;
+
+    const dobValue =
+      child.dob && typeof child.dob === "string"
+        ? child.dob.slice(0, 10)
+        : child.dob || "";
+
+    reset({
+      childFirstName: child.childFirstName || "",
+      childLastName: child.childLastName || "",
+      dob: dobValue,
+      lunchTime: child.lunchTime || "",
+      school: child.school || "",
+      location: child.location || "",
+      childClass: child.childClass || "",
+      section: child.section || "",
+      allergies: child.allergies || "",
+    });
+  };
+
+  // FIXED: Update filtered locations when school changes
   useEffect(() => {
-    if (watchSchool && schools) {
+    if (watchSchool && schools && schools.length > 0) {
       const schoolLocations = schools
         .filter((school) => school.name === watchSchool)
         .map((school) => school.location);
@@ -183,38 +190,41 @@ const RenewChildDetailsStep = ({
       const uniqueLocations = [...new Set(schoolLocations)];
       setFilteredLocations(uniqueLocations);
 
-      const currentLocation = watch("location");
+      // Clear location if it's not in the new filtered list
       if (
-        currentLocation &&
-        uniqueLocations.length > 0 &&
-        !uniqueLocations.includes(currentLocation)
+        watchLocation &&
+        !uniqueLocations.includes(watchLocation)
       ) {
-        setValue("location", "");
-      } else if (
-        currentLocation &&
-        uniqueLocations.includes(currentLocation)
-      ) {
-        setValue("location", currentLocation);
+        setValue("location", "", { shouldValidate: false });
       }
     } else {
       setFilteredLocations([]);
-      setValue("location", "");
     }
-  }, [watchSchool, schools, setValue, watch]);
+  }, [watchSchool, schools, setValue, watchLocation]);
 
-  // Sync form changes to children state
+  // FIXED: Debounced form sync to children state
   useEffect(() => {
     const subscription = watch((values) => {
       clearTimeout(window.__childUpdateTimer);
       window.__childUpdateTimer = setTimeout(() => {
         setChildren((prev) => {
           const updated = [...prev];
-          updated[activeTab] = { ...updated[activeTab], ...values };
+          if (updated[activeTab]) {
+            updated[activeTab] = {
+              ...updated[activeTab],
+              ...values,
+              isExisting: updated[activeTab].isExisting ?? false
+            };
+          }
           return updated;
         });
-      }, 300); // update after 300ms pause
+      }, 300);
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(window.__childUpdateTimer);
+    };
   }, [watch, activeTab]);
 
   const handleTabChange = (event, newValue) => {
@@ -226,17 +236,19 @@ const RenewChildDetailsStep = ({
       const newChild = {
         childFirstName: "",
         childLastName: "",
-        dob: null,
+        dob: "",
         lunchTime: "",
         school: "",
         location: "",
         childClass: "",
         section: "",
         allergies: "",
-        isExisting: false, // mark new child as not existing
+        isExisting: false,
       };
       setChildren([...children, newChild]);
-      setActiveTab(children.length);
+      setTimeout(() => {
+        setActiveTab(children.length);
+      }, 0);
     }
   };
 
@@ -244,23 +256,24 @@ const RenewChildDetailsStep = ({
     if (children.length === 1) return;
     const updatedChildren = children.filter((_, i) => i !== index);
     setChildren(updatedChildren);
+
+    let newTabIndex = activeTab;
     if (index === activeTab && activeTab > 0) {
-      setActiveTab(activeTab - 1);
+      newTabIndex = activeTab - 1;
     } else if (index < activeTab) {
-      setActiveTab(activeTab - 1);
+      newTabIndex = activeTab - 1;
     }
+    setActiveTab(newTabIndex);
   };
 
   const onSubmit = async () => {
     try {
-      // Validate all children at once
       await Promise.all(
         children.map((child) => schema.validate(child, { abortEarly: false }))
       );
 
       const res = await submitHandler({
         formData: children,
-        // step: 2,
         path: "step-Form-ChildDetails",
         _id,
       });
@@ -320,8 +333,7 @@ const RenewChildDetailsStep = ({
       />
 
       {/* Form Side */}
-      <Box
-        className="renewchildRcol" sx={{ width: { xs: "100%", md: "55%" } }}>
+      <Box className="renewchildRcol" sx={{ width: { xs: "100%", md: "55%" } }}>
         <Typography variant="h5" mb={2} className="renewchildtitle">
           CHILD DETAILS :
         </Typography>
@@ -331,7 +343,8 @@ const RenewChildDetailsStep = ({
             value={activeTab}
             onChange={handleTabChange}
             variant="scrollable"
-            scrollButtons="auto" className="childtabs"
+            scrollButtons="auto"
+            className="childtabs"
           >
             {children.map((child, index) => (
               <Tab
@@ -374,7 +387,6 @@ const RenewChildDetailsStep = ({
         </Box>
 
         <Grid container spacing={2} className="childformgrid">
-          {/* Child First & Last Name */}
           {[
             ["CHILD'S FIRST NAME*", "childFirstName", "Enter Child's First Name"],
             ["CHILD'S LAST NAME*", "childLastName", "Enter Child's Last Name"],
@@ -417,8 +429,7 @@ const RenewChildDetailsStep = ({
                       : ""
                   }
                   onChange={(e) => {
-                    const val = e.target.value;
-                    field.onChange(val ? val : "");
+                    field.onChange(e.target.value || "");
                   }}
                   inputProps={{ max: getYesterdayDateString() }}
                 />

@@ -499,6 +499,7 @@ const MenuCalendar = () => {
     const newMonthStart = dayjs(`${newYear}-${newMonth + 1}-01`);
     const newMonthEnd = newMonthStart.endOf("month");
 
+    // Prevent moving outside subscription range
     if (
       newMonthEnd.isBefore(subscriptionStart) ||
       newMonthStart.isAfter(subscriptionEnd)
@@ -509,9 +510,25 @@ const MenuCalendar = () => {
     setCurrentMonth(newMonth);
     setCurrentYear(newYear);
 
+    // Reset meal plan options
     setUseMealPlan(false);
     setSelectedPlans({});
+
+    // -----------------------------
+    // ✅ Auto-select correct date
+    // -----------------------------
+    const subStart = dayjs(subscriptionStart);
+    const subEnd = dayjs(subscriptionEnd);
+
+    if (subEnd.year() === newYear && subEnd.month() === newMonth) {
+      setSelectedDate(subEnd.date());            // Last day of plan
+    } else if (subStart.year() === newYear && subStart.month() === newMonth) {
+      setSelectedDate(subStart.date());          // First day of plan
+    } else {
+      setSelectedDate(1);                        // Normal month first day
+    }
   };
+
 
   const handleDateClick = (date) => {
     setSelectedDate(date);
