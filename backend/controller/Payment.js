@@ -278,16 +278,24 @@ exports.ccavenueResponse = async (req, res) => {
 
 // Holiday Payment Response Handler
 exports.holiydayPayment = async (req, res) => {
+  console.log("🔔 Holiday payment API triggered");
+
   let encResponse = "";
   req.on("data", (data) => {
+    console.log("📩 Received data chunk:", data.toString());
     encResponse += data;
   });
 
   req.on("end", async () => {
+    console.log("📥 Full encResponse:", encResponse);
 
     try {
       const parsed = qs.parse(encResponse);
+      console.log("📦 Parsed response:", parsed);
+
       const encrypted = parsed.encResp;
+      console.log("🔐 Encrypted data:", encrypted);
+
       if (!encrypted) {
         console.error("❌ Missing encrypted response");
         return res.status(400).send("Missing encrypted response");
@@ -297,7 +305,10 @@ exports.holiydayPayment = async (req, res) => {
       let decrypted, responseData;
       try {
         decrypted = ccav.decrypt(encrypted, workingKey);
+        console.log("🔓 Decrypted response:", decrypted);
+
         responseData = qs.parse(decrypted);
+        console.log("📑 Final parsed decrypted data:", responseData);
       } catch (err) {
         console.error("❌ Decryption failed:", err);
         return res.status(400).send("Failed to decrypt payment response");
@@ -312,73 +323,115 @@ exports.holiydayPayment = async (req, res) => {
         merchant_param3,
       } = responseData;
 
-      if (!userId) return res.status(400).send("Missing userId");
-      if (!mongoose.Types.ObjectId.isValid(userId))
+      console.log("📌 Extracted values:", {
+        order_id,
+        tracking_id,
+        order_status,
+        userId,
+        mealDate,
+        merchant_param3,
+      });
+
+      if (!userId) {
+        console.log("❌ Missing userId");
+        return res.status(400).send("Missing userId");
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        console.log("❌ Invalid userId format");
         return res.status(400).send("Invalid userId");
+      }
 
+      console.log("⚙️ Calling processPaymentResponse...");
       await processPaymentResponse(responseData, "holiday", "HOLIDAY_PAY");
+      console.log("✔️ processPaymentResponse completed");
 
-      // --- Parse merchant_param3
+      // --- Parse merchant_param3 (children)
       let childrenData = [];
       try {
+        console.log("📦 Decoding merchant_param3:", merchant_param3);
+
         const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
+        console.log("📤 Decoded merchant_param3:", decoded);
+
         childrenData = JSON.parse(decoded);
+        console.log("🧒 Children Data Array:", childrenData);
       } catch (err) {
         console.error("⚠️ Failed to parse merchant_param3:", err);
         return res.status(400).send("Invalid children data");
       }
 
       if (!Array.isArray(childrenData) || childrenData.length === 0) {
-        console.warn("⚠️ No children data found in payment");
+        console.warn("⚠️ No children data found, redirecting to failed");
         return res.redirect("https://lunchbowl.co.in/payment/failed");
       }
 
       // --- Process each child's holiday meal
+      console.log("🔍 Checking existing userMeal for user:", userId);
+
       let userMeal = await UserMeal.findOne({ userId });
+      console.log("📥 Found userMeal:", userMeal);
+
       if (!userMeal) {
+        console.log("🆕 Creating new userMeal...");
         userMeal = new UserMeal({ userId, plans: [] });
       }
 
       for (const child of childrenData) {
+        console.log("👶 Processing child:", child);
+
         const { childId, dish, mealDate, planId } = child;
-        if (!childId || !dish || !mealDate || !planId) {
+
+        // FIX: Extract mealName properly
+        const mealName = dish?.mealName || "";
+        console.log("🍽 Extracted mealName:", mealName);
+
+        if (!childId || !mealName || !mealDate || !planId) {
+          console.log("⚠️ Missing child fields, skipping child:", child);
           continue;
         }
 
-
         // --- Record HolidayPayment
+        console.log("💾 Creating HolidayPayment entry...");
         try {
           await HolidayPayment.create({
             userId,
             childId,
             mealDate,
-            mealName: dish,
+            mealName, // FIXED
             amount: 200,
             paymentStatus: "Paid",
             transactionDetails: { tracking_id, order_id, ...responseData },
           });
+
+          console.log("✔️ HolidayPayment created");
         } catch (err) {
           console.error("⚠️ Failed to create HolidayPayment:", err.message);
         }
 
         // --- Find or create plan
+        console.log("🔍 Searching plan:", planId);
         let plan = userMeal.plans.find((p) => p.planId === planId);
+
         if (!plan) {
+          console.log("🆕 Creating new plan:", planId);
           plan = { planId, children: [] };
           userMeal.plans.push(plan);
         }
 
         // --- Find or create child under plan
-        let childEntry = plan.children.find((c) =>
-          c.childId.equals(childId)
-        );
+        console.log("🔍 Searching child entry:", childId);
+        let childEntry = plan.children.find((c) => c.childId.equals(childId));
+
         if (!childEntry) {
+          console.log("🆕 Adding new child entry");
           plan.children.push({
             childId,
-            meals: [{ mealDate: new Date(mealDate), mealName: dish }],
+            meals: [{ mealDate: new Date(mealDate), mealName }], // FIXED
           });
         } else {
-          // --- Find if meal already exists for that date
+          console.log("📌 Child found, checking existing meals...");
+
           const existingMeal = childEntry.meals.find(
             (m) =>
               new Date(m.mealDate).toISOString().slice(0, 10) ===
@@ -386,24 +439,34 @@ exports.holiydayPayment = async (req, res) => {
           );
 
           if (existingMeal) {
-            existingMeal.mealName = dish;
+            console.log("♻️ Updating existing meal");
+            existingMeal.mealName = mealName; // FIXED
           } else {
+            console.log("➕ Adding new meal entry");
             childEntry.meals.push({
               mealDate: new Date(mealDate),
-              mealName: dish,
+              mealName, // FIXED
             });
           }
         }
       }
 
+      console.log("💾 Saving userMeal document...");
       await userMeal.save();
+      console.log("✔️ userMeal saved successfully");
 
       // --- Optional: send confirmation email
+      console.log("📧 Preparing to send confirmation email...");
+
       try {
         const userForm = await Form.findOne({ user: userId });
+        console.log("📄 userForm fetched:", userForm);
+
         if (userForm && userForm.parentDetails) {
           const parentName = `${userForm.parentDetails.fatherFirstName} ${userForm.parentDetails.fatherLastName}`;
           const email = userForm.parentDetails.email;
+
+          console.log("📧 Sending email to:", email);
 
           const transporter = nodemailer.createTransport({
             service: "gmail",
@@ -429,13 +492,14 @@ exports.holiydayPayment = async (req, res) => {
 
           transporter.sendMail(mailOptions, (err) => {
             if (err) console.error("📧 Email send error:", err);
-            else console.log("📧 Confirmation email sent to:", email);
+            else console.log("📧 Email sent successfully");
           });
         }
       } catch (mailErr) {
         console.error("📧 Email sending failed:", mailErr);
       }
 
+      console.log("🎉 Holiday payment completed successfully — redirecting...");
       return res.redirect("https://lunchbowl.co.in/payment/success");
     } catch (err) {
       console.error("💥 Holiday payment handler error:", err);
@@ -443,6 +507,7 @@ exports.holiydayPayment = async (req, res) => {
     }
   });
 };
+
 
 
 

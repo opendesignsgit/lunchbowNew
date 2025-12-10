@@ -1967,7 +1967,7 @@ const deleteMeal = async (req, res) => {
         // ------------------------------------
         const userMailOptions = {
           from: process.env.EMAIL_USER,
-          to: "csivarex.odi@gmail.com",
+          to: parentEmail,
           subject: "Meal Deletion Confirmation – LunchBowl",
           html: `
         <p>Hi <strong>${parentName}</strong>,</p>
@@ -1999,7 +1999,7 @@ const deleteMeal = async (req, res) => {
         // ------------------------------------
         const clientMailOptions = {
           from: process.env.EMAIL_USER,
-          to: "csivarex.odi@gmail.com",
+          to: "contactus@lunchbowl.co.in",
           subject: "New Meal Deletion Alert",
           html: `
         <h3>Meal Deletion Details</h3>
