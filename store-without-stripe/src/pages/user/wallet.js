@@ -138,10 +138,10 @@ const WalletPage = () => {
                       <h4 className="mb-2">How It Works</h4>
                       <div className="notelistul">
                         <ul style={{ lineHeight: "1.8" }}>
-                          <li>Points are added when you <strong>cancel</strong> a meal.</li>
-                          <li>Saved points can be redeemed on your <strong>next subscription</strong>.</li>
+                          <li>Points are added to your wallet when you <strong>cancel</strong> a meal.</li>
                           <li><strong>1Point = ₹1.</strong></li>
-                          <li>Points are <strong>not transferable</strong> or <strong>exchangeable</strong> for cash.</li>
+                          <li>Saved points can be redeemed in your <strong>next subscription</strong>.</li>
+                          <li>Points cannot <strong>be transferred</strong> or <strong>exchanged</strong> for cash.</li>
                         </ul>
                       </div>
                     </Box>

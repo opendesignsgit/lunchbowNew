@@ -305,7 +305,7 @@ const LeftPanel = ({
                         !isSaturday &&
                         !isSunday &&
                         !isHolidayDay && (
-                        <Tooltip title="Content Needed" arrow placement="top">
+                        <Tooltip title=" Delete meal permanently" arrow placement="top">
                           <IconButton
                             className="deletebtn"
                             size="small"
@@ -356,12 +356,12 @@ const LeftPanel = ({
         fullWidth
       >
         <DialogTitle sx={{ fontWeight: "bold", textAlign: "center" }}>
-          Need Content
+          This action cannot be undone!
         </DialogTitle>
 
         <DialogContent dividers sx={{ textAlign: "center" }}>
           <Typography variant="body2">
-            Are you sure you want to delete this meal?
+            Are you sure you want to delete this meal permanently? 
           </Typography>
         </DialogContent>
 

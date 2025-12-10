@@ -1899,12 +1899,16 @@ const deleteMeal = async (req, res) => {
     // 5. Fetch Child Name from Child Schema
     // ------------------
     let childName = "Unknown Child";
+    let classSection = "-";
+    let schoolName = "-";
 
     try {
       const child = await Child.findById(childId);
 
       if (child) {
         childName = `${child.childFirstName} ${child.childLastName}`;
+        classSection = `${child.childClass}, ${child.section}` || "-";
+        schoolName = child.school || "-";
       }
     } catch (err) {
       console.log("Warning: Failed to fetch child name from Child model");
@@ -1913,9 +1917,18 @@ const deleteMeal = async (req, res) => {
     // ------------------
     // 6. WALLET UPDATE (ADD +200)
     // ------------------
+
+    let parentName = "";
+    let parentEmail = "";
+    let parentMobile = "";
+
     const form = await Form.findOne({ user: userId });
 
     if (form) {
+      parentName = `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`;
+      parentEmail = form.parentDetails.email || "";
+      parentMobile = form.parentDetails.mobile || "";
+
       form.wallet.points += 200;
 
       form.wallet.history.push({
@@ -1933,6 +1946,89 @@ const deleteMeal = async (req, res) => {
     // 7. SAVE CHANGES
     // ------------------
     await userMeal.save();
+
+    // ------------------
+    // 8. SEND EMAILS (Using your existing email setup)
+    // ------------------
+    if (form && parentEmail) {
+      try {
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+
+        const formattedDate = new Date(date).toLocaleDateString("en-GB");
+
+        // ------------------------------------
+        // USER EMAIL TEMPLATE
+        // ------------------------------------
+        const userMailOptions = {
+          from: process.env.EMAIL_USER,
+          to: "csivarex.odi@gmail.com",
+          subject: "Meal Deletion Confirmation – LunchBowl",
+          html: `
+        <p>Hi <strong>${parentName}</strong>,</p>
+
+        <p>Your meal is successfully deleted.</p>
+
+        <p><strong>${childName}</strong>’s meal booked for 
+        <strong>${formattedDate}</strong> with the menu 
+        <strong>${meal.mealName}</strong> has been deleted by you.</p>
+
+        <p>The meal amount has been credited to your LunchBowl wallet and can be redeemed anytime.</p>
+
+        <p>We look forward to making your child enjoy their meal!</p>
+
+        <p>For any queries, contact 
+        <a href="mailto:contactus@lunchbowl.co.in">contactus@lunchbowl.co.in</a></p>
+
+        <p>Best regards,<br>
+        <strong>Team Lunch Bowl and Earth Tech Concepts Pvt Ltd</strong></p>
+      `,
+        };
+
+        transporter.sendMail(userMailOptions, (err) => {
+          if (err) console.log("User Meal Delete Email Error:", err);
+        });
+
+        // ------------------------------------
+        // CLIENT (ADMIN) EMAIL TEMPLATE
+        // ------------------------------------
+        const clientMailOptions = {
+          from: process.env.EMAIL_USER,
+          to: "csivarex.odi@gmail.com",
+          subject: "New Meal Deletion Alert",
+          html: `
+        <h3>Meal Deletion Details</h3>
+
+        <p><strong>Parent Name:</strong> ${parentName}</p>
+        <p><strong>Email:</strong> ${parentEmail}</p>
+        <p><strong>Mobile:</strong> ${parentMobile}</p>
+
+        <p><strong>Child Name:</strong> ${childName}</p>
+        <p><strong>Class/Section:</strong> ${classSection}</p>
+        <p><strong>School Name:</strong> ${schoolName}</p>
+
+        <p><strong>Date:</strong> ${formattedDate}</p>
+        <p><strong>Meal Name:</strong> ${meal.mealName}</p>
+      `,
+        };
+
+        transporter.sendMail(clientMailOptions, (err) => {
+          if (err) console.log("Client Meal Delete Email Error:", err);
+        });
+
+      } catch (error) {
+        console.log("Email sending failed:", error);
+      }
+    }
+
+
+
+
 
     return res.status(200).json({
       success: true,

@@ -475,7 +475,10 @@ const RightPanel = ({
                       >
                         {isDeletedMeal ? (
                           <Typography className="mealdelettag">
-                            This Meal is Deleted.
+                            This Meal is deleted. The meal amount is credited to your LunchBowl wallet.
+                            <Link href="/user/wallet" style={{ textDecoration: "underline", color: "#1976d2" }}>
+                              Redirect to my wallet
+                            </Link>
                           </Typography>
                         ) : (
                             <Select

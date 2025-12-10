@@ -593,7 +593,7 @@ const RenewSubscriptionPlanStep = ({
 
               {useWallet && (
                 <Typography mt={1} fontSize={12} color="#232323">
-                  <strong>Note:</strong> Wallet points will be applied automatically to reduce your final payable amount.
+                  <strong>Note:</strong> Wallet points applied will automatically reduce your final payable amount.
                 </Typography>
               )}
             </Box>
@@ -617,7 +617,8 @@ const RenewSubscriptionPlanStep = ({
                   </td>
                   <td >
                     {currentPlan?.workingDays} Days / ₹
-                    {(currentPlan?.workingDays * BASE_PRICE_PER_DAY * numberOfChildren).toLocaleString("en-IN")}
+                    {currentPlan?.price?.toLocaleString("en-IN")}
+
                   </td>
                 </tr>
 

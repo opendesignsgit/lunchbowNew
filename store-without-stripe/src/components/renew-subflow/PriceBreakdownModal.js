@@ -147,7 +147,9 @@ const PriceBreakdownModal = ({
           variant="body2"
           sx={{ textAlign: "center", color: "#888" }}
         >
-          * All calculations shown before payment
+          <Typography mt={1} fontSize={12} color="#232323">
+            <strong>Note:</strong> If your wallet points exceed the subscription amount, only 80% of the wallet value will be applied. The remaining points will be available in the wallet and can be redeemed during the next subscription.
+          </Typography>
         </Typography>
       </DialogContent>
 
