@@ -163,6 +163,26 @@ const Home = () => {
       content:
         "You can request service termination at any time. The unconsumed meal days will be calculated, and a refund will be processed. Please contact customer service for termination assistance.",
     },
+    {
+      title: "How do I earn wallet points and where can I see them?",
+      content:
+        "You earn wallet points when you don’t need a meal on a particular date and delete that meal at least one day in advance using the Delete icon. Each deleted meal’s value is added to your wallet (₹1 = 1 point). You can view your wallet balance under My Account → Wallet, where you’ll find your total points, a 'How It Works' guide, and complete history of points earned and redeemed.",
+    },
+    {
+      title: "When can I redeem my wallet points and is there any limit?",
+      content:
+        "Wallet points can be redeemed only during subscription renewal. If points are available, a redemption option will appear when selecting your new plan. If your wallet points exceed the renewal amount, only 80% of your wallet value will be applied, and the remaining points will stay in your wallet for future renewals.",
+    },
+    {
+      title: "Can wallet points be transferred or shared?",
+      content:
+        "No. Wallet points are non-transferable and cannot be shared with another account or another child. Points can only be used by the account holder who earned them.",
+    },
+    {
+      title: "What do I do when I don’t need a meal on a particular day?",
+      content:
+        "If your child is not attending school on a particular day, you can go to your subscription and delete the meal for that date using the Delete icon. This must be done a day prior. The meal will not be delivered, and the meal value will be automatically added to your wallet.",
+    },
   ];
     const [popopen, setpopOpen] = useState(false);
 
