@@ -115,8 +115,18 @@ const MultiStepForm = () => {
             ...formData,
             ...data.parentDetails,
             children: data.children || [],
-            subscriptionPlan: data.subscriptionPlan || {},
+            subscriptionPlan: data.subscriptions?.length
+              ? {
+                subscriptionId: data.subscriptions[0]._id,
+                planId: data.subscriptions[0].planId,
+                startDate: data.subscriptions[0].startDate,
+                endDate: data.subscriptions[0].endDate,
+                workingDays: data.subscriptions[0].workingDays,
+                price: data.subscriptions[0].price
+              }
+              : {},
           });
+
 
           setChildCount(data.children?.length || 1);
 

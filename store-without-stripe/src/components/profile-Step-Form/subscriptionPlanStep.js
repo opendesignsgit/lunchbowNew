@@ -188,17 +188,27 @@ const SubscriptionPlanStep = ({
   // -- NEW: fetch children for subscription selection
   const { data: childrenList = [], loading: childrenLoading } = useAsync(() => CategoryServices.getChildren(_id));
 
+  const subscriptionId = initialSubscriptionPlan?.subscriptionId;
+
+
 
 
 
   const [childError, setChildError] = useState(false);
 
   useEffect(() => {
-    if (childrenList && childrenList?.length > 0) {
-      // Select the first child by default
-      setSelectedChildren([childrenList[0]._id]);
+    if (childrenList?.children?.length > 0) {
+
+      if (initialSubscriptionPlan?.children?.length > 0) {
+        // preload previously selected children
+        setSelectedChildren(initialSubscriptionPlan.children);
+      } else {
+        // default select first child
+        setSelectedChildren([childrenList.children[0]._id]);
     }
-  }, [childrenList]);
+    }
+  }, [childrenList, initialSubscriptionPlan]);
+
 
   const handleChildCheckbox = (childId) => {
     setSelectedChildren((prev) => {
@@ -383,6 +393,7 @@ const SubscriptionPlanStep = ({
     }
 
     const payload = {
+      subscriptionId,
       selectedPlan,
       workingDays: totalWorkingDays,
       totalPrice,
