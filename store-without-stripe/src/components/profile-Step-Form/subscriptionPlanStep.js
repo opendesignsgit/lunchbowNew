@@ -188,17 +188,27 @@ const SubscriptionPlanStep = ({
   // -- NEW: fetch children for subscription selection
   const { data: childrenList = [], loading: childrenLoading } = useAsync(() => CategoryServices.getChildren(_id));
 
+  const subscriptionId = initialSubscriptionPlan?.subscriptionId;
+
+
 
 
 
   const [childError, setChildError] = useState(false);
 
   useEffect(() => {
-    if (childrenList && childrenList?.length > 0) {
-      // Select the first child by default
-      setSelectedChildren([childrenList[0]._id]);
+    if (childrenList?.children?.length > 0) {
+
+      if (initialSubscriptionPlan?.children?.length > 0) {
+        // preload previously selected children
+        setSelectedChildren(initialSubscriptionPlan.children);
+      } else {
+        // default select first child
+        setSelectedChildren([childrenList.children[0]._id]);
     }
-  }, [childrenList]);
+    }
+  }, [childrenList, initialSubscriptionPlan]);
+
 
   const handleChildCheckbox = (childId) => {
     setSelectedChildren((prev) => {
@@ -217,43 +227,39 @@ const SubscriptionPlanStep = ({
 
 
   useEffect(() => {
-    if (!holidays.length) return; // wait until holidays are fetched
+   if (!holidays.length) return;
 
-    // Calculate base plans first
-    const computedPlans = calculatePlans(holidays, numberOfChildren, customStartDates);
-    setPlans(computedPlans);
+   const computedPlans = calculatePlans(holidays, numberOfChildren, customStartDates);
+   setPlans(computedPlans);
 
-    // Only initialize custom start dates once (avoid infinite loop)
-    if (
-    Object.keys(customStartDates).length === 0 &&
-    initialSubscriptionPlan &&
-    initialSubscriptionPlan.planId &&
-    initialSubscriptionPlan.planId !== "byDate" &&
-    initialSubscriptionPlan.startDate
-  ) {
-    const savedCustomStartDates = {
-      [parseInt(initialSubscriptionPlan.planId, 10)]: dayjs(initialSubscriptionPlan.startDate),
-    };
-    setCustomStartDates(savedCustomStartDates);
-  }
+   if (initialSubscriptionPlan?.planId) {
+     const planId = initialSubscriptionPlan.planId.toString();
 
-    // Plan selection logic
-    if (initialSubscriptionPlan && initialSubscriptionPlan.planId && !selectedPlan) {
-      const planId = initialSubscriptionPlan.planId.toString();
-      setSelectedPlan(planId);
+    // Load plan
+    setSelectedPlan(planId);
 
-    if (planId === "byDate") {
-      setStartDate(initialSubscriptionPlan.startDate ? dayjs(initialSubscriptionPlan.startDate) : null);
-      setEndDate(initialSubscriptionPlan.endDate ? dayjs(initialSubscriptionPlan.endDate) : null);
-    } else {
-      const selectedPlanObj = computedPlans.find(p => p.id.toString() === planId);
-      if (selectedPlanObj) {
-        setStartDate(selectedPlanObj.startDate);
-        setEndDate(selectedPlanObj.endDate);
-      }
+    // Load children
+    if (initialSubscriptionPlan.children?.length > 0) {
+      setSelectedChildren(initialSubscriptionPlan.children);
+    }
+
+    // Load start and end dates (convert to dayjs)
+    const start = initialSubscriptionPlan.startDate ? dayjs(initialSubscriptionPlan.startDate) : null;
+    const end = initialSubscriptionPlan.endDate ? dayjs(initialSubscriptionPlan.endDate) : null;
+
+    setStartDate(start);
+    setEndDate(end);
+
+    // For standard plans → override default start date
+    if (planId !== "byDate" && start) {
+      setCustomStartDates(prev => ({
+        ...prev,
+        [parseInt(planId)]: start
+      }));
     }
   }
-  }, [holidays, numberOfChildren, initialSubscriptionPlan]);
+ }, [holidays, numberOfChildren, initialSubscriptionPlan]);
+
 
 
 
@@ -383,6 +389,7 @@ const SubscriptionPlanStep = ({
     }
 
     const payload = {
+      subscriptionId,
       selectedPlan,
       workingDays: totalWorkingDays,
       totalPrice,
