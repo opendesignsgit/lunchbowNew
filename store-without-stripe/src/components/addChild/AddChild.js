@@ -119,6 +119,8 @@ const AddChild = ({ _id, onComplete }) => {
   }, [activeSubscription]);
 
   const [activeTab, setActiveTab] = useState(0);
+  const [filteredSchools, setFilteredSchools] = useState([]);
+
 
   const router = useRouter();
 
@@ -197,6 +199,8 @@ const AddChild = ({ _id, onComplete }) => {
   });
 
   const watchSchool = watch("school");
+  const watchLocation = watch("location");
+
 
   const [filteredLocations, setFilteredLocations] = useState([]);
 
@@ -213,18 +217,29 @@ const AddChild = ({ _id, onComplete }) => {
   }, [activeSubscription]);
 
 
+  // Filter schools based on selected location
+  // Filter schools based on location selection
   useEffect(() => {
-    if (watchSchool && schools.length) {
-      const schoolLocations = schools
-        .filter((s) => s.name === watchSchool)
-        .map((s) => s.location);
-      setFilteredLocations([...new Set(schoolLocations)]);
-      if (!schoolLocations.includes(watch("location"))) setValue("location", "");
+    if (!schools || schools.length === 0) return;
+
+    if (watchLocation) {
+      const availableSchools = schools
+        .filter((item) => item.location === watchLocation)
+        .map((item) => item.name);
+
+      const uniqueSchools = [...new Set(availableSchools)];
+      setFilteredSchools(uniqueSchools);
+
+      if (!uniqueSchools.includes(watch("school"))) {
+        setValue("school", "");
+      }
     } else {
-      setFilteredLocations([]);
-      setValue("location", "");
-    }
-  }, [watchSchool, schools, setValue, watch]);
+    setFilteredSchools([]);
+    setValue("school", "");
+  }
+  }, [watchLocation, schools, watch, setValue]);
+
+
 
   useEffect(() => {
     if (children.length > 0) {
@@ -239,14 +254,14 @@ const AddChild = ({ _id, onComplete }) => {
       reset(child, { keepErrors: true, keepDirty: true, keepTouched: true });
 
       // Set filteredLocations according to child's school
-      if (child.school && schools.length) {
-        const schoolLocations = schools
-          .filter((s) => s.name === child.school)
-          .map((s) => s.location);
-        setFilteredLocations([...new Set(schoolLocations)]);
-      } else {
-        setFilteredLocations([]);
-      }
+      // if (child.school && schools.length) {
+      //   const schoolLocations = schools
+      //     .filter((s) => s.name === child.school)
+      //     .map((s) => s.location);
+      //   setFilteredLocations([...new Set(schoolLocations)]);
+      // } else {
+      //   setFilteredLocations([]);
+      // }
     }
   }, [children, activeTab, reset, schools]);
 
@@ -608,7 +623,7 @@ const AddChild = ({ _id, onComplete }) => {
             </Tabs>
             {children.length < 3 && (
               <Button variant="outlined" onClick={addChild} disabled={children.length >= 3} sx={{ ml: 2 }}>
-                Add Another Child
+                Add Another Child ({3 - children.length} left)
               </Button>
             )}
           </Box>
@@ -660,38 +675,9 @@ const AddChild = ({ _id, onComplete }) => {
 
             <Grid item xs={12} md={6}>
               <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
-                SCHOOL*
-              </Typography>
-              <Controller
-                name="school"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    select
-                    fullWidth
-                    label="Select School"
-                    {...field}
-                    error={!!errors.school}
-                    helperText={errors.school?.message}
-                    disabled={schoolsLoading || children[activeTab]?.isExisting}
-                  >
-                    <MenuItem value="" disabled>
-                      {schoolsLoading ? "Loading schools..." : "Select School"}
-                    </MenuItem>
-                    {[...new Set(schools.map((s) => s.name))].map((school) => (
-                      <MenuItem value={school} key={school}>
-                        {school}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
                 LOCATION*
               </Typography>
+
               <Controller
                 name="location"
                 control={control}
@@ -703,26 +689,68 @@ const AddChild = ({ _id, onComplete }) => {
                     {...field}
                     error={!!errors.location}
                     helperText={errors.location?.message}
-                    disabled={
-                      !watchSchool || filteredLocations.length === 0 || children[activeTab]?.isExisting
-                    }
+                    disabled={schoolsLoading || children[activeTab]?.isExisting}
                   >
                     <MenuItem value="" disabled>
-                      {!watchSchool
-                        ? "Select a school first"
-                        : filteredLocations.length === 0
-                          ? "No locations available"
-                          : "Select Location"}
+                      {schoolsLoading ? "Loading locations..." : "Select Location"}
                     </MenuItem>
-                    {filteredLocations.map((location) => (
-                      <MenuItem key={location} value={location}>
-                        {location}
+
+                    {[...new Set(schools.map((s) => s.location))].map((loc) => (
+                      <MenuItem key={loc} value={loc}>
+                        {loc}
                       </MenuItem>
                     ))}
                   </TextField>
                 )}
               />
             </Grid>
+
+
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>
+                SCHOOL*
+              </Typography>
+
+              <Controller
+                name="school"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Select School"
+                    {...field}
+                    error={!!errors.school}
+                    helperText={errors.school?.message}
+                    disabled={
+                      !watchLocation ||
+                      filteredSchools.length === 0 ||
+                      schoolsLoading ||
+                      children[activeTab]?.isExisting
+                    }
+                  >
+                    <MenuItem value="" disabled>
+                      {!watchLocation
+                        ? "Select location first"
+                        : filteredSchools.length === 0
+                          ? "No schools available"
+                          : "Select School"}
+                    </MenuItem>
+
+                    {filteredSchools.map((school) => (
+                      <MenuItem key={school} value={school}>
+                        {school}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Grid>
+
+
+
+
 
             <Grid item xs={12} md={6}>
               <Typography variant="subtitle2" sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}>

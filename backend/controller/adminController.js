@@ -814,7 +814,6 @@ const getInTouch = async (req, res) => {
       <p><strong>Name:</strong> ${firstName} ${lastName}</p>
       <p><strong>Email:</strong> ${email}</p>
       <p><strong>Mobile:</strong> ${mobileNumber}</p>
-      <p><strong>School Name:</strong> ${schoolName}</p>
       <p><strong>Message:</strong> ${message || 'N/A'}</p>
     `,
   };
@@ -823,12 +822,29 @@ const getInTouch = async (req, res) => {
   const thankYouMailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: "Thank you for getting in touch with Lunch Bowl!",
+    subject: "Thank you reaching out — will be in touch soon",
     html: `
-      <p>Hello ${firstName} ${lastName},</p>
-      <p>Thank you for contacting us. We’ve received your enquiry and our team will get back to you shortly.</p>
-      <p>Best regards,<br/>Team Lunch Bowl</p>
-    `,
+    <p>Dear ${firstName} ${lastName},</p>
+
+    <p>
+      Thank you for getting in touch with us! We’ve received your message, and
+      our team is already on it. One of our representatives will connect with you 
+      within <strong>1 business day</strong> to assist with your query.
+    </p>
+
+    <p>
+      In the meantime, feel free to explore more about us on  
+      <a href="https://lunchbowl.co.in/" target="_blank">https://lunchbowl.co.in/</a> 
+      or simply reply to this email if you’d like to share more details.
+    </p>
+
+    <p>We look forward to helping you!</p>
+
+    <p>
+      Warm regards,<br/>
+      <strong>Team Lunch Bowl and Earth Tech Concepts Pvt Ltd</strong>
+    </p>
+  `,
   };
 
   try {
@@ -884,7 +900,7 @@ const contactUs = async (req, res) => {
       <p>Hello ${firstname},</p>
       <p>Thank you for reaching out to us through our enquiry form. We’ve received your request, and our team will get back to you shortly with the details.</p>
       <p>We look forward to assisting you soon.</p>
-      <p>Best regards,<br/>Team LunchBowl</p>
+      <p>Best regards,<br/>Team Lunch Bowl and Earth Tech Concepts Pvt Ltd</p>
     `,
   };
 

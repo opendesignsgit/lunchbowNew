@@ -126,7 +126,10 @@ const Letsfindout = () => {
       {showSchoolForm && (
         <SchoolServiceForm
           prefillSchool={schoolName}
-          onClose={() => setShowSchoolForm(false)}
+          onClose={() => {
+            setShowSchoolForm(false);
+            setSchoolName("");   // ✅ Clear the input field here
+          }}
         />
       )}
       <SignUpPopup open={showSignUp} onClose={() => setShowSignUp(false)} />

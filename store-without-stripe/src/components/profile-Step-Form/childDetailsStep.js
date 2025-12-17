@@ -78,6 +78,8 @@ const ChildDetailsStep = ({
       ]
   );
   const { submitHandler, loading } = useRegistration();
+  const [filteredSchools, setFilteredSchools] = useState([]);
+
 
   // Fetch schools data
   const { data: schools, loading: schoolsLoading } = useAsync(
@@ -166,6 +168,8 @@ const ChildDetailsStep = ({
   });
 
   const watchSchool = watch("school");
+  const watchLocation = watch("location");
+
 
   // ✅ 2️⃣ Reset form when children data changes or tab switches
   useEffect(() => {
@@ -187,22 +191,22 @@ const ChildDetailsStep = ({
   // ✅ 3️⃣ Avoid infinite loop in location filter
   useEffect(() => {
     if (!schools) return;
-    if (watchSchool) {
-      const schoolLocations = schools
-        .filter((school) => school.name === watchSchool)
-        .map((school) => school.location);
-      const uniqueLocations = [...new Set(schoolLocations)];
-      setFilteredLocations((prev) =>
-        JSON.stringify(prev) !== JSON.stringify(uniqueLocations)
-          ? uniqueLocations
-          : prev
+
+    if (watchLocation) {
+      const availableSchools = schools
+        .filter((item) => item.location === watchLocation)
+        .map((item) => item.name);
+
+      const uniqueSchools = [...new Set(availableSchools)];
+
+      setFilteredSchools((prev) =>
+        JSON.stringify(prev) !== JSON.stringify(uniqueSchools) ? uniqueSchools : prev
       );
     } else {
-      setFilteredLocations([]);
-      setValue("location", "");
+      setFilteredSchools([]);
+      setValue("school", ""); // reset school when location changes
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchSchool, schools]);
+  }, [watchLocation, schools]);
 
   // ✅ 4️⃣ Watch form values and sync with children state
   useEffect(() => {
@@ -367,7 +371,7 @@ const ChildDetailsStep = ({
                 className="addanochildbtn"
                 disabled={children.length >= 3}
               >
-                Add Another Child
+                Add Another Child ({3 - children.length} left)
               </Button>
             )}
           </Box>
@@ -431,41 +435,6 @@ const ChildDetailsStep = ({
             />
           </Grid>
 
-          {/* School Dropdown */}
-          <Grid item className="formboxcol" key="school">
-            <Typography
-              variant="subtitle2"
-              sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
-            >
-              SCHOOL*
-            </Typography>
-            <Controller
-              name="school"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  select
-                  fullWidth
-                  label="Select School"
-                  {...field}
-                  error={!!errors.school}
-                  helperText={errors.school?.message}
-                  sx={{ width: "300px", minWidth: "300px" }}
-                  disabled={schoolsLoading}
-                >
-                  <MenuItem value="" disabled>
-                    {schoolsLoading ? "Loading schools..." : "Select School"}
-                  </MenuItem>
-                  {uniqueSchools.map((school) => (
-                    <MenuItem key={school} value={school}>
-                      {school}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              )}
-            />
-          </Grid>
-
           {/* Location Dropdown */}
           <Grid item className="formboxcol" key="location">
             <Typography
@@ -474,6 +443,7 @@ const ChildDetailsStep = ({
             >
               LOCATION*
             </Typography>
+
             <Controller
               name="location"
               control={control}
@@ -486,24 +456,67 @@ const ChildDetailsStep = ({
                   error={!!errors.location}
                   helperText={errors.location?.message}
                   sx={{ width: "300px", minWidth: "300px" }}
-                  disabled={!watchSchool || filteredLocations.length === 0}
+                  disabled={schoolsLoading}
                 >
                   <MenuItem value="" disabled>
-                    {!watchSchool
-                      ? "Select a school first"
-                      : filteredLocations.length === 0
-                        ? "No locations available"
-                        : "Select Location"}
+                    {schoolsLoading ? "Loading..." : "Select Location"}
                   </MenuItem>
-                  {filteredLocations.map((location) => (
-                    <MenuItem key={location} value={location}>
-                      {location}
+
+                  {/* Unique locations from schools list */}
+                  {[...new Set(schools?.map((s) => s.location))].map((loc) => (
+                    <MenuItem key={loc} value={loc}>
+                      {loc}
                     </MenuItem>
                   ))}
                 </TextField>
               )}
             />
           </Grid>
+
+
+          {/* School Dropdown */}
+          <Grid item className="formboxcol" key="school">
+            <Typography
+              variant="subtitle2"
+              sx={{ color: "#FF6A00", fontWeight: 600, mb: 1 }}
+            >
+              SCHOOL*
+            </Typography>
+
+            <Controller
+              name="school"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  select
+                  fullWidth
+                  label="Select School"
+                  {...field}
+                  error={!!errors.school}
+                  helperText={errors.school?.message}
+                  sx={{ width: "300px", minWidth: "300px" }}
+                  disabled={!watchLocation || filteredSchools.length === 0}
+                >
+                  <MenuItem value="" disabled>
+                    {!watchLocation
+                      ? "Select location first"
+                      : filteredSchools.length === 0
+                        ? "No schools available"
+                        : "Select School"}
+                  </MenuItem>
+
+                  {filteredSchools.map((school) => (
+                    <MenuItem key={school} value={school}>
+                      {school}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Grid>
+
+
+
 
           {/* Lunch Time */}
           <Grid item className="formboxcol" key="lunchTime">

@@ -761,7 +761,7 @@ const verifyOtp = async (req, res) => {
             <p>🎉 Start by selecting your preferred meals:</p>
             <p>🔗 <a href="https://lunchbowl.co.in">lunchbowl.co.in</a></p>
             <p>We’re happy to have you with us!</p>
-            <p>– Team Lunch Bowl</p>
+            <p>Team Lunch Bowl and Earth Tech Concepts Pvt Ltd</p>
           `,
         };
 
@@ -770,6 +770,28 @@ const verifyOtp = async (req, res) => {
           if (err) {
             console.error("Sign-Up Completion Mail Error:", err);
           }
+        });
+
+        // --- SEND EMAIL TO CLIENT (New Mail) ---
+        const clientMailOptions = {
+          from: process.env.EMAIL_USER,
+          to: "contactus@lunchbowl.co.in", // Client email
+          subject: "New Parent Registration – Lunch Bowl",
+          html: `
+        <h3>New Parent Registered</h3>
+
+        <p><strong>Parent Name:</strong> ${firstName} ${lastName}</p>
+        <p><strong>Phone Number:</strong> ${mobile}</p>
+        <p><strong>Email ID:</strong> ${email || "Not provided"}</p>
+
+        <p>This parent has successfully registered using the Lunch Bowl mobile OTP verification system.</p>
+
+        <p>Regards,<br/>Lunch Bowl System Notification</p>
+      `,
+        };
+
+        transporter.sendMail(clientMailOptions, (err) => {
+          if (err) console.error("Client Notification Mail Error:", err);
         });
       }
 

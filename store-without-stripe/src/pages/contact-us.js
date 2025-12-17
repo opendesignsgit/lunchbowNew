@@ -473,9 +473,20 @@ const ContactUs = () => {
                       </div>
                     </div>
                     <div className="relative">
-                      <button disabled={loading} data-variant="flat" className="" type="submit">
+                      <button
+                        disabled={loading}
+                        data-variant="flat"
+                        className=""
+                        type="submit"
+                        style={{
+                          backgroundColor: loading ? '#ccc' : undefined,
+                          opacity: loading ? 0.6 : 1,
+                          cursor: loading ? 'not-allowed' : 'pointer'
+                        }}
+                      >
                         <span>Submit</span>
                       </button>
+
                     </div>
                   </div>
                 </form>
