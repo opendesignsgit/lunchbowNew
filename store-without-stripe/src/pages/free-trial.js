@@ -393,18 +393,21 @@ export default function FreeTrialPage() {
                         helperText={errors.food}
                         sx={{ mt: 1 }}
                       >
-                        <MenuItem value="VEG ALFREDO PASTA - GARLIC BREAD">
-                          VEG ALFREDO PASTA - GARLIC BREAD
+                          <MenuItem value="PANEER SHASHLIK WITH HERBED RICE">
+                            PANEER SHASHLIK WITH HERBED RICE
                         </MenuItem>
                         <MenuItem value="COCONUT RICE – BROWN CHANA PORIYAL">
                           COCONUT RICE – BROWN CHANA PORIYAL
                         </MenuItem>
-                        <MenuItem value="PHULKA – ALOO MUTTER">
-                          JEERA RICE – ALOO MUTTER
+                          <MenuItem value="AGLIO E OLIO PASTA AND GARLIC BREAD">
+                            AGLIO E OLIO PASTA AND GARLIC BREAD
                         </MenuItem>
                         <MenuItem value="Paneer Bao - with Butter garlic Sautte Vegetables">
                           PANEER BAO - WITH BUTTER GARLIC SAUTTE VEGETABLES
                         </MenuItem>
+                          <MenuItem value="DAL KHICHDI AND BABY POTATO FRY">
+                            DAL KHICHDI AND BABY POTATO FRY
+                          </MenuItem>
                         </TextField>
                       {/* Address split into three fields */}
                       <Typography variant="subtitle2" mt={3} className="text-[#FF6514]">
