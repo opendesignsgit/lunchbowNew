@@ -901,41 +901,53 @@ const searchOrders = async (req, res) => {
 
 const userSubscription = async (req, res) => {
   try {
-    // Get pagination values from query params, default to page 1, limit 10
+    // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Get total count for pagination
+    // Total count
     const total = await Form.countDocuments({ step: { $gte: 3 } });
 
-    // Get paginated forms
+    // Fetch forms with lean() to get plain objects
     const forms = await Form.find({ step: { $gte: 3 } })
+      .select('parentDetails subscriptionPlan paymentStatus step') // Select only needed fields
+      .lean() // Convert to plain JavaScript objects
       .skip(skip)
       .limit(limit);
 
-    // Map only the required fields for each subscription
-    const subscriptions = forms.map((form) => ({
-      parentName:
-        (form.parentDetails?.fatherFirstName || "") +
-        " " +
-        (form.parentDetails?.fatherLastName || ""),
-      mobile: form.parentDetails?.mobile || "",
-      email: form.parentDetails?.email || "",
-      subscriptionDate: form.subscriptionPlan?.startDate,
-      planDetails: form.subscriptionPlan || {},
-      paymentStatus: form.paymentStatus,
-      step: form.step,
-    }));
+    // console.log("forms===>", forms);
 
-    res.status(200).json({
+    // Return formatted subscription list
+    const subscriptions = forms.map((form) => {
+      // Convert to object explicitly if needed
+      const latest = form.subscriptionPlan
+        ? JSON.parse(JSON.stringify(form.subscriptionPlan))
+        : {};
+
+      // console.log("latest===>", latest, "form.subscriptionPlan===>", form.subscriptionPlan);
+
+      return {
+        parentName: `${form.parentDetails?.fatherFirstName || ""} ${form.parentDetails?.fatherLastName || ""}`.trim(),
+        mobile: form.parentDetails?.mobile || "",
+        email: form.parentDetails?.email || "",
+        subscriptionDate: latest.startDate || null,
+        planDetails: latest,
+        paymentStatus: form.paymentStatus,
+        step: form.step,
+      };
+    });
+
+    return res.status(200).json({
       subscriptions,
       total,
       page,
       limit,
     });
+
   } catch (err) {
-    res.status(500).send({
+    console.error("Error in userSubscription:", err);
+    return res.status(500).json({
       message: err.message,
     });
   }
@@ -945,66 +957,82 @@ const userSubscription = async (req, res) => {
 // Add this to your controller file (or wherever you keep userSubscription)
 const searchUserSubscriptions = async (req, res) => {
   try {
-    const { fatherName = "", mobile = "", email = "", page = 1, limit = 10 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    // Extract query params
+    const {
+      fatherName = "",
+      mobile = "",
+      email = "",
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
     // Build dynamic filter
     const filter = { step: { $gte: 3 } };
 
-    // We'll filter in-memory for fatherName because it's concatenated from two fields
-    // But for mobile/email, we can filter in Mongo query for efficiency
     if (mobile) {
-      // Partial match (contains), case-insensitive
       filter["parentDetails.mobile"] = { $regex: mobile, $options: "i" };
     }
     if (email) {
       filter["parentDetails.email"] = { $regex: email, $options: "i" };
     }
 
-    // Get all forms matching mobile/email filters
-    let forms = await Form.find(filter).lean();
+    // Fetch forms using lean() & select only required fields
+    let forms = await Form.find(filter)
+      .select("parentDetails subscriptionPlan paymentStatus step")
+      .lean();
 
-    // Filter by father's name (first+last) in-memory for flexibility
-    let subscriptions = forms
-      .filter((form) => {
-        if (!fatherName) return true;
-        const fullName =
-          (form.parentDetails?.fatherFirstName || "") +
-          " " +
-          (form.parentDetails?.fatherLastName || "");
-        return fullName.toLowerCase().includes(fatherName.toLowerCase());
-      })
-      .map((form) => ({
-        parentName:
-          (form.parentDetails?.fatherFirstName || "") +
-          " " +
-          (form.parentDetails?.fatherLastName || ""),
+    // FILTER father first+last name (in-memory only)
+    let filtered = forms.filter((form) => {
+      if (!fatherName) return true;
+      const full = `${form.parentDetails?.fatherFirstName || ""} ${form.parentDetails?.fatherLastName || ""
+        }`.trim();
+
+      return full.toLowerCase().includes(fatherName.toLowerCase());
+    });
+
+    // Total after all filtering
+    const total = filtered.length;
+
+    // PAGINATION (in-memory)
+    const paginated = filtered.slice(skip, skip + limitNum);
+
+    // FORMAT RESULT
+    const subscriptions = paginated.map((form) => {
+      const plan = form.subscriptionPlan
+        ? JSON.parse(JSON.stringify(form.subscriptionPlan))
+        : {};
+
+      return {
+        parentName: `${form.parentDetails?.fatherFirstName || ""} ${form.parentDetails?.fatherLastName || ""
+          }`.trim(),
         mobile: form.parentDetails?.mobile || "",
         email: form.parentDetails?.email || "",
-        subscriptionDate: form.subscriptionPlan?.startDate,
-        planDetails: form.subscriptionPlan || {},
+        subscriptionDate: plan.startDate || null,
+        planDetails: plan,
         paymentStatus: form.paymentStatus,
         step: form.step,
-      }));
+      };
+    });
 
-    // Total after in-memory filtering
-    const total = subscriptions.length;
-
-    // Paginate
-    subscriptions = subscriptions.slice(skip, skip + parseInt(limit));
-
-    res.status(200).json({
+    // SEND RESPONSE
+    return res.status(200).json({
       subscriptions,
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      page: pageNum,
+      limit: limitNum,
     });
   } catch (err) {
-    res.status(500).send({
+    console.error("Error in searchUserSubscriptions:", err);
+    return res.status(500).json({
       message: err.message,
     });
   }
 };
+
 
 module.exports = {
   getAllOrders,
