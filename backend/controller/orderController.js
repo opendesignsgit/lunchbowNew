@@ -825,6 +825,9 @@ const searchOrders = async (req, res) => {
           childEntry.meals.forEach((meal) => {
             if (!meal.mealDate || !meal.mealName) return;
 
+            // ❗ Skip deleted meals
+            if (meal.deleted) return;
+
             // Include only meals from today onwards
             if (new Date(meal.mealDate) >= today) {
               orders.push({
