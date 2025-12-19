@@ -56,7 +56,7 @@ const Customers = () => {
       <PageTitle>{t("CustomersPage")}</PageTitle>
 
       <AnimatedContent>
-        <Card className="min-w-0 shadow-xs overflow-hidden bg-white dark:bg-gray-800 mb-5">
+        {/* <Card className="min-w-0 shadow-xs overflow-hidden bg-white dark:bg-gray-800 mb-5">
           <CardBody>
             <form
               onSubmit={handleSubmitUser}
@@ -75,7 +75,7 @@ const Customers = () => {
               </div>
             </form>
           </CardBody>
-        </Card>
+        </Card> */}
 
         <Card className="min-w-0 shadow-xs overflow-hidden bg-white dark:bg-gray-800 mb-5">
           <CardBody>
