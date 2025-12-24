@@ -12,40 +12,42 @@ import {
   Tab,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import mealPlanData from "../../jsonHelper/Dietitian_meal_plan.json";
 
-const meals = [
-  "Phulka Channa Masala",
-  "Veg Fried Rice – Veg in Black Bean Sauce",
-  "Paneer Bao -Butter and Garlic Saute Vegetables",
-  "Steamed Momos & Hot Garlic Sauce",
-  "Veg Pulav & Raita",
-  "Veg Fried Rice – Veg in Black Bean Sauce",
-  "Paneer Shashlik & Butter Garlic Rice",
-  "Thai Green Curry with Butter Garlic Rice",
-  "Veg Noodles & Veg Manchurian Gravy",
-  "Sambar Rice & Coined Baby Potato Fry",
-  "Veg Biryani – Raita",
-  "Steamy Rice – Dal Makhani",
-  "Paneer Kati Roll – Khatta Meeta Sauce",
-  "Saffron & Nuts Rice with Kadai Veg",
-  "Phulka Aloo Mutter",
-  "Dal Khichidi & Baby Potato Fry",
-  "Veg Noodles & Veg Manchurian Gravy",
-  "Veg Stroganoff with Butter Garlic Rice",
-  "Veg Alfredo Pasta – Garlic Bread",
-  "Coconut Rice & Brown Chana Poriyal",
-  "Veg Kati Roll – Khatta Meeta Sauce",
-  "Veg Fried Rice – Veg in Black Bean Sauce",
-  "Mint Paratha with Kashmiri Kofta",
-  "Veg Pizza",
-  "Jeera Rice with Aloo Mutter",
-  "Phulka Channa Masala",
-  "Phulka Paneer Butter Masala",
-  "Steamed Momos & Hot Garlic Sauce",
-  "Creamy Curd Rice with Potato Roast",
-  "Coconut Pulav with Crispy Peanut & Bhindi Fry",
-  "Lemon Rice & Sliced Potato Fry"
-];
+
+// const meals = [
+//   "Phulka Channa Masala",
+//   "Veg Fried Rice – Veg in Black Bean Sauce",
+//   "Paneer Bao -Butter and Garlic Saute Vegetables",
+//   "Steamed Momos & Hot Garlic Sauce",
+//   "Veg Pulav & Raita",
+//   "Veg Fried Rice – Veg in Black Bean Sauce",
+//   "Paneer Shashlik & Butter Garlic Rice",
+//   "Thai Green Curry with Butter Garlic Rice",
+//   "Veg Noodles & Veg Manchurian Gravy",
+//   "Sambar Rice & Coined Baby Potato Fry",
+//   "Veg Biryani – Raita",
+//   "Steamy Rice – Dal Makhani",
+//   "Paneer Kati Roll – Khatta Meeta Sauce",
+//   "Saffron & Nuts Rice with Kadai Veg",
+//   "Phulka Aloo Mutter",
+//   "Dal Khichidi & Baby Potato Fry",
+//   "Veg Noodles & Veg Manchurian Gravy",
+//   "Veg Stroganoff with Butter Garlic Rice",
+//   "Veg Alfredo Pasta – Garlic Bread",
+//   "Coconut Rice & Brown Chana Poriyal",
+//   "Veg Kati Roll – Khatta Meeta Sauce",
+//   "Veg Fried Rice – Veg in Black Bean Sauce",
+//   "Mint Paratha with Kashmiri Kofta",
+//   "Veg Pizza",
+//   "Jeera Rice with Aloo Mutter",
+//   "Phulka Channa Masala",
+//   "Phulka Paneer Butter Masala",
+//   "Steamed Momos & Hot Garlic Sauce",
+//   "Creamy Curd Rice with Potato Roast",
+//   "Coconut Pulav with Crispy Peanut & Bhindi Fry",
+//   "Lemon Rice & Sliced Potato Fry"
+// ];
 
 
 const MealPlanDialog = ({
@@ -60,14 +62,15 @@ const MealPlanDialog = ({
 
   const mealPlans = {
     1: {
-      name: "Meal Plan ",
-      meals: meals,
+      name: "Meal Plan",
+      meals: mealPlanData.meal_plan
     },
     2: {
       name: "Meal Plan 2",
-      meals: [...meals].reverse(),
-    },
+      meals: [...mealPlanData.meal_plan].reverse()
+    }
   };
+
 
   // const handleTabChange = (event, newValue) => {
   //   setTabValue(newValue);
@@ -82,6 +85,7 @@ const MealPlanDialog = ({
     //const plan = mealPlans[planId];
     const firstCol = plan.meals.slice(0, Math.ceil(plan.meals.length / 2));
     const secondCol = plan.meals.slice(Math.ceil(plan.meals.length / 2));
+
 
     const renderColumn = (data, startIndex) => (
       <Box>
@@ -110,17 +114,16 @@ const MealPlanDialog = ({
               borderBottom="1px solid #f0f0f0"
             >
               <Box width="30%" color="#666">
-                Day {String(dayNumber).padStart(2, "0")}
+                {item.day}
               </Box>
-              {/* <Box width="40%" color="#666">
-                {mealDate}
-              </Box> */}
+
               <Box width="30%" color="#333">
-                {item}
+                {item.meal}
               </Box>
             </Box>
           );
         })}
+
       </Box>
     );
 
