@@ -6,7 +6,7 @@
         },
         {
             "day": "Day 2",
-            "meal": "Veg Fried Rice – Veg in Black Bean Sauce"
+            "meal": "Veg Fried Rice – Dragon Paneer"
         },
         {
             "day": "Day 3",
@@ -22,7 +22,7 @@
         },
         {
             "day": "Day 6",
-            "meal": "Veg Fried Rice – Veg in Black Bean Sauce"
+            "meal": "Veg Fried Rice – Dragon Paneer"
         },
         {
             "day": "Day 7",
@@ -38,7 +38,7 @@
         },
         {
             "day": "Day 10",
-            "meal": "Sambar Rice & Coined Baby Potato Fry"
+            "meal": "Sambar Rice & Color Poriyal"
         },
         {
             "day": "Day 11",
@@ -46,7 +46,7 @@
         },
         {
             "day": "Day 12",
-            "meal": "Steamy Rice – Dal Makhani"
+            "meal": "Jeera Rice – Dal Makhani"
         },
         {
             "day": "Day 13",
@@ -54,7 +54,7 @@
         },
         {
             "day": "Day 14",
-            "meal": "Saffron & Nuts Rice with Kadai Veg"
+            "meal": "Hummus Platter , Pita and Veggies"
         },
         {
             "day": "Day 15",
@@ -82,27 +82,27 @@
         },
         {
             "day": "Day 21",
-            "meal": "Veg Kati Roll – Khatta Meeta Sauce"
+            "meal": "Ghee Rice and Palak Paneer"
         },
         {
             "day": "Day 22",
-            "meal": "Veg Fried Rice – Veg in Black Bean Sauce"
+            "meal": "Veg Fried Rice – Dragon Paneer"
         },
         {
             "day": "Day 23",
-            "meal": "Mint Paratha with Kashmiri Kofta"
+            "meal": "Paneer Pulav & Chatpata Raita"
         },
         {
             "day": "Day 24",
-            "meal": "Veg Pizza"
+            "meal": "Veg Wheat Pizza"
         },
         {
             "day": "Day 25",
-            "meal": "Jeera Rice with Aloo Mutter"
+            "meal": "Jeera Rice with Yellow Dal Tadka"
         },
         {
             "day": "Day 26",
-            "meal": "Phulka Channa Masala"
+            "meal": "Phulka Paneer Butter Masala"
         },
         {
             "day": "Day 27",
@@ -122,7 +122,7 @@
         },
         {
             "day": "Day 31",
-            "meal": "Lemon Rice & Sliced Potato Fry"
+            "meal": "Lemon Rice & Crispy Plantain Roast"
         }
     ]
 }
