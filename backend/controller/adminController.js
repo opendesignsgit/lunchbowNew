@@ -719,7 +719,7 @@ const freeTrialEnquiry = async (req, res) => {
       <p><strong>Name:</strong> ${firstName} ${lastName}</p>
       <p><strong>Child Name:</strong> ${childName}</p>
       <p><strong>Email:</strong> ${email}</p>
-      
+      <p><strong>School:</strong> ${schoolName}</p>
       <p><strong>Class:</strong> ${className}</p>
       <p><strong>Address:</strong><br/>${fullAddress.replace(/\n/g, "<br/>")}</p>
       <p><strong>Primary Mobile:</strong> ${mobileNumber}</p>

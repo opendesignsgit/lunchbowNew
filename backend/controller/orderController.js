@@ -829,7 +829,6 @@ const searchOrders = async (req, res) => {
             if (meal.deleted) return;
 
             // Include only meals from today onwards
-            if (new Date(meal.mealDate) >= today) {
               orders.push({
                 userId,
                 planId: plan.planId,
@@ -844,7 +843,6 @@ const searchOrders = async (req, res) => {
                 childClass: childDetails?.childClass || "",
                 section: childDetails?.section || "",
               });
-            }
           });
         });
       });
