@@ -75,6 +75,7 @@ export default function FreeTrialPage() {
     userId: session?.user?.id || "",
     class: "",
     childName: "",
+    school: "",
   });
 
   const [submitted, setSubmitted] = useState(false);
@@ -97,6 +98,7 @@ export default function FreeTrialPage() {
       userId: session?.user?.id || "",
       class: "",
       childName: "",
+      school: "",
     });
     setErrors({});
     setSubmitted(false);
@@ -122,6 +124,11 @@ export default function FreeTrialPage() {
       newErrors.email = "Valid email is required";
 
     if (!formData.class) newErrors.class = "Class is required";
+
+    if (!formData.school) {
+      newErrors.school = "School selection is required";
+    }
+
 
     if (!formData.food) newErrors.food = "Please select a dish";
 
@@ -161,6 +168,7 @@ export default function FreeTrialPage() {
       altMobileNumber: formData.altMobile,
       address: addressCombined,
       className: formData.class,
+      schoolName: formData.school,
       childName: formData.childName,
       message: `Dish: ${formData.food}\n${formData.message}`,
       userId: formData.userId,
@@ -379,6 +387,27 @@ export default function FreeTrialPage() {
                           <MenuItem key={cls} value={cls}>{cls}</MenuItem>
                         ))}
                         </TextField>
+
+                        {/* School */}
+                        <Typography variant="subtitle2" mt={2} className="text-[#FF6514]">
+                          SELECT SCHOOL*
+                        </Typography>
+
+                        <TextField
+                          select
+                          fullWidth
+                          value={formData.school}
+                          onChange={handleChange("school")}
+                          size="small"
+                          error={!!errors.school}
+                          helperText={errors.school}
+                          sx={{ mt: 1 }}
+                        >
+                          <MenuItem value="">Select School</MenuItem>
+                          {renderSchoolOptions()}
+                        </TextField>
+
+
                       {/* Food */}
                       <Typography variant="subtitle2" mt={3} className="text-[#FF6514]">
                         SELECT YOUR PREFERRED FOOD*
