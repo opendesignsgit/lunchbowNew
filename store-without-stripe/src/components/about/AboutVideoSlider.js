@@ -8,7 +8,7 @@ const AboutVideoSlider = () => {
   const [playingIndex, setPlayingIndex] = useState(null);
 
   const videoList = [
-    { id: "video1", url: "/video/lunchbowl.mp4" },
+    { id: "video1", url: "/video/lunchbowl2.mp4" },
   ];
   const settings = {
     dots: true,
