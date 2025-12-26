@@ -225,7 +225,7 @@ const Home = () => {
                 <div className='hbanRight relative'>  
                   <div className="w-full h-screen bg-black videoscreenbox">
                     <video className="absolute w-full object-cover" autoPlay muted loop playsInline poster="/lunchbowl-poster.jpg">
-                      <source src="/video/lunchbowl.mp4" type="video/mp4" />
+                  <source src="/video/lunchbowl2.mp4" type="video/mp4" />
                       Your browser does not support the video tag.
                     </video>
                   </div>
