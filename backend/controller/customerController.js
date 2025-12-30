@@ -422,8 +422,18 @@ const getAllCustomers = async (req, res) => {
 const getCustomerById = async (req, res) => {
   try {
     const user = await Customer.findById(req.params.id);
-    const form = await Form.findOne({ user: req.params.id });
+
+    const form = await Form.findOne({ user: req.params.id })
+      .populate({
+        path: "subscriptions",          // Populate subscriptions
+        populate: {
+          path: "children",             // Populate children inside each subscription
+          model: "Child",
+        },
+      });
+
     const customer = { user, form };
+
     res.send(customer);
   } catch (err) {
     res.status(500).send({
@@ -431,6 +441,7 @@ const getCustomerById = async (req, res) => {
     });
   }
 };
+
 
 // Shipping address create or update
 const addShippingAddress = async (req, res) => {

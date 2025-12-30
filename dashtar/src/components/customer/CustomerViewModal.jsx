@@ -149,79 +149,56 @@ const CustomerViewModal = ({ open, onClose, id }) => {
               </div>
             )}
 
-            {/* Subscription Plan - Only if form and subscriptionPlan exist */}
-            {customer.form?.subscriptionPlan && (
-              <div className="border-b border-gray-700 pb-6">
-                <h2 className="text-2xl font-bold text-white mb-6">
-                  Subscription Plan
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 break-words">
-                  <div>
-                    {renderField(
-                      "Plan ID",
-                      customer.form.subscriptionPlan.planId
-                    )}
-                    {renderField(
-                      "Start Date",
-                      formatDate(customer.form.subscriptionPlan.startDate)
-                    )}
-                  </div>
-                  <div>
-                    {renderField(
-                      "End Date",
-                      formatDate(customer.form.subscriptionPlan.endDate)
-                    )}
-                    {renderField(
-                      "Working Days",
-                      customer.form.subscriptionPlan.workingDays
-                    )}
-                  </div>
-                  <div>
-                    {renderField(
-                      "Price",
-                      customer.form.subscriptionPlan.price &&
-                        `₹${customer.form.subscriptionPlan.price.toLocaleString()}`
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+              {customer.form?.subscriptions && customer.form.subscriptions.length > 0 && (
+                <div className="border-b border-gray-700 pb-6">
+                  <h2 className="text-2xl font-bold text-white mb-6">
+                    Subscriptions ({customer.form.subscriptions.length})
+                  </h2>
 
-            {/* Children - Only if form and children exist */}
-            {customer.form?.children && customer.form.children.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-6">
-                  Children ({customer.form.children.length})
-                </h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {customer.form.children.map((child, index) => (
-                    <div
-                      key={child._id}
-                      className="bg-gray-700 p-6 rounded-lg break-words"
-                    >
-                      <h3 className="font-bold text-xl text-white mb-4">
-                        {index + 1}. {child.childFirstName}{" "}
-                        {child.childLastName}
-                      </h3>
-                      <div className="space-y-2">
-                        {renderField("Date of Birth", formatDate(child.dob))}
-                        {renderField("Lunch Time", formatTime(child.lunchTime))}
-                        {renderField("Allergies", child.allergies || "None")}
-                        {renderField("School", child.school)}
-                        {renderField("Location", child.location)}
-                        {renderField(
-                          "Class",
-                          child.childClass &&
-                            `${child.childClass}${
-                              child.section ? ` - Section ${child.section}` : ""
-                            }`
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                  <div className="space-y-6">
+                    {customer.form.subscriptions.map((sub, index) => (
+                      <div key={sub._id} className="bg-gray-700 p-5 rounded-lg">
+                        <h3 className="text-xl font-bold text-white mb-4">
+                          Subscription {index + 1}
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {renderField("Plan ID", sub.planId)}
+                          {renderField("Status", sub.status)}
+                          {renderField("Price", `₹${sub.price}`)}
+                          {renderField("Start Date", formatDate(sub.startDate))}
+                          {renderField("End Date", formatDate(sub.endDate))}
+                          {renderField("Working Days", sub.workingDays)}
+                        </div>
+
+          {/* Children inside the Subscription */}
+          {sub.children?.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-lg font-semibold text-white">
+                Children ({sub.children.length})
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                {sub.children.map((child, cIndex) => (
+                  <div key={child._id} className="p-4 bg-gray-600 rounded">
+                    <p className="font-bold mb-2">
+                      {cIndex + 1}. {child.childFirstName} {child.childLastName}
+                    </p>
+                    {renderField("DOB", formatDate(child.dob))}
+                    {renderField("School", child.school)}
+                    {renderField("Location", child.location)}
+                    {renderField("Lunch Time", child.lunchTime)}
+                    {renderField("Class", `${child.childClass} - ${child.section}`)}
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      ))}
+                  </div>
+                </div>
+              )}
+
           </div>
         ) : (
           <div className="text-center py-8">No customer data found.</div>
