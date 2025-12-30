@@ -195,11 +195,11 @@ const SubscriptionTable = () => {
                     <TableCell>Father Name</TableCell>
                     <TableCell>Mobile</TableCell>
                     <TableCell>Email</TableCell>
-                    <TableCell>Plan</TableCell>
+                      <TableCell>Working Days</TableCell>
                     <TableCell>Start Date</TableCell>
                     <TableCell>End Date</TableCell>
-                    <TableCell>Amount</TableCell>
-                    <TableCell>Payment Status</TableCell>
+                      {/* <TableCell>Amount</TableCell> */}
+                      {/* <TableCell>Payment Status</TableCell> */}
                   </tr>
                 </TableHeader>
                 <TableBody>
@@ -209,7 +209,7 @@ const SubscriptionTable = () => {
                       <TableCell>{sub.parentName}</TableCell>
                       <TableCell>{sub.mobile}</TableCell>
                       <TableCell>{sub.email}</TableCell>
-                      <TableCell>{sub.planDetails?.planId || ""}</TableCell>
+                      <TableCell>{sub.planDetails?.workingDays || ""}</TableCell>
                       <TableCell>
                         {sub.planDetails?.startDate
                           ? new Date(
@@ -224,16 +224,16 @@ const SubscriptionTable = () => {
                             ).toLocaleDateString()
                           : ""}
                       </TableCell>
-                      <TableCell>
+                      {/* <TableCell>
                         {sub.planDetails?.price
                           ? `₹${sub.planDetails.price}`
                           : ""}
-                      </TableCell>
-                      <TableCell>
+                      </TableCell> */}
+                      {/* <TableCell>
                         {sub.paymentStatus === true && "Paid"}
                         {sub.paymentStatus === false && "Pending"}
                         {typeof sub.paymentStatus !== "boolean" && ""}
-                      </TableCell>
+                      </TableCell> */}
                     </TableRow>
                   ))}
                 </TableBody>
