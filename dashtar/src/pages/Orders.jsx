@@ -98,6 +98,18 @@ const Orders = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+
+  // Format date as "DD MMM YYYY" (e.g., 10 Nov 2025)
+  const formatDateDMY = (date) => {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+
   // Search handler
   const handleSearch = (e) => {
     e.preventDefault();
@@ -121,9 +133,7 @@ const Orders = () => {
     // Dish Summary Section
     let dishSummarySection = "";
     if (date && dishSummary.length > 0) {
-      dishSummarySection += `Dish Summary for ${new Date(
-        date
-      ).toLocaleDateString()}\n`;
+      dishSummarySection += `Dish Summary for ${formatDateDMY(date)}\n`;
       dishSummarySection += ["Dish", "Count"].join(",") + "\n";
       dishSummary.forEach((item) => {
         dishSummarySection +=
@@ -152,7 +162,7 @@ const Orders = () => {
         order.childClass + " - " + order.section,
         order.school,
         order.location,
-        order.date ? new Date(order.date).toLocaleDateString() : "",
+        order.date ? `\t${formatDateDMY(order.date)}` : "",
         order.food,
       ]
         .map((field) => `"${String(field).replace(/"/g, '""')}"`)
@@ -163,7 +173,11 @@ const Orders = () => {
     const csvContent = dishSummarySection + [headers, ...rows].join("\n");
 
     // Create download link
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(
+      ["\uFEFF" + csvContent],
+      { type: "text/csv;charset=utf-8;" }
+    );
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -246,7 +260,7 @@ const Orders = () => {
                   {item.count}
                 </span>
                 <span className="text-xs text-emerald-700 mt-1">
-                  {date ? `on ${new Date(date).toLocaleDateString()}` : ""}
+                  {date ? `on ${formatDateDMY(date)}` : ""}
                 </span>
               </CardBody>
             </Card>
@@ -286,7 +300,7 @@ const Orders = () => {
                       <TableCell>{order.location}</TableCell>
                       <TableCell>
                         {order.date
-                          ? new Date(order.date).toLocaleDateString()
+                          ? formatDateDMY(order.date)
                           : ""}
                       </TableCell>
                       <TableCell>{order.food}</TableCell>

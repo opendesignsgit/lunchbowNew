@@ -423,7 +423,7 @@ export default function FreeTrialPage() {
                         sx={{ mt: 1 }}
                       >
                           <MenuItem value="PANEER SHASHLIK WITH HERBED RICE">
-                            PANEER SHASHLIK WITH HERBED RICE
+                            PANEER SHASHLIK WITH HERB RICE
                         </MenuItem>
                         <MenuItem value="COCONUT RICE – BROWN CHANA PORIYAL">
                           COCONUT RICE – BROWN CHANA PORIYAL
