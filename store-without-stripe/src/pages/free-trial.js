@@ -422,7 +422,7 @@ export default function FreeTrialPage() {
                         helperText={errors.food}
                         sx={{ mt: 1 }}
                       >
-                          <MenuItem value="PANEER SHASHLIK WITH HERBED RICE">
+                          <MenuItem value="PANEER SHASHLIK WITH HERB RICE">
                             PANEER SHASHLIK WITH HERB RICE
                         </MenuItem>
                         <MenuItem value="COCONUT RICE – BROWN CHANA PORIYAL">
