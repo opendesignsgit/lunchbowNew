@@ -1,6 +1,8 @@
 const Order = require("../models/Order");
 const UserMeal = require("../models/UserMeal");
 const Form = require("../models/Form");
+const Subscription = require("../models/subscriptionModel");
+
 const Child = require("../models/childModel");
 
 const getAllOrders = async (req, res) => {
@@ -902,55 +904,107 @@ const searchOrders = async (req, res) => {
 
 const userSubscription = async (req, res) => {
   try {
-    // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Total count
-    const total = await Form.countDocuments({ step: { $gte: 3 } });
+    // 1️⃣ Fetch ACTIVE subscriptions
+    const total = await Subscription.countDocuments({ status: "active" });
 
-    // Fetch forms with lean() to get plain objects
-    const forms = await Form.find({ step: { $gte: 3 } })
-      .select('parentDetails subscriptionPlan paymentStatus step') // Select only needed fields
-      .lean() // Convert to plain JavaScript objects
+    const subscriptions = await Subscription.find({ status: "active" })
+      .populate("children")
+      .populate("user") // may be ObjectId OR populated object
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
-    // console.log("forms===>", forms);
+    // 2️⃣ Extract userIds safely
+    const userIds = subscriptions
+      .map(sub => {
+        if (!sub.user) return null;
+        return typeof sub.user === "object"
+          ? sub.user._id
+          : sub.user;
+      })
+      .filter(Boolean);
 
-    // Return formatted subscription list
-    const subscriptions = forms.map((form) => {
-      // Convert to object explicitly if needed
-      const latest = form.subscriptionPlan
-        ? JSON.parse(JSON.stringify(form.subscriptionPlan))
-        : {};
+    // 3️⃣ Fetch Forms
+    const forms = await Form.find({ user: { $in: userIds } })
+      .select("user parentDetails paymentStatus step")
+      .lean();
 
-      // console.log("latest===>", latest, "form.subscriptionPlan===>", form.subscriptionPlan);
-
-      return {
-        parentName: `${form.parentDetails?.fatherFirstName || ""} ${form.parentDetails?.fatherLastName || ""}`.trim(),
-        mobile: form.parentDetails?.mobile || "",
-        email: form.parentDetails?.email || "",
-        subscriptionDate: latest.startDate || null,
-        planDetails: latest,
-        paymentStatus: form.paymentStatus,
-        step: form.step,
-      };
+    // 4️⃣ Build lookup map
+    const formMap = {};
+    forms.forEach(form => {
+      formMap[form.user.toString()] = form;
     });
 
+    // 5️⃣ Final response
+    const result = subscriptions
+      .map(sub => {
+        if (!sub.user) return null;
+
+        const userId =
+          typeof sub.user === "object"
+            ? sub.user._id.toString()
+            : sub.user.toString();
+
+        const form = formMap[userId];
+        if (!form) return null; // no form → skip safely
+
+        return {
+          parentDetails: {
+            name: `${form.parentDetails?.fatherFirstName || ""} ${form.parentDetails?.fatherLastName || ""}`.trim(),
+            mobile: form.parentDetails?.mobile || "",
+            email: form.parentDetails?.email || "",
+            address: form.parentDetails?.address || "",
+            city: form.parentDetails?.city || "",
+            state: form.parentDetails?.state || "",
+            country: form.parentDetails?.country || "India",
+            pincode: form.parentDetails?.pincode || "",
+          },
+
+          subscriptionDetails: {
+            planId: sub.planId,
+            startDate: sub.startDate,
+            endDate: sub.endDate,
+            workingDays: sub.workingDays,
+            price: sub.price,
+            status: sub.status,
+            paymentAmount: sub.paymentAmount || null,
+            paymentDate: sub.paymentDate || null,
+            paymentMethod: sub.paymentMethod,
+            transactionId: sub.transactionId || null,
+          },
+
+          children: (sub.children || []).map(child => ({
+            childId: child._id,
+            name: `${child.childFirstName} ${child.childLastName}`,
+            dob: child.dob,
+            lunchTime: child.lunchTime,
+            school: child.school,
+            location: child.location,
+            class: child.childClass,
+            section: child.section,
+            allergies: child.allergies || "",
+          })),
+
+          paymentStatus: form.paymentStatus || "",
+          step: form.step || null,
+        };
+      })
+      .filter(Boolean); // 🔥 remove null entries safely
+
     return res.status(200).json({
-      subscriptions,
       total,
       page,
       limit,
+      subscriptions: result,
     });
 
-  } catch (err) {
-    console.error("Error in userSubscription:", err);
-    return res.status(500).json({
-      message: err.message,
-    });
+  } catch (error) {
+    console.error("Error in userSubscription:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -958,7 +1012,6 @@ const userSubscription = async (req, res) => {
 // Add this to your controller file (or wherever you keep userSubscription)
 const searchUserSubscriptions = async (req, res) => {
   try {
-    // Extract query params
     const {
       fatherName = "",
       mobile = "",
@@ -971,66 +1024,123 @@ const searchUserSubscriptions = async (req, res) => {
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    // Build dynamic filter
-    const filter = { step: { $gte: 3 } };
-
-    if (mobile) {
-      filter["parentDetails.mobile"] = { $regex: mobile, $options: "i" };
-    }
-    if (email) {
-      filter["parentDetails.email"] = { $regex: email, $options: "i" };
-    }
-
-    // Fetch forms using lean() & select only required fields
-    let forms = await Form.find(filter)
-      .select("parentDetails subscriptionPlan paymentStatus step")
+    // 1️⃣ Fetch ACTIVE subscriptions
+    const subscriptions = await Subscription.find({ status: "active" })
+      .populate("children")
+      .populate("user") // may be ObjectId or populated
       .lean();
 
-    // FILTER father first+last name (in-memory only)
-    let filtered = forms.filter((form) => {
-      if (!fatherName) return true;
-      const full = `${form.parentDetails?.fatherFirstName || ""} ${form.parentDetails?.fatherLastName || ""
+    // 2️⃣ Extract userIds safely
+    const userIds = subscriptions
+      .map((sub) => {
+        if (!sub.user) return null;
+        return typeof sub.user === "object" ? sub.user._id : sub.user;
+      })
+      .filter(Boolean);
+
+    // 3️⃣ Build Form filter
+    const formFilter = {
+      user: { $in: userIds },
+    };
+
+    if (mobile) {
+      formFilter["parentDetails.mobile"] = { $regex: mobile, $options: "i" };
+    }
+
+    if (email) {
+      formFilter["parentDetails.email"] = { $regex: email, $options: "i" };
+    }
+
+    // 4️⃣ Fetch Forms
+    let forms = await Form.find(formFilter)
+      .select("user parentDetails paymentStatus step")
+      .lean();
+
+    // 5️⃣ Father name filter (full name → in-memory)
+    if (fatherName) {
+      const search = fatherName.toLowerCase();
+      forms = forms.filter((form) => {
+        const fullName = `${form.parentDetails?.fatherFirstName || ""} ${form.parentDetails?.fatherLastName || ""
         }`.trim();
+        return fullName.toLowerCase().includes(search);
+      });
+    }
 
-      return full.toLowerCase().includes(fatherName.toLowerCase());
+    // 6️⃣ Create form lookup map
+    const formMap = {};
+    forms.forEach((form) => {
+      formMap[form.user.toString()] = form;
     });
 
-    // Total after all filtering
-    const total = filtered.length;
+    // 7️⃣ Merge Subscription + Form + Child
+    const merged = subscriptions
+      .map((sub) => {
+        if (!sub.user) return null;
 
-    // PAGINATION (in-memory)
-    const paginated = filtered.slice(skip, skip + limitNum);
+        const userId =
+          typeof sub.user === "object"
+            ? sub.user._id.toString()
+            : sub.user.toString();
 
-    // FORMAT RESULT
-    const subscriptions = paginated.map((form) => {
-      const plan = form.subscriptionPlan
-        ? JSON.parse(JSON.stringify(form.subscriptionPlan))
-        : {};
+        const form = formMap[userId];
+        if (!form) return null;
 
-      return {
-        parentName: `${form.parentDetails?.fatherFirstName || ""} ${form.parentDetails?.fatherLastName || ""
-          }`.trim(),
-        mobile: form.parentDetails?.mobile || "",
-        email: form.parentDetails?.email || "",
-        subscriptionDate: plan.startDate || null,
-        planDetails: plan,
-        paymentStatus: form.paymentStatus,
-        step: form.step,
-      };
-    });
+        return {
+          parentDetails: {
+            name: `${form.parentDetails?.fatherFirstName || ""} ${form.parentDetails?.fatherLastName || ""
+              }`.trim(),
+            mobile: form.parentDetails?.mobile || "",
+            email: form.parentDetails?.email || "",
+            address: form.parentDetails?.address || "",
+            city: form.parentDetails?.city || "",
+            state: form.parentDetails?.state || "",
+            country: form.parentDetails?.country || "India",
+            pincode: form.parentDetails?.pincode || "",
+          },
 
-    // SEND RESPONSE
+          subscriptionDetails: {
+            planId: sub.planId,
+            startDate: sub.startDate,
+            endDate: sub.endDate,
+            workingDays: sub.workingDays,
+            price: sub.price,
+            status: sub.status,
+            paymentAmount: sub.paymentAmount || null,
+            paymentDate: sub.paymentDate || null,
+            paymentMethod: sub.paymentMethod,
+            transactionId: sub.transactionId || null,
+          },
+
+          children: (sub.children || []).map((child) => ({
+            childId: child._id,
+            name: `${child.childFirstName} ${child.childLastName}`,
+            school: child.school,
+            class: child.childClass,
+            section: child.section,
+            lunchTime: child.lunchTime,
+            allergies: child.allergies || "",
+          })),
+
+          paymentStatus: form.paymentStatus || "",
+          step: form.step || null,
+        };
+      })
+      .filter(Boolean);
+
+    // 8️⃣ Pagination (after filtering)
+    const total = merged.length;
+    const paginated = merged.slice(skip, skip + limitNum);
+
     return res.status(200).json({
-      subscriptions,
+      subscriptions: paginated,
       total,
       page: pageNum,
       limit: limitNum,
     });
-  } catch (err) {
-    console.error("Error in searchUserSubscriptions:", err);
-    return res.status(500).json({
-      message: err.message,
-    });
+
+  } catch (error) {
+    console.error("Error in searchUserSubscriptions:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
 

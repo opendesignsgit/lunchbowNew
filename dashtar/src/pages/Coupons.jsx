@@ -94,6 +94,16 @@ const SubscriptionTable = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  const formatDate = (date) => {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(1);
@@ -191,52 +201,65 @@ const SubscriptionTable = () => {
               <Table>
                 <TableHeader>
                   <tr>
-                    <TableCell>#</TableCell>
+                      {/* <TableCell>#</TableCell> */}
                     <TableCell>Father Name</TableCell>
                     <TableCell>Mobile</TableCell>
-                    <TableCell>Email</TableCell>
-                      <TableCell>Working Days</TableCell>
+                      <TableCell>Email</TableCell>
                     <TableCell>Start Date</TableCell>
                     <TableCell>End Date</TableCell>
+                      <TableCell>Working Days</TableCell>
+
                       {/* <TableCell>Amount</TableCell> */}
                       {/* <TableCell>Payment Status</TableCell> */}
                   </tr>
                 </TableHeader>
                 <TableBody>
-                  {subscriptions.map((sub, idx) => (
-                    <TableRow key={sub._id || idx}>
-                      <TableCell>{(page - 1) * PAGE_SIZE + idx + 1}</TableCell>
-                      <TableCell>{sub.parentName}</TableCell>
-                      <TableCell>{sub.mobile}</TableCell>
-                      <TableCell>{sub.email}</TableCell>
-                      <TableCell>{sub.planDetails?.workingDays || ""}</TableCell>
-                      <TableCell>
-                        {sub.planDetails?.startDate
-                          ? new Date(
-                              sub.planDetails.startDate
-                            ).toLocaleDateString()
-                          : ""}
-                      </TableCell>
-                      <TableCell>
-                        {sub.planDetails?.endDate
-                          ? new Date(
-                              sub.planDetails.endDate
-                            ).toLocaleDateString()
-                          : ""}
-                      </TableCell>
-                      {/* <TableCell>
-                        {sub.planDetails?.price
-                          ? `₹${sub.planDetails.price}`
-                          : ""}
-                      </TableCell> */}
-                      {/* <TableCell>
-                        {sub.paymentStatus === true && "Paid"}
-                        {sub.paymentStatus === false && "Pending"}
-                        {typeof sub.paymentStatus !== "boolean" && ""}
-                      </TableCell> */}
-                    </TableRow>
-                  ))}
-                </TableBody>
+                    {subscriptions.map((sub, idx) => (
+                      <TableRow key={idx}>
+                        {/* <TableCell>{(page - 1) * PAGE_SIZE + idx + 1}</TableCell> */}
+
+                        {/* Father Name */}
+                        <TableCell>{sub.parentDetails?.name || ""}</TableCell>
+
+                        {/* Mobile */}
+                        <TableCell>{sub.parentDetails?.mobile || ""}</TableCell>
+
+                        {/* Email */}
+                        <TableCell>{sub.parentDetails?.email || ""}</TableCell>
+
+
+
+                        {/* Start Date */}
+                        <TableCell>
+                          {sub.subscriptionDetails?.startDate
+                            ? formatDate(sub.subscriptionDetails?.startDate)
+                            : ""}
+                        </TableCell>
+
+                        {/* End Date */}
+                        <TableCell>
+                          {sub.subscriptionDetails?.endDate
+                            ? formatDate(sub.subscriptionDetails?.endDate)
+                            : ""}
+                        </TableCell>
+
+                        {/* Working Days */}
+                        <TableCell>
+                          {sub.subscriptionDetails?.workingDays || ""}
+                        </TableCell>
+
+                        {/* Optional: Price */}
+                        {/*
+      <TableCell>
+        {sub.subscriptionDetails?.price
+          ? `₹${sub.subscriptionDetails.price}`
+          : ""}
+      </TableCell>
+      */}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+
               </Table>
             </TableContainer>
           )}
