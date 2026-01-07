@@ -908,10 +908,18 @@ const userSubscription = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // 1️⃣ Fetch ACTIVE subscriptions
-    const total = await Subscription.countDocuments({ status: "active" });
+    const today = new Date();
 
-    const subscriptions = await Subscription.find({ status: "active" })
+    const activeValidFilter = {
+      status: "active",
+      endDate: { $gte: today },
+    };
+
+
+    // 1️⃣ Fetch ACTIVE subscriptions
+    const total = await Subscription.countDocuments(activeValidFilter);
+
+    const subscriptions = await Subscription.find(activeValidFilter)
       .populate("children")
       .populate("user") // may be ObjectId OR populated object
       .skip(skip)
@@ -1028,8 +1036,16 @@ const searchUserSubscriptions = async (req, res) => {
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
+    const today = new Date();
+
+    const activeValidFilter = {
+      status: "active",
+      endDate: { $gte: today }, // 🔥 exclude expired subscriptions
+    };
+
+
     // 1️⃣ Fetch ACTIVE subscriptions
-    const subscriptions = await Subscription.find({ status: "active" })
+    const subscriptions = await Subscription.find(activeValidFilter)
       .populate("children")
       .populate("user") // may be ObjectId or populated
       .lean();
