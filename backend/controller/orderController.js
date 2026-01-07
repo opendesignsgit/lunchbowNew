@@ -929,9 +929,13 @@ const userSubscription = async (req, res) => {
       .filter(Boolean);
 
     // 3️⃣ Fetch Forms
-    const forms = await Form.find({ user: { $in: userIds } })
+    const forms = await Form.find({
+      user: { $in: userIds },
+      step: 4, // ✅ ONLY step 4 users
+    })
       .select("user parentDetails paymentStatus step")
       .lean();
+
 
     // 4️⃣ Build lookup map
     const formMap = {};
@@ -1041,6 +1045,7 @@ const searchUserSubscriptions = async (req, res) => {
     // 3️⃣ Build Form filter
     const formFilter = {
       user: { $in: userIds },
+      step: 4, // 🔥 IMPORTANT
     };
 
     if (mobile) {

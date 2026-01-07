@@ -77,22 +77,22 @@ const SubscriptionTable = () => {
 
   // Initial load (no filters)
   useEffect(() => {
-    fetchSubscriptions(1, "", "", "");
     setLastFilters({ fatherName: "", mobile: "", email: "" });
-    setPage(1);
+    setPage(1); // 🔥 pagination effect will handle fetch
   }, []);
+
 
   // When page changes, use last used filters
   useEffect(() => {
-    if (page === 1) return;
     fetchSubscriptions(
       page,
       lastFilters.fatherName,
       lastFilters.mobile,
       lastFilters.email
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, lastFilters]);
+
+
 
   const formatDate = (date) => {
     if (!date) return "";
@@ -106,14 +106,10 @@ const SubscriptionTable = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    setPage(1);
-    setLastFilters({
-      fatherName,
-      mobile,
-      email,
-    });
-    fetchSubscriptions(1, fatherName, mobile, email);
+    setLastFilters({ fatherName, mobile, email });
+    setPage(1); // 🔥 triggers API call automatically
   };
+
 
   const handleReset = () => {
     setFatherName("");
@@ -122,12 +118,14 @@ const SubscriptionTable = () => {
     if (fatherNameRef.current) fatherNameRef.current.value = "";
     if (mobileRef.current) mobileRef.current.value = "";
     if (emailRef.current) emailRef.current.value = "";
-    setPage(1);
+
     setLastFilters({ fatherName: "", mobile: "", email: "" });
-    fetchSubscriptions(1, "", "", "");
+    setPage(1); // 🔥 pagination effect will refetch
   };
 
-  const pageCount = Math.ceil((total || 0) / PAGE_SIZE);
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;

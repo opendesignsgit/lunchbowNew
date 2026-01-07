@@ -107,19 +107,15 @@ const CustomerViewModal = ({ open, onClose, id }) => {
                       <>
                         {renderField(
                           "Father",
-                          `${
-                            customer.form.parentDetails.fatherFirstName || ""
-                          } ${
-                            customer.form.parentDetails.fatherLastName || ""
-                          }`.trim() || null
+                          `${customer.form.parentDetails.fatherFirstName || ""
+                            } ${customer.form.parentDetails.fatherLastName || ""
+                            }`.trim() || null
                         )}
                         {renderField(
                           "Mother",
-                          `${
-                            customer.form.parentDetails.motherFirstName || ""
-                          } ${
-                            customer.form.parentDetails.motherLastName || ""
-                          }`.trim() || null
+                          `${customer.form.parentDetails.motherFirstName || ""
+                            } ${customer.form.parentDetails.motherLastName || ""
+                            }`.trim() || null
                         )}
                       </>
                     )}
@@ -149,7 +145,7 @@ const CustomerViewModal = ({ open, onClose, id }) => {
               </div>
             )}
 
-              {customer.form?.subscriptions && customer.form.subscriptions.length > 0 && (
+              {customer.form?.step === 4 && customer.form?.subscriptions && customer.form.subscriptions.length > 0 && (
                 <div className="border-b border-gray-700 pb-6">
                   <h2 className="text-2xl font-bold text-white mb-6">
                     Subscriptions ({customer.form.subscriptions.length})
@@ -162,39 +158,39 @@ const CustomerViewModal = ({ open, onClose, id }) => {
                           Subscription {index + 1}
                         </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          {renderField("Plan ID", sub.planId)}
-                          {renderField("Status", sub.status)}
-                          {renderField("Price", `₹${sub.price}`)}
-                          {renderField("Start Date", formatDate(sub.startDate))}
-                          {renderField("End Date", formatDate(sub.endDate))}
-                          {renderField("Working Days", sub.workingDays)}
-                        </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {renderField("Plan ID", sub.planId)}
+                        {renderField("Status", sub.status)}
+                        {renderField("Price", `₹${sub.price}`)}
+                        {renderField("Start Date", formatDate(sub.startDate))}
+                        {renderField("End Date", formatDate(sub.endDate))}
+                        {renderField("Working Days", sub.workingDays)}
+                      </div>
 
-          {/* Children inside the Subscription */}
-          {sub.children?.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-lg font-semibold text-white">
-                Children ({sub.children.length})
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                {sub.children.map((child, cIndex) => (
-                  <div key={child._id} className="p-4 bg-gray-600 rounded">
-                    <p className="font-bold mb-2">
-                      {cIndex + 1}. {child.childFirstName} {child.childLastName}
-                    </p>
-                    {renderField("DOB", formatDate(child.dob))}
-                    {renderField("School", child.school)}
-                    {renderField("Location", child.location)}
-                    {renderField("Lunch Time", child.lunchTime)}
-                    {renderField("Class", `${child.childClass} - ${child.section}`)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
+                      {/* Children inside the Subscription */}
+                      {sub.children?.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="text-lg font-semibold text-white">
+                            Children ({sub.children.length})
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                            {sub.children.map((child, cIndex) => (
+                              <div key={child._id} className="p-4 bg-gray-600 rounded">
+                                <p className="font-bold mb-2">
+                                  {cIndex + 1}. {child.childFirstName} {child.childLastName}
+                                </p>
+                                {renderField("DOB", formatDate(child.dob))}
+                                {renderField("School", child.school)}
+                                {renderField("Location", child.location)}
+                                {renderField("Lunch Time", child.lunchTime)}
+                                {renderField("Class", `${child.childClass} - ${child.section}`)}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                   </div>
                 </div>
               )}
