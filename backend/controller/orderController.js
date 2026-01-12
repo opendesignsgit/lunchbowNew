@@ -5,6 +5,8 @@ const Subscription = require("../models/subscriptionModel");
 
 const Child = require("../models/childModel");
 
+const UserPayment = require("../models/Payment");
+
 const getAllOrders = async (req, res) => {
   const {
     day,
@@ -910,11 +912,20 @@ const userSubscription = async (req, res) => {
 
     const today = new Date();
 
+    const paidUsers = await UserPayment.find(
+      {
+        "payments.order_status": "Success"
+      },
+      { user: 1 }
+    ).lean();
+
+    const paidUserIds = paidUsers.map(p => p.user);
+
+
     const activeValidFilter = {
       status: { $in: ["active", "upcoming"] },
       endDate: { $gte: today },
-
-      transactionId: { $exists: true, $ne: "" },
+      user: { $in: paidUserIds }
     };
 
 
@@ -1040,10 +1051,19 @@ const searchUserSubscriptions = async (req, res) => {
 
     const today = new Date();
 
+    const paidUsers = await UserPayment.find(
+      {
+        "payments.order_status": "Success"
+      },
+      { user: 1 }
+    ).lean();
+
+    const paidUserIds = paidUsers.map(p => p.user);
+
     const activeValidFilter = {
       status: { $in: ["active", "upcoming"] },
       endDate: { $gte: today }, // 🔥 exclude expired subscriptions
-      transactionId: { $exists: true, $ne: "" },
+      user: { $in: paidUserIds }
     };
 
 
