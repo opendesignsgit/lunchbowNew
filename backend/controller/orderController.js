@@ -911,8 +911,10 @@ const userSubscription = async (req, res) => {
     const today = new Date();
 
     const activeValidFilter = {
-      status: "active",
+      status: { $in: ["active", "upcoming"] },
       endDate: { $gte: today },
+
+      transactionId: { $exists: true, $ne: "" },
     };
 
 
@@ -1039,8 +1041,9 @@ const searchUserSubscriptions = async (req, res) => {
     const today = new Date();
 
     const activeValidFilter = {
-      status: "active",
+      status: { $in: ["active", "upcoming"] },
       endDate: { $gte: today }, // 🔥 exclude expired subscriptions
+      transactionId: { $exists: true, $ne: "" },
     };
 
 
