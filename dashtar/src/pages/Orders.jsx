@@ -14,7 +14,7 @@ import {
 import PageTitle from "@/components/Typography/PageTitle";
 import OrderServices from "@/services/OrderServices";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 50;
 
 // Helper to get today's date in yyyy-mm-dd format
 const getTodayString = () => {
@@ -93,7 +93,6 @@ const Orders = () => {
 
   // When page changes (after initial load), keep current filters
   useEffect(() => {
-    if (page === 1) return;
     fetchOrders(page, childName, date);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
