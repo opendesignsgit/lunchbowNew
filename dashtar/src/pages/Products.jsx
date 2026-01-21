@@ -219,12 +219,12 @@ const Products = () => {
             />
           </Table>
           <TableFooter>
-            <Pagination
+                {/* <Pagination
               totalResults={data?.totalDoc}
               resultsPerPage={limitData}
               onChange={handleChangePage}
               label="Product Page Navigation"
-            />
+            /> */}
           </TableFooter>
         </TableContainer>
       ) : (
