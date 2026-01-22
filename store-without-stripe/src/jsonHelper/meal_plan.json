@@ -4,7 +4,7 @@
       "day": "Day 1",
       "meals": [
         "Phulka Channa Masala",
-        "Veg Alfredo Pasta – Garlic Bread",
+        "Veg Wheat Alfredo Pasta – Garlic Bread",
         "Veg Noodles & Veg Manchurian Gravy",
         "Creamy Curd Rice with Potato Roast",
         "Phulka Paneer Butter Masala"
@@ -14,7 +14,7 @@
       "day": "Day 2",
       "meals": [
         "Pav Bhaji",
-        "Arrabbiata Pasta – Garlic Bread",
+        "Wheat arrabiata Pasta – Garlic Bread",
         "Veg Fried Rice – Dragon Paneer",
         "Sambar Rice & Color Poriyal",
         "Veg Biryani – Raita"
@@ -24,7 +24,7 @@
       "day": "Day 3",
       "meals": [
         "Methi Aloo Paratha – Chatpata Raita",
-        "Aglio e Olio Cheesy Garlic Bread",
+        "Wheat Aglio e Olio Cheesy Garlic Bread",
         "Paneer Bao - with Butter garlic Saute Vegetables",
         "Lemon Rice & Crispy Plantain Roast",
         "Jeera Rice – Dal Makhani"
@@ -34,8 +34,8 @@
       "day": "Day 4",
       "meals": [
         "Ghee Rice and Palak Paneer",
-        "Spaghetti with Pink Sauce Pasta & Garlic Bread",
-        "Steamed Momos & Hot Garlic Sauce",
+        "Wheat Spaghetti with Pink Sauce Pasta & Garlic Bread",
+        "Vietnamese rice sheet paneer Momos & Hot Garlic Sauce",
         "Coconut Rice & Brown Chana Poriyal",
         "Paneer Kati Roll – Khatta Meeta Sauce"
       ]
@@ -75,7 +75,7 @@
       "meals": [
         "Jeera Rice with Yellow Dal Tadka",
         "Thai Green Curry with Butter Garlic Rice",
-        "Steamed Momos & Hot Garlic Sauce",
+        "Vietnamese rice sheet paneer Momos & Hot Garlic Sauce",
         "Coconut Rice & Brown Chana Poriyal",
         "Paneer Pulav & Chatpata Raita"
       ]
@@ -94,7 +94,7 @@
       "day": "Day 10",
       "meals": [
         "Phulka Paneer Butter Masala",
-        "Veg Alfredo Pasta – Garlic Bread",
+        "Veg Wheat Alfredo Pasta – Garlic Bread",
         "Veg Fried Rice – Dragon Paneer",
         "Sambar Rice & Color Poriyal",
         "Pav Bhaji"
@@ -104,7 +104,7 @@
       "day": "Day 11",
       "meals": [
         "Veg Biryani – Raita",
-        "Arrabbiata Pasta – Garlic Bread",
+        "Wheat arrabiata Pasta – Garlic Bread",
         "Paneer Bao & Butter Garlic Veg",
         "Lemon Rice & Crispy Plantain Roast",
         "Methi Aloo Paratha – Chatpata Raita"
@@ -114,8 +114,8 @@
       "day": "Day 12",
       "meals": [
         "Jeera Rice – Dal Makhani",
-        "Aglio e Olio Cheesy Garlic Bread",
-        "Steamed Momos & Hot Garlic Sauce",
+        "Wheat Aglio e Olio Cheesy Garlic Bread",
+        "Vietnamese rice sheet paneer Momos & Hot Garlic Sauce",
         "Coconut Rice & Brown Chana Poriyal",
         "Ghee Rice and Palak Paneer"
       ]
@@ -124,7 +124,7 @@
       "day": "Day 13",
       "meals": [
         "Paneer Kati Roll – Khatta Meeta Sauce",
-        "Spaghetti with Pink Sauce Pasta & Garlic Bread",
+        "Wheat Spaghetti with Pink Sauce Pasta & Garlic Bread",
         "Veg Noodles & Veg Manchurian Gravy",
         "Creamy Curd Rice with Potato Roast",
         "Coconut Pulav with Crispy Peanut & Bhindi Fry"
@@ -155,7 +155,7 @@
       "meals": [
         "Dal Khichidi & Baby Potato Fry",
         "Paneer Shashlik & Herb Rice",
-        "Steamed Momos & Hot Garlic Sauce",
+        "Vietnamese rice sheet paneer Momos & Hot Garlic Sauce",
         "Coconut Rice & Brown Chana Poriyal",
         "Jeera Rice with Yellow Dal Tadka"
       ]
@@ -184,7 +184,7 @@
       "day": "Day 19",
       "meals": [
         "Pav Bhaji",
-        "Veg Alfredo Pasta – Garlic Bread",
+        "Veg Wheat Alfredo Pasta – Garlic Bread",
         "Paneer Bao & Butter Garlic Veg",
         "Lemon Rice & Crispy Plantain Roast",
         "Veg Biryani – Raita"
@@ -194,8 +194,8 @@
       "day": "Day 20",
       "meals": [
         "Methi Aloo Paratha – Chatpata Raita",
-        "Arrabbiata Pasta – Garlic Bread",
-        "Steamed Momos & Hot Garlic Sauce",
+        "Wheat arrabiata Pasta – Garlic Bread",
+        "Vietnamese rice sheet paneer Momos & Hot Garlic Sauce",
         "Coconut Rice & Brown Chana Poriyal",
         "Jeera Rice – Dal Makhani"
       ]
@@ -204,7 +204,7 @@
       "day": "Day 21",
       "meals": [
         "Ghee Rice and Palak Paneer",
-        "Aglio e Olio Cheesy Garlic Bread",
+        "Wheat Aglio e Olio Cheesy Garlic Bread",
         "Veg Noodles & Veg Manchurian Gravy",
         "Creamy Curd Rice with Potato Roast",
         "Paneer Kati Roll – Khatta Meeta Sauce"
@@ -214,7 +214,7 @@
       "day": "Day 22",
       "meals": [
         "Coconut Pulav with Crispy Peanut & Bhindi Fry",
-        "Spaghetti with Pink Sauce Pasta & Garlic Bread",
+        "Wheat Spaghetti with Pink Sauce Pasta & Garlic Bread",
         "Veg Fried Rice – Dragon Paneer",
         "Sambar Rice & Color Poriyal",
         "Veg Pulav & Raita"
@@ -235,7 +235,7 @@
       "meals": [
         "Phulka Aloo Mutter",
         "Veg Wheat Pizza",
-        "Steamed Momos & Hot Garlic Sauce",
+        "Vietnamese rice sheet paneer Momos & Hot Garlic Sauce",
         "Coconut Rice & Brown Chana Poriyal",
         "Dal Khichidi & Baby Potato Fry"
       ]
@@ -274,8 +274,8 @@
       "day": "Day 28",
       "meals": [
         "Veg Biryani – Raita",
-        "Veg Alfredo Pasta – Garlic Bread",
-        "Steamed Momos & Hot Garlic Sauce",
+        "Veg Wheat Alfredo Pasta – Garlic Bread",
+        "Vietnamese rice sheet paneer Momos & Hot Garlic Sauce",
         "Coconut Rice & Brown Chana Poriyal",
         "Methi Aloo Paratha – Chatpata Raita"
       ]
@@ -284,7 +284,7 @@
       "day": "Day 29",
       "meals": [
         "Jeera Rice – Dal Makhani",
-        "Arrabbiata Pasta – Garlic Bread",
+        "Wheat arrabiata Pasta – Garlic Bread",
         "Veg Noodles & Veg Manchurian Gravy",
         "Creamy Curd Rice with Potato Roast",
         "Ghee Rice and Palak Paneer"
@@ -294,7 +294,7 @@
       "day": "Day 30",
       "meals": [
         "Paneer Kati Roll – Khatta Meeta Sauce",
-        "Aglio e Olio Cheesy Garlic Bread",
+        "Wheat Aglio e Olio Cheesy Garlic Bread",
         "Veg Fried Rice – Dragon Paneer",
         "Sambar Rice & Color Poriyal",
         "Coconut Pulav with Crispy Peanut & Bhindi Fry"
@@ -304,7 +304,7 @@
       "day": "Day 31",
       "meals": [
         "Veg Pulav & Raita",
-        "Spaghetti with Pink Sauce Pasta & Garlic Bread",
+        "Wheat Spaghetti with Pink Sauce Pasta & Garlic Bread",
         "Paneer Bao & Butter Garlic Veg",
         "Lemon Rice & Crispy Plantain Roast",
         "Hummus Platter , Pita and Veggies"
