@@ -225,40 +225,28 @@ const SubscriptionPlanStep = ({
     });
   };
 
+  useEffect(() => {
+    setSelectedPlan("");
+    setStartDate(null);
+    setEndDate(null);
+    setCustomStartDates({});
+    setAgreed(false);
+    setSelectedChildren([]);
+  }, []);
+
+
 
   useEffect(() => {
-   if (!holidays.length) return;
+    if (!holidays.length) return;
 
-   const computedPlans = calculatePlans(holidays, numberOfChildren, customStartDates);
-   setPlans(computedPlans);
+    const computedPlans = calculatePlans(
+      holidays,
+      numberOfChildren,
+      customStartDates
+    );
+    setPlans(computedPlans);
+  }, [holidays, numberOfChildren, customStartDates]);
 
-   if (initialSubscriptionPlan?.planId) {
-     const planId = initialSubscriptionPlan.planId.toString();
-
-    // Load plan
-    setSelectedPlan(planId);
-
-    // Load children
-    if (initialSubscriptionPlan.children?.length > 0) {
-      setSelectedChildren(initialSubscriptionPlan.children);
-    }
-
-    // Load start and end dates (convert to dayjs)
-    const start = initialSubscriptionPlan.startDate ? dayjs(initialSubscriptionPlan.startDate) : null;
-    const end = initialSubscriptionPlan.endDate ? dayjs(initialSubscriptionPlan.endDate) : null;
-
-    setStartDate(start);
-    setEndDate(end);
-
-    // For standard plans → override default start date
-    if (planId !== "byDate" && start) {
-      setCustomStartDates(prev => ({
-        ...prev,
-        [parseInt(planId)]: start
-      }));
-    }
-  }
- }, [holidays, numberOfChildren, initialSubscriptionPlan]);
 
 
 
