@@ -951,34 +951,24 @@ const stepFormRegister = async (req, res) => {
       const form = await Form.findOne({ user: _id }).populate("subscriptions").exec();
 
       // Look for active subscription with same planId
-      const existingSubscription = form.subscriptions.find(
-        (sub) =>
-          sub.status === "active" && sub.planId.toString() === payload.selectedPlan.toString()
-      );
+      const existingSubscription = await Subscription.findOne({
+        user: _id,
+        status: { $in: ["active", "pending_payment"] }
+      });
+
 
       if (existingSubscription) {
-        // Update existing subscription with new fields
+        existingSubscription.planId = payload.selectedPlan;
         existingSubscription.startDate = payload.startDate;
         existingSubscription.endDate = payload.endDate;
         existingSubscription.workingDays = payload.workingDays;
         existingSubscription.price = payload.totalPrice;
-        existingSubscription.children = payload.children.map((id) => mongoose.Types.ObjectId(id));
+        existingSubscription.children = payload.children.map(id =>
+          mongoose.Types.ObjectId(id)
+        );
 
         await existingSubscription.save();
       } else {
-        // Deactivate current active subscriptions before adding new one
-        const activeSubscriptionIds = form.subscriptions
-          .filter((sub) => sub.status === "active")
-          .map((sub) => sub._id);
-
-        if (activeSubscriptionIds.length > 0) {
-          await Subscription.updateMany(
-            { _id: { $in: activeSubscriptionIds }, status: "active" },
-            { $set: { status: "deactivated" } }
-          );
-        }
-
-        // Create new subscription
         const subscription = new Subscription({
           user: _id,
           planId: payload.selectedPlan,
@@ -987,16 +977,19 @@ const stepFormRegister = async (req, res) => {
           workingDays: payload.workingDays,
           price: payload.totalPrice,
           status: "active",
-          children: payload.children.map((id) => mongoose.Types.ObjectId(id)),
+          children: payload.children.map(id =>
+            mongoose.Types.ObjectId(id)
+          ),
         });
+
         await subscription.save();
 
-        // Push new subscription reference to form
         await Form.updateOne(
           { user: _id },
           { $push: { subscriptions: subscription._id }, $set: { step } }
         );
       }
+
 
       // Return updated form with populated subscriptions and children
       const updatedForm = await Form.findOne({ user: _id })
