@@ -1,18 +1,18 @@
 import { useEffect } from 'react';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
-import messaging from '@react-native-firebase/messaging';
+import { getMessaging, getToken, requestPermission, onMessage, AuthorizationStatus } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 
 const useFirebaseNotifications = () => {
     useEffect(() => {
         const requestUserPermission = async () => {
-            const authStatus = await messaging().requestPermission();
+            const authStatus = await requestPermission(getMessaging());
             const enabled =
-                authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-                authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+                authStatus === AuthorizationStatus.AUTHORIZED ||
+                authStatus === AuthorizationStatus.PROVISIONAL;
 
             if (enabled) {
-                const token = await messaging().getToken();
+                const token = await getToken(getMessaging());
                 console.log(' FCM Token:', token);
             } else {
                 Alert.alert('Push notifications permission denied');
@@ -29,7 +29,7 @@ const useFirebaseNotifications = () => {
             }
         };
 
-        const foregroundListener = messaging().onMessage(async remoteMessage => {
+        const foregroundListener = onMessage(getMessaging(), async remoteMessage => {
             console.log('📩 Foreground FCM:', remoteMessage);
 
             await notifee.displayNotification({

@@ -27,7 +27,7 @@ if (loading || currentStep === null) {
 // Route to renewal if subscription is expired, registration if incomplete, else plan view
 const initialScreen =
   currentStep < 4 ? 'Registartion' :
-  isSubscriptionExpired ? 'RenewSubscription' : 'MyPlan';
+  isSubscriptionExpired ? 'RenewSubscription' : 'PlanCalendar';
 
   return (
     <MenuProvider>
@@ -48,7 +48,7 @@ const initialScreen =
                   options={{headerShown: false}}
                 />
                 <Stack.Screen
-                  name="MyPlan"
+                  name="PlanCalendar"
                   component={MyPlanScreen}
                   options={{headerShown: false}}
                 />

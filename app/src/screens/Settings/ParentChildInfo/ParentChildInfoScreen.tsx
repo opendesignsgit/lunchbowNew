@@ -36,7 +36,7 @@ export default function ParentChildInfoScreen({ navigation }: any) {
                 {parent.fatherFirstName} {parent.fatherLastName}
                 {parent.motherFirstName ? ` & ${parent.motherFirstName} ${parent.motherLastName}` : ''}
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Registartion')}>
+              <TouchableOpacity onPress={() => navigation.navigate('MyPlan', {screen: 'Registartion'})}>
                 <Edit size={20} color={Colors.primaryOrange} />
               </TouchableOpacity>
             </View>
@@ -69,7 +69,7 @@ export default function ParentChildInfoScreen({ navigation }: any) {
                 <Text style={styles.childName}>
                   {child.childFirstName} {child.childLastName}
                 </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Registartion')}>
+                <TouchableOpacity onPress={() => navigation.navigate('MyPlan', {screen: 'Registartion'})}>
                   <Edit size={20} color={Colors.primaryOrange} />
                 </TouchableOpacity>
               </View>
@@ -101,7 +101,7 @@ export default function ParentChildInfoScreen({ navigation }: any) {
         {/* Add Child Button */}
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate('Registartion')}>
+          onPress={() => navigation.navigate('MyPlan', {screen: 'Registartion'})}>
           <Plus size={20} color={Colors.white} />
           <Typography style={styles.addButtonText}>Add / Edit Children</Typography>
         </TouchableOpacity>

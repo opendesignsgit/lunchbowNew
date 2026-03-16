@@ -39,7 +39,7 @@ export default function PaymentWebView({navigation}: any) {
         onShouldStartLoadWithRequest={request => {
           if (request.url.includes('ccavenue/response')) {
             console.log('✅ Payment completed.');
-            navigation.replace('MyPlan');
+            navigation.replace('PlanCalendar');
             return false;
           }
 
