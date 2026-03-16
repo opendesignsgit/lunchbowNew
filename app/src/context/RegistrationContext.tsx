@@ -38,8 +38,18 @@ export const RegistrationProvider = ({ children }: any) => {
       setCurrentStep(fetchedStep);
       await AsyncStorage.setItem('@registrationStep', String(fetchedStep));
 
-      // Persist subscription end date for expiry check
-      const endDate = res?.data?.subscriptionPlan?.endDate || null;
+      // Persist subscription end date for expiry check.
+      // The API returns subscriptions as an array; fall back to subscriptionPlan for
+      // older/alternative response shapes.
+      const subscriptions: any[] = res?.data?.subscriptions || [];
+      const activeSub =
+        subscriptions.find((s: any) => s.status === 'active') ||
+        subscriptions[subscriptions.length - 1] ||
+        null;
+      const endDate: string | null =
+        activeSub?.endDate ||
+        res?.data?.subscriptionPlan?.endDate ||
+        null;
       setSubscriptionEndDate(endDate);
       if (endDate) {
         await AsyncStorage.setItem('@subscriptionEndDate', endDate);
