@@ -12,8 +12,8 @@ class Menus {
   async createMenu(children: any) {
     return await httpAxiosClient.post(this.menuEndpoint, children);
   }
-  async GetChildrends(RequstData?: string) {
-    return await httpAxiosClient.post(this.ChildEndPoint, RequstData);
+  async getChildren(requestData?: string) {
+    return await httpAxiosClient.post(this.ChildEndPoint, requestData);
   }
   async getMenu(menuId: string) {
     return await httpAxiosClient.get(`${this.menuEndpoint}/${menuId}`);

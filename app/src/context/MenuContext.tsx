@@ -35,7 +35,7 @@ export const MenuProvider = ({children}: {children: ReactNode}) => {
 
   const fetchChildren = async (data: RequestData) => {
     try {
-      const response = await MenuService.GetChildrends(data);
+      const response = await MenuService.getChildren(data);
       console.log(
         '📌 Full response:sdfsdfffff========================================================================================',
         response,

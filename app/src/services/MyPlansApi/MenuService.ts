@@ -5,9 +5,9 @@ import { ApiResponseModel } from 'src/model/apiResponseModel';
 class MenuService {
 
   
- static async GetChildrends(RequstData:any): Promise<ApiResponseModel> {
+ static async getChildren(requestData:any): Promise<ApiResponseModel> {
     try {
-      const response = await menuApi.GetChildrends(RequstData);
+      const response = await menuApi.getChildren(requestData);
       return response.data as ApiResponseModel;
     } catch (error: any) {
       return {
