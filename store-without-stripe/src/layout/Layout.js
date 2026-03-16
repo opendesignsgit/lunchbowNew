@@ -9,6 +9,7 @@ import NavBarTop from "./navbar/NavBarTop";
 import FooterTop from "@layout/footer/FooterTop";
 import MobileFooter from "@layout/footer/MobileFooter";
 import FeatureCard from "@components/feature-card/FeatureCard";
+import Link from "next/link";
 
 const Layout = ({ title, description, children }) => {
   return (
@@ -17,11 +18,7 @@ const Layout = ({ title, description, children }) => {
 
       <div className="font-sans">
         <Head>
-          <title>
-            {title
-              ? `Lunchbowl | ${title}`
-              : "Lunchbowl "}
-          </title>
+          <title>{title ? `Lunchbowl | ${title}` : "Lunchbowl "}</title>
           {description && <meta name="description" content={description} />}
           <link ref="icon" href="/favicon.png" />
         </Head>
@@ -39,6 +36,8 @@ const Layout = ({ title, description, children }) => {
             <Footer />
           </div>
         </div>
+
+
       </div>
     </>
   );

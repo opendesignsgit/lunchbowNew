@@ -19,6 +19,7 @@ import { UserProvider } from "@context/UserContext";
 import DefaultSeo from "@components/common/DefaultSeo";
 import { SidebarProvider } from "@context/SidebarContext";
 import SettingServices from "@services/SettingServices";
+import Link from "next/link";
 
 let persistor = persistStore(store);
 
@@ -93,6 +94,8 @@ function MyApp({ Component, pageProps }) {
           </UserProvider>
         </SessionProvider>
       </QueryClientProvider>
+
+
     </>
   );
 }
