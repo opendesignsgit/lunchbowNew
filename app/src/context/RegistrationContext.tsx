@@ -31,7 +31,7 @@ export const RegistrationProvider = ({ children }: any) => {
 
       if (userId) {
         try {
-          const res: any = await RegistrationService.registartionCheck({ _id: userId, path: 'Step-Check' });
+          const res: any = await RegistrationService.registrationCheck({ _id: userId, path: 'Step-Check' });
           const fetchedStep = Number(res?.data?.step);
           setCurrentStep(fetchedStep);
           await AsyncStorage.setItem('@registrationStep', String(fetchedStep));

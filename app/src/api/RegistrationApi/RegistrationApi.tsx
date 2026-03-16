@@ -11,8 +11,8 @@ class RegistrationApi {
     this.registrationEndpoint = '/customer/stepForm-Register';
     this.AllSchoolEndpoint = '/schools/get-all-schools';
     this.startSubs = '/customer/form';
-    this.registrationCheckerEndPoint ='customer/Step-Check';
-    this.getPlanPrice ='customer/get-plan-price'
+    this.registrationCheckerEndPoint = '/customer/Step-Check';
+    this.getPlanPrice = '/customer/get-plan-price'
 
   }
 
@@ -64,7 +64,7 @@ class RegistrationApi {
     );
   }
   
-    async registartionCheck(payloadData: { _id: string; path: string }) {
+    async registrationCheck(payloadData: { _id: string; path: string }) {
     return await httpAxiosClient.post(`${this.registrationCheckerEndPoint}`, payloadData);
   }
 
