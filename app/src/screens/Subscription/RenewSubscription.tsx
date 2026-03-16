@@ -5,12 +5,11 @@ import Typography from 'components/Text/Typography';
 import {useAuth} from 'context/AuthContext';
 import {useRegistration} from 'context/RegistrationContext';
 import React, {useState} from 'react';
-import {Alert, StyleSheet, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import HeaderBackButton from 'screens/Dashboard/Components/BackButton';
 import PaymentOptions from './Components/forms/PaymentOptions';
 import styles from './Components/forms/Styles/styles';
 import SubscriptionPlan from './Components/forms/Subscription';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RenewStep = 1 | 2;
 

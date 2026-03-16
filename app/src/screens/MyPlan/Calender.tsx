@@ -18,7 +18,6 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   Vibration,

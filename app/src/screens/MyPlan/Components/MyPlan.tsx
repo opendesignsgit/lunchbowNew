@@ -3,7 +3,7 @@ import Fonts from 'assets/styles/fonts';
 import PrimaryButton from 'components/buttons/PrimaryButton';
 import Typography from 'components/Text/Typography';
 import React from 'react';
-import {StyleSheet, Text, View, ScrollView} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import {widthPercentageToDP as wp} from 'react-native-responsive-screen';
 
 type PlanCardProps = {
@@ -26,9 +26,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.wrapper}
-      showsVerticalScrollIndicator={false}>
+    <View style={styles.wrapper}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Typography style={styles.planTitle} numberOfLines={1} maxWords={2}>
@@ -54,13 +52,12 @@ const PlanCard: React.FC<PlanCardProps> = ({
           style={{width: '100%'}}
         />
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   wrapper: {
-    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: wp('1%'),

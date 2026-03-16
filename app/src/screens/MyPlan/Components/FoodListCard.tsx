@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {FlatList, StyleSheet, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, TouchableOpacity, View} from 'react-native';
 import {SvgXml} from 'react-native-svg';
 import {Colors} from 'assets/styles/colors';
 import Fonts from 'assets/styles/fonts';
@@ -31,24 +31,6 @@ const FoodListCard: React.FC<Props> = ({childName, meals}) => {
     setModalVisible(true);
   };
 
-  const renderItem = ({item}: {item: Meal}) => (
-    <View style={styles.row}>
-      <Typography style={styles.cell} numberOfLines={1}>
-        {item.date}
-      </Typography>
-      <View style={styles.foodCell}>
-        <Typography style={styles.foodText} numberOfLines={1}>
-          {item.food}
-        </Typography>
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => handleEdit(item)}>
-          <SvgXml xml={EditIcon} width={wp('4%')} height={wp('4%')} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
   return (
     <View style={styles.wrapper}>
       <Typography style={styles.header} numberOfLines={1}>
@@ -57,33 +39,41 @@ const FoodListCard: React.FC<Props> = ({childName, meals}) => {
 
       <View style={styles.table}>
         <View style={styles.row}>
-          <Typography
-            style={[styles.cell, styles.tableHeader]}
-            numberOfLines={1}>
+          <Typography style={[styles.cell, styles.tableHeader]} numberOfLines={1}>
             DATE
           </Typography>
-          <Typography
-            style={[styles.cell, styles.tableHeader]}
-            numberOfLines={1}>
+          <Typography style={[styles.cell, styles.tableHeader]} numberOfLines={1}>
             FOOD LIST
           </Typography>
         </View>
 
-       <FlatList
-          data={meals}
-          keyExtractor={(_, index) => index.toString()}
-          renderItem={renderItem}
-          scrollEnabled={false}
-          ListEmptyComponent={<NoDataMessage message="No food items found." />}
-          ItemSeparatorComponent={() => (
-            <View style={styles.separator} />
-          )}
-        />
+        {meals.length === 0 ? (
+          <NoDataMessage message="No food items found." />
+        ) : (
+          meals.map((item, index) => (
+            <View key={index}>
+              <View style={styles.row}>
+                <Typography style={styles.cell} numberOfLines={1}>
+                  {item.date}
+                </Typography>
+                <View style={styles.foodCell}>
+                  <Typography style={styles.foodText} numberOfLines={1}>
+                    {item.food}
+                  </Typography>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => handleEdit(item)}>
+                    <SvgXml xml={EditIcon} width={wp('4%')} height={wp('4%')} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {index < meals.length - 1 && <View style={styles.separator} />}
+            </View>
+          ))
+        )}
       </View>
 
-      <BottomModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}>
+      <BottomModal visible={modalVisible} onClose={() => setModalVisible(false)}>
         <Typography
           style={{
             fontSize: wp('4.5%'),
@@ -92,9 +82,6 @@ const FoodListCard: React.FC<Props> = ({childName, meals}) => {
           }}>
           Edit Meal
         </Typography>
-        {/* <Typography>Date: {selectedMeal?.date}</Typography>
-        <Typography>Food: {selectedMeal?.food}</Typography> */}
-        {/* Add your input fields or actions here */}
       </BottomModal>
     </View>
   );
@@ -106,7 +93,7 @@ const styles = StyleSheet.create({
     borderRadius: wp('3%'),
     padding: wp('2%'),
     marginVertical: hp('1%'),
-    elevation: 0.50,
+    elevation: 0.5,
   },
   header: {
     fontSize: wp('4.2%'),
@@ -114,11 +101,11 @@ const styles = StyleSheet.create({
     padding: wp('2%'),
     borderRadius: wp('2%'),
     color: Colors.primaryOrange,
-    fontFamily:Fonts.Urbanist.bold
+    fontFamily: Fonts.Urbanist.bold,
   },
   table: {
     marginTop: hp('1%'),
-    padding:('4%')
+    paddingHorizontal: wp('4%'),
   },
   tableHeader: {
     fontFamily: 'Urbanist-Bold',
@@ -153,7 +140,7 @@ const styles = StyleSheet.create({
     fontSize: wp('3.5%'),
     color: Colors.black,
   },
-   separator: {
+  separator: {
     height: 1,
     backgroundColor: Colors.Storke,
     marginVertical: hp('0.5%'),
