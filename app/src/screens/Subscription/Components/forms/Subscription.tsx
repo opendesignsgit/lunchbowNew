@@ -101,6 +101,7 @@ export default function SubscriptionPlan({
   childCount,
   prevStep,
   nextStep,
+  isRenewal,
 }: any) {
   //####################### STATE VARIABLES ######################
 
@@ -253,7 +254,7 @@ export default function SubscriptionPlan({
 
     const payload: any = {
       step: 3,
-      path: 'step-Form-SubscriptionPlan',
+      path: isRenewal ? 'step-Form-Renew-SubscriptionPlan' : 'step-Form-SubscriptionPlan',
       payload: {
         selectedPlan: planId,
         workingDays,

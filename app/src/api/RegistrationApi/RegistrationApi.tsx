@@ -12,7 +12,7 @@ class RegistrationApi {
     this.AllSchoolEndpoint = '/schools/get-all-schools';
     this.startSubs = '/customer/form';
     this.registrationCheckerEndPoint = '/customer/Step-Check';
-    this.getPlanPrice = '/customer/get-plan-price'
+    this.getPlanPrice = '/customer/get-plan-price';
 
   }
 
@@ -23,9 +23,8 @@ class RegistrationApi {
     );
   }
 
-    async getPerDayCost(registrationId:string) {
-   
-      return await httpAxiosClient.get(
+  async getPerDayCost(registrationId: string) {
+    return await httpAxiosClient.get(
       `${this.getPlanPrice}/${registrationId}`,
     );
   }
@@ -85,6 +84,33 @@ class RegistrationApi {
     return await httpAxiosClient.post(`${this.registrationEndpoint}/get-all`, {
       _id: userId,
       path,
+    });
+  }
+
+  async getParentAndChildren(userId: string) {
+    return await httpAxiosClient.get(`${this.startSubs}/${userId}`);
+  }
+
+  async updateParentDetails(payload: {
+    formData: any;
+    _id: string;
+    path: string;
+  }) {
+    return await httpAxiosClient.post(this.registrationEndpoint, payload);
+  }
+
+  async updateChildrenDetails(payload: {
+    formData: any[];
+    _id: string;
+    path: string;
+  }) {
+    return await httpAxiosClient.post(this.registrationEndpoint, payload);
+  }
+
+  async deleteChild(userId: string, childId: string) {
+    return await httpAxiosClient.post('/customer/delete-child', {
+      userId,
+      childId,
     });
   }
 }

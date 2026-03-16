@@ -39,10 +39,10 @@ async getUserData(userId: string) {
   }
 
   async updatePassword(userId: string, passwordData: any) {
-    return await httpAxiosClient.post(
-      `${this.userEndpoint}/update-password/${userId}`,
-      passwordData,
-    );
+    return await httpAxiosClient.post('/customer/change-password', {
+      userId,
+      ...passwordData,
+    });
   }
 
   async updateUserDetails(userId: string, userDetails: Partial<UserInterface>) {

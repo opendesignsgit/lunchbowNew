@@ -9,6 +9,7 @@ import { UserProfileProvider } from 'context/UserDataContext';
 import React from 'react';
 import PaymentWebView from 'screens/PaymentWebView';
 import Registartion from 'screens/Subscription/Registration';
+import RenewSubscription from 'screens/Subscription/RenewSubscription';
 import MyPlanScreen from './Calender';
 import FoodScreen from './FoodScreen';
 import MenuSelectionScreen from './MenuSelection';
@@ -18,12 +19,16 @@ const Stack = createStackNavigator();
 
 const MyPlanNavigator = () => {
   
-const { currentStep, loading } = useRegistration();
+const { currentStep, loading, isSubscriptionExpired } = useRegistration();
 if (loading || currentStep === null) {
   return <LoadingModal loading={true} setLoading={() => {}} />;
 }
 
-const initialScreen = currentStep >= 4 ? 'MyPlan' : 'Registartion';
+// Route to renewal if subscription is expired, registration if incomplete, else plan view
+const initialScreen =
+  currentStep < 4 ? 'Registartion' :
+  isSubscriptionExpired ? 'RenewSubscription' : 'MyPlan';
+
   return (
     <MenuProvider>
       <FoodProvider>
@@ -53,6 +58,11 @@ const initialScreen = currentStep >= 4 ? 'MyPlan' : 'Registartion';
                   options={{headerShown: false}}
                 />
                 <Stack.Screen
+                  name="RenewSubscription"
+                  component={RenewSubscription}
+                  options={{headerShown: false}}
+                />
+                <Stack.Screen
                   name="WebViewScreen"
                   component={PaymentWebView}
                   options={{headerShown: false}}
@@ -68,3 +78,4 @@ const initialScreen = currentStep >= 4 ? 'MyPlan' : 'Registartion';
 };
 
 export default MyPlanNavigator;
+

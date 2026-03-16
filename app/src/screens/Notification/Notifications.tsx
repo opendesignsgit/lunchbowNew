@@ -3,23 +3,14 @@ import Fonts from 'assets/styles/fonts';
 import AnimatedBell from 'components/Animations/AnimatedBell';
 import ThemeGradientBackground from 'components/Backgrounds/GradientBackground';
 import React, { useEffect, useState } from 'react';
-import {
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View
-} from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import {
   heightPercentageToDP as hp,
   widthPercentageToDP as wp,
 } from 'react-native-responsive-screen';
 import { SvgXml } from 'react-native-svg';
 import HeaderBackButton from 'screens/Dashboard/Components/BackButton';
-import {
-  NONotificationBell,
-  NotificationBell
-} from 'styles/svg-icons';
+import { NONotificationBell, NotificationBell } from 'styles/svg-icons';
 
 interface Notification {
   id: string;
@@ -28,31 +19,16 @@ interface Notification {
   time: string;
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    title: 'Notification Lorem ipsum dolor',
-    description: 'Lorem ipsum dolor sit amet consectetur.',
-    time: '10 Hours ago',
-  },
-  {
-    id: '2',
-    title: 'Notification Lorem ipsum dolor',
-    description: 'Lorem ipsum dolor sit amet consectetur.',
-    time: '14 Hours ago',
-  },
-];
-
 export default function NotificationScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const SHOW_NOTIFICATIONS = true;
-
   useEffect(() => {
-    setNotifications(SHOW_NOTIFICATIONS ? MOCK_NOTIFICATIONS : []);
+    // Notifications are delivered via Firebase push.
+    // In-app list is populated when backend provides a notifications endpoint.
+    setNotifications([]);
   }, []);
 
-  const renderNotification = ({item}: {item: Notification}) => (
+  const renderNotification = ({ item }: { item: Notification }) => (
     <View style={styles.notificationCard}>
       <View style={styles.iconCircle}>
         <AnimatedBell xml={NotificationBell} width={40} height={40} />
@@ -71,10 +47,9 @@ export default function NotificationScreen() {
         <SvgXml xml={NONotificationBell} />
       </View>
       <View style={styles.ContentContainer}>
-        <Text style={styles.emptyTitle}>No Notification</Text>
+        <Text style={styles.emptyTitle}>No Notifications</Text>
         <Text style={styles.emptyDescription}>
-          You don’t have any notifications yet. All your alerts will appear
-          here.
+          You don't have any notifications yet. All your alerts will appear here.
         </Text>
       </View>
     </View>
@@ -86,9 +61,9 @@ export default function NotificationScreen() {
         data={notifications}
         renderItem={renderNotification}
         keyExtractor={item => item.id}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: hp('10%')}]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: hp('10%') }]}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={<HeaderBackButton title="Notification" />}
+        ListHeaderComponent={<HeaderBackButton title="Notifications" />}
         ListEmptyComponent={<EmptyState />}
       />
     </ThemeGradientBackground>
@@ -96,10 +71,7 @@ export default function NotificationScreen() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: wp('5%'),
-    paddingTop: hp('2%'),
-  },
+  scrollContent: { paddingHorizontal: wp('5%'), paddingTop: hp('2%') },
   notificationCard: {
     flexDirection: 'row',
     backgroundColor: Colors.white,
@@ -112,61 +84,30 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: '#FFE0B2',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     marginRight: wp('3%'),
   },
-  iconText: {
-    fontSize: hp('2.2%'),
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  ContentContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: hp('2%'),
-  },
-
+  notificationContent: { flex: 1 },
+  ContentContainer: { alignItems: 'center', justifyContent: 'center', marginTop: hp('2%') },
   notificationTitle: {
-    fontSize: hp('2%'),
-    fontFamily: Fonts.Urbanist.bold,
-    color: Colors.black,
-    marginBottom: hp('0.5%'),
+    fontSize: hp('2%'), fontFamily: Fonts.Urbanist.bold,
+    color: Colors.black, marginBottom: hp('0.5%'),
   },
   notificationDescription: {
-    fontSize: hp('1.7%'),
-    fontFamily: Fonts.Urbanist.medium,
-    color: Colors.bodyText,
-    marginBottom: hp('0.5%'),
+    fontSize: hp('1.7%'), fontFamily: Fonts.Urbanist.medium,
+    color: Colors.bodyText, marginBottom: hp('0.5%'),
   },
   notificationTime: {
-    fontSize: hp('1.5%'),
-    fontFamily: Fonts.Urbanist.medium,
-    color: Colors.bodyText,
+    fontSize: hp('1.5%'), fontFamily: Fonts.Urbanist.medium, color: Colors.bodyText,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    marginTop: hp('10%'),
-  },
-  illustration: {
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontSize: hp('2.2%'),
-    fontFamily: Fonts.Urbanist.bold,
-    color: Colors.black,
-  },
+  emptyContainer: { alignItems: 'center', marginTop: hp('10%') },
+  illustration: { alignItems: 'center' },
+  emptyTitle: { fontSize: hp('2.2%'), fontFamily: Fonts.Urbanist.bold, color: Colors.black },
   emptyDescription: {
-    fontSize: hp('1.7%'),
-    fontFamily: Fonts.Urbanist.medium,
-    color: Colors.bodyText,
-    textAlign: 'center',
-    marginTop: hp('1%'),
-    maxWidth: wp('80%'),
+    fontSize: hp('1.7%'), fontFamily: Fonts.Urbanist.medium,
+    color: Colors.bodyText, textAlign: 'center',
+    marginTop: hp('1%'), maxWidth: wp('80%'),
   },
 });

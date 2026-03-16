@@ -2,18 +2,73 @@ import RegistrationApi from 'api/RegistrationApi/RegistrationApi';
 import {ApiResponseModel} from 'src/model/apiResponseModel';
 
 class RegistrationService {
-    static deleteChild(userId: string | null, childId: string) {
-        throw new Error('Method not implemented.');
+  static async getParentAndChildren(userId: string): Promise<ApiResponseModel> {
+    try {
+      const response = await RegistrationApi.getParentAndChildren(userId);
+      return response.data as ApiResponseModel;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Error fetching parent and children info',
+        data: null,
+        error: this.handleApiError(error),
+      };
     }
-    static updateChildren(payload: { formData: { childFirstName: any; childLastName: any; dob: any; lunchTime: any; school: any; location: any; childClass: any; section: any; allergies: any; }[]; _id: string | null; path: string; }) {
-        throw new Error('Method not implemented.');
+  }
+
+  static async updateParent(payload: {
+    formData: any;
+    _id: string | null;
+    path: string;
+  }): Promise<ApiResponseModel> {
+    try {
+      const response = await RegistrationApi.updateParentDetails(payload as any);
+      return response.data as ApiResponseModel;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Error updating parent details',
+        data: null,
+        error: this.handleApiError(error),
+      };
     }
-    static updateParent(payload: { formData: { fatherFirstName: string; fatherLastName: string; motherFirstName: string; motherLastName: string; mobile: string; address: string; }; _id: string | null; path: string; }) {
-        throw new Error('Method not implemented.');
+  }
+
+  static async updateChildren(payload: {
+    formData: any[];
+    _id: string | null;
+    path: string;
+  }): Promise<ApiResponseModel> {
+    try {
+      const response = await RegistrationApi.updateChildrenDetails(payload as any);
+      return response.data as ApiResponseModel;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Error updating children details',
+        data: null,
+        error: this.handleApiError(error),
+      };
     }
-    static getParentAndChildren(userId: string): any {
-        throw new Error('Method not implemented.');
+  }
+
+  static async deleteChild(
+    userId: string | null,
+    childId: string,
+  ): Promise<ApiResponseModel> {
+    try {
+      const response = await RegistrationApi.deleteChild(userId ?? '', childId);
+      return response.data as ApiResponseModel;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Error deleting child',
+        data: null,
+        error: this.handleApiError(error),
+      };
     }
+  }
+
   static async createParentRegistration(
     registrationData: any,
   ): Promise<ApiResponseModel> {
