@@ -19,15 +19,21 @@ const Stack = createStackNavigator();
 
 const MyPlanNavigator = () => {
   
-const { currentStep, loading, isSubscriptionExpired } = useRegistration();
+const { currentStep, loading, isSubscriptionExpired, subscriptionEndDate } = useRegistration();
 if (loading || currentStep === null) {
   return <LoadingModal loading={true} setLoading={() => {}} />;
 }
 
-// Route to renewal if subscription is expired, registration if incomplete, else plan view
+// A user with an active (non-expired) subscription should always go to the plan view,
+// even if the step API returns an incomplete step value.
+const hasActiveSubscription = !!subscriptionEndDate && !isSubscriptionExpired;
+
+// Route to plan view if subscription active, renewal if expired, registration if incomplete
 const initialScreen =
+  hasActiveSubscription ? 'PlanCalendar' :
+  isSubscriptionExpired ? 'RenewSubscription' :
   currentStep < 4 ? 'Registartion' :
-  isSubscriptionExpired ? 'RenewSubscription' : 'PlanCalendar';
+  'PlanCalendar';
 
   return (
     <MenuProvider>

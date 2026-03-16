@@ -41,12 +41,23 @@ export const RegistrationProvider = ({ children }: any) => {
       // Persist subscription end date for expiry check
       const endDate = res?.data?.subscriptionPlan?.endDate || null;
       setSubscriptionEndDate(endDate);
+      if (endDate) {
+        await AsyncStorage.setItem('@subscriptionEndDate', endDate);
+      } else {
+        await AsyncStorage.removeItem('@subscriptionEndDate');
+      }
     } catch (err) {
       console.log('Registration check API failed:', err);
-      // Fall back to cached step if available
-      const cachedStep = await AsyncStorage.getItem('@registrationStep');
+      // Fall back to cached values if available
+      const [cachedStep, cachedEndDate] = await Promise.all([
+        AsyncStorage.getItem('@registrationStep'),
+        AsyncStorage.getItem('@subscriptionEndDate'),
+      ]);
       if (cachedStep) {
         setCurrentStep(Number(cachedStep));
+      }
+      if (cachedEndDate) {
+        setSubscriptionEndDate(cachedEndDate);
       }
     } finally {
       setLoading(false);
@@ -55,13 +66,19 @@ export const RegistrationProvider = ({ children }: any) => {
 
   useEffect(() => {
     const init = async () => {
-      // Use cache for fast first render, then refresh in background
-      const cachedStep = await AsyncStorage.getItem('@registrationStep');
+      // Restore cached state so it is available as fallback if the API fails
+      const [cachedStep, cachedEndDate] = await Promise.all([
+        AsyncStorage.getItem('@registrationStep'),
+        AsyncStorage.getItem('@subscriptionEndDate'),
+      ]);
       if (cachedStep) {
         setCurrentStep(Number(cachedStep));
-        setLoading(false);
       }
-      // Always refresh from API to get latest subscription status
+      if (cachedEndDate) {
+        setSubscriptionEndDate(cachedEndDate);
+      }
+      // Always wait for the API so routing decisions use authoritative data.
+      // loading stays true until fetchRegistrationStatus sets it false in finally.
       await fetchRegistrationStatus();
     };
     init();
