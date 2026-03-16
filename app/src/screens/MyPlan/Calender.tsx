@@ -118,137 +118,143 @@ const MyPlanScreen: React.FC<{navigation: any}> = ({navigation}) => {
   return (
     <ThemeGradientBackground>
       {/* <LoadingModal loading={loading} setLoading={() => {}} /> */}
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.container}>
-          <HeaderBackButton title="My Plan" />
-          {loading ? (
-            <MyPlanSkeleton />
-          ) : subscriptionPlan.length > 0 ? (
-            <>
-              <FlatList
-                data={subscriptionPlan}
-                keyExtractor={item => item.id.toString()}
-                renderItem={({item}) => (
-                  <PlanCard
-                    userName={item.userName}
-                    plan={item.plan}
-                    amount={item.amount}
-                    status={item.status}
-                    expiry={item.expiry}
-                  />
-                )}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onScroll={handleScroll}
-                scrollEventThrottle={16}
-                ref={flatListRef}
-              />
+      <FlatList
+        scrollEnabled={true}
+        showsVerticalScrollIndicator={false}
+        data={[{key: 'content'}]}
+        renderItem={() => (
+          <View style={styles.container}>
+            <HeaderBackButton title="My Plan" />
+            {loading ? (
+              <MyPlanSkeleton />
+            ) : subscriptionPlan.length > 0 ? (
+              <>
+                <FlatList
+                  data={subscriptionPlan}
+                  keyExtractor={item => item.id.toString()}
+                  renderItem={({item}) => (
+                    <PlanCard
+                      userName={item.userName}
+                      plan={item.plan}
+                      amount={item.amount}
+                      status={item.status}
+                      expiry={item.expiry}
+                    />
+                  )}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                  ref={flatListRef}
+                  nestedScrollEnabled={true}
+                />
 
-              <View style={styles.pagination}>
-                {subscriptionPlan.map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.dot,
-                      index === currentIndex && styles.activeDot,
+                <View style={styles.pagination}>
+                  {subscriptionPlan.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.dot,
+                        index === currentIndex && styles.activeDot,
+                      ]}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : (
+              <NoDataFound message="No active subscription found" />
+            )}
+            <ToolTipSectionHeader
+              title="Select your Food Plan"
+              tooltipText="Choose a plan to see your daily meals."
+              icon={questionIcon}
+              onPress={() => setLegendVisible(true)}
+            />
+            <MenueCalendar
+              onDateChange={date =>
+                navigation.navigate('MenuSelection', {selectedDate: date})
+              }
+              holidays={holidays}
+              currentMonth={currentMonth}
+              currentYear={currentYear}
+              onMonthChange={handleMonthChange}
+            />
+            <Modal
+              transparent
+              visible={legendVisible}
+              animationType="fade"
+              onRequestClose={() => setLegendVisible(false)}>
+              <Pressable
+                style={{
+                  flex: 1,
+                  backgroundColor: Colors.black,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: wp('5%'),
+                }}
+                onPress={() => setLegendVisible(false)}>
+                <View
+                  style={{
+                    backgroundColor: Colors.white,
+                    borderRadius: 12,
+                    padding: wp('5%'),
+                    width: '100%',
+                  }}>
+                  <Text style={styles.calendarGuidTittle}>
+                    Calendar Color Guide
+                  </Text>
+
+                  <CalendarLegend
+                    items={[
+                      {color: [Colors.green, Colors.green], label: 'Plan Start'},
+                      {color: [Colors.red, Colors.red], label: 'Plan End'},
+                      {
+                        color: [Colors.lightRed, Colors.lightRed],
+                        label: 'Plan Ongoing',
+                      },
+                      {
+                        color: [Colors.hoiday, Colors.hoiday],
+                        label: 'Holiday / Weekend',
+                      },
+                      {
+                        color: [Colors.lightRed, Colors.lightRed],
+                        label: 'Meal Booked (Editable)',
+                      }, // editable meal same as ongoing
+                      {
+                        color: [Colors.greeFadd, Colors.greeFadd],
+                        label: 'Meal Booked (Locked)',
+                      },
+                      {
+                        color: [Colors.transparent, Colors.transparent],
+                        label: 'Available / No Color',
+                      },
                     ]}
                   />
-                ))}
-              </View>
-            </>
-          ) : (
-            <NoDataFound message="No active subscription found" />
-          )}
-          <ToolTipSectionHeader
-            title="Select your Food Plan"
-            tooltipText="Choose a plan to see your daily meals."
-            icon={questionIcon}
-            onPress={() => setLegendVisible(true)}
-          />
-          <MenueCalendar
-            onDateChange={date =>
-              navigation.navigate('MenuSelection', {selectedDate: date})
-            }
-            holidays={holidays}
-            currentMonth={currentMonth}
-            currentYear={currentYear}
-            onMonthChange={handleMonthChange}
-          />
-          <Modal
-            transparent
-            visible={legendVisible}
-            animationType="fade"
-            onRequestClose={() => setLegendVisible(false)}>
-            <Pressable
-              style={{
-                flex: 1,
-                backgroundColor: Colors.black,
-                justifyContent: 'center',
-                alignItems: 'center',
-                padding: wp('5%'),
-              }}
-              onPress={() => setLegendVisible(false)}>
-              <View
+                </View>
+              </Pressable>
+            </Modal>
+            <OnboardingTip storageKey="MY_PLAN_TIP_SEEN" />
+
+            <SectionTitle>Holidays</SectionTitle>
+            {filteredHolidays.length > 0 ? (
+              <HolidayListCard holidays={filteredHolidays} />
+            ) : (
+              <NoDataFound message="No holidays found" />
+            )}
+            <View style={styles.foodListButton}>
+              <PrimaryButton
+                title="View food list"
+                onPress={onViewFoodList}
                 style={{
-                  backgroundColor: Colors.white,
-                  borderRadius: 12,
-                  padding: wp('5%'),
-                  width: '100%',
-                }}>
-                <Text style={styles.calendarGuidTittle}>
-                  Calendar Color Guide
-                </Text>
-
-                <CalendarLegend
-                  items={[
-                    {color: [Colors.green, Colors.green], label: 'Plan Start'},
-                    {color: [Colors.red, Colors.red], label: 'Plan End'},
-                    {
-                      color: [Colors.lightRed, Colors.lightRed],
-                      label: 'Plan Ongoing',
-                    },
-                    {
-                      color: [Colors.hoiday, Colors.hoiday],
-                      label: 'Holiday / Weekend',
-                    },
-                    {
-                      color: [Colors.lightRed, Colors.lightRed],
-                      label: 'Meal Booked (Editable)',
-                    }, // editable meal same as ongoing
-                    {
-                      color: [Colors.greeFadd, Colors.greeFadd],
-                      label: 'Meal Booked (Locked)',
-                    },
-                    {
-                      color: [Colors.transparent, Colors.transparent],
-                      label: 'Available / No Color',
-                    },
-                  ]}
-                />
-              </View>
-            </Pressable>
-          </Modal>
-          <OnboardingTip storageKey="MY_PLAN_TIP_SEEN" />
-
-          <SectionTitle>Holidays</SectionTitle>
-          {filteredHolidays.length > 0 ? (
-            <HolidayListCard holidays={filteredHolidays} />
-          ) : (
-            <NoDataFound message="No holidays found" />
-          )}
-          <View style={styles.foodListButton}>
-            <PrimaryButton
-              title="View food list"
-              onPress={onViewFoodList}
-              style={{
-                width: wp('90%'),
-              }}
-            />
+                  width: wp('90%'),
+                }}
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
-      <WhatsAppButton />
+        )}
+        ListFooterComponent={<WhatsAppButton />}
+      />
     </ThemeGradientBackground>
   );
 };

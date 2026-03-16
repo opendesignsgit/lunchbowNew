@@ -4,8 +4,8 @@
 
 
 
-export const API_URL = 'https://api.lunchbowl.co.in/api';
-export const IMAGE_BASE_URL = 'https://api.lunchbowl.co.in';
+export const API_URL = 'https://dev-api.lunchbowl.co.in/api';
+export const IMAGE_BASE_URL = 'https://dev-api.lunchbowl.co.in';
 
 // export const API_URL = 'https://dev-api.lunchbowl.co.in/api';
 // export const IMAGE_BASE_URL = 'https://dev-api.lunchbowl.co.in';

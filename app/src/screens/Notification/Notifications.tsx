@@ -82,21 +82,15 @@ export default function NotificationScreen() {
 
   return (
     <ThemeGradientBackground>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        <HeaderBackButton title="Notification" />
-        {notifications.length > 0 ? (
-          <FlatList
-            data={notifications}
-            renderItem={renderNotification}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{paddingBottom: hp('10%')}}
-          />
-        ) : (
-          <EmptyState />
-        )}
-      </ScrollView>
+      <FlatList
+        data={notifications}
+        renderItem={renderNotification}
+        keyExtractor={item => item.id}
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: hp('10%')}]}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={<HeaderBackButton title="Notification" />}
+        ListEmptyComponent={<EmptyState />}
+      />
     </ThemeGradientBackground>
   );
 }
@@ -104,7 +98,7 @@ export default function NotificationScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: wp('5%'),
-    paddingBottom: hp('5%'),
+    paddingTop: hp('2%'),
   },
   notificationCard: {
     flexDirection: 'row',
