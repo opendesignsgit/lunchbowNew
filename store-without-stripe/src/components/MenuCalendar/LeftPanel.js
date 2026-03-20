@@ -211,7 +211,7 @@ const LeftPanel = ({
             const isOutOfRange =
               dayjs(dateKey).isBefore(subscriptionStart.subtract(1, "day")) ||
               dayjs(dateKey).isAfter(subscriptionEnd);
-            const isWithin48Hours = dayjs(dateKey).diff(dayjs(), "hour") < 24;
+            const isLocked = dayjs(dateKey).isSameOrBefore(dayjs(), "day");
 
             // If there's no meal or mealName, skip rendering that row
             if (!dish || !dish.mealName) return null;
@@ -252,7 +252,7 @@ const LeftPanel = ({
                   )}
 
                   {/* Locked label (within 48 hours) */}
-                  {isWithin48Hours && !isOutOfRange && (
+                  {isLocked && !isOutOfRange && (
                     <Typography variant="caption" color="textSecondary" sx={{ ml: 1 }}>
                       Locked
                     </Typography>
@@ -261,7 +261,7 @@ const LeftPanel = ({
                   {!isOutOfRange && (
                     <>
                       {/* Edit: hide when locked or meal is deleted */}
-                      {!isWithin48Hours && !isDeleted && (
+                      {!isLocked && !isDeleted && (
                         <IconButton
                           className="editbtn"
                           size="small"
