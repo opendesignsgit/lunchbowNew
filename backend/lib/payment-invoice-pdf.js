@@ -16,6 +16,13 @@ const M = 50;
 const PAGE_WIDTH = 595; // A4 @ 72 DPI
 const PAGE_HEIGHT = 842; // A4 @ 72 DPI
 
+function trunc(s, maxLen) {
+  if (s === undefined || s === null) return "";
+  const str = String(s);
+  if (str.length <= maxLen) return str;
+  return str.slice(0, maxLen - 3) + "...";
+}
+
 function formatINR(num) {
   const n = Number(num);
   if (isNaN(n)) return "0.00";
@@ -109,7 +116,10 @@ async function generatePaymentInvoicePDF(options) {
     const logoPath = process.env.INVOICE_LOGO_PATH || defaultLogoPath;
     if (fs.existsSync(logoPath)) {
       try {
-        doc.image(logoPath, M, M, { fit: [85, 72], align: "left", valign: "top" });
+        // Keep logo height bounded so it can't push the content past A4.
+        // Use the same sizing intent as the reference invoice (width ~85),
+        // while still bounding height to avoid multi-page overflow.
+        doc.image(logoPath, M, M, { fit: [85, 85], align: "left", valign: "top" });
       } catch (e) {
         console.error("Invoice logo embed failed (PDF still generated):", e.message);
       }
@@ -138,7 +148,7 @@ async function generatePaymentInvoicePDF(options) {
     doc.text(`Contact No: ${COMPANY.contact}`, { align: "right" });
     doc.text(`Email: ${COMPANY.email}`, { align: "right" });
 
-    doc.moveDown(2);
+    doc.moveDown(1.1);
 
     // ================= CUSTOMER + INVOICE =================
     const topY = doc.y;
@@ -148,7 +158,8 @@ async function generatePaymentInvoicePDF(options) {
     doc.font("Helvetica").fontSize(9);
     doc.moveDown(0.5);
     doc.text(customerName || "—");
-    doc.text(customerAddress || "—", { width: 220 });
+    // Long addresses can wrap a lot and push the invoice to page 2.
+    doc.text(trunc(customerAddress || "—", 120), { width: 220 });
     doc.text(`Phone: ${customerPhone || "—"}`);
     doc.text(`Email: ${customerEmail || "—"}`);
 
@@ -163,7 +174,7 @@ async function generatePaymentInvoicePDF(options) {
       doc.text(`Customer ID: ${customerId}`, rightX);
     }
 
-    doc.moveDown(2);
+    doc.moveDown(1.1);
 
     // ================= BLACK BAR =================
     const barY = doc.y;
@@ -174,7 +185,7 @@ async function generatePaymentInvoicePDF(options) {
       .fontSize(10)
       .text("PAYMENT DETAILS", M + 10, barY + 8);
     doc.fillColor("#000");
-    doc.moveDown(2);
+    doc.moveDown(1.0);
 
     // ================= PAYMENT ROWS =================
     const labelX = M;
@@ -188,16 +199,16 @@ async function generatePaymentInvoicePDF(options) {
       ["Delivery Pincode", reasonDetails["Delivery Pincode"]],
     ];
 
-    doc.font("Helvetica").fontSize(9);
+    doc.font("Helvetica").fontSize(8.8);
     rows.forEach(([label, value]) => {
       if (value !== undefined && value !== null && String(value).trim() !== "") {
         doc.text(label, labelX, doc.y);
-        doc.text(String(value), valueX, doc.y, { width: 160 });
-        doc.moveDown(1.0);
+        doc.text(trunc(String(value), 60), valueX, doc.y, { width: 160 });
+        doc.moveDown(0.75);
       }
     });
 
-    doc.moveDown(0.5);
+    doc.moveDown(0.3);
 
     // ================= SUMMARY =================
     const summaryLabelX = PAGE_WIDTH - 200;
@@ -211,7 +222,7 @@ async function generatePaymentInvoicePDF(options) {
       doc.y,
       { width: summaryValueWidth, align: "right" }
     );
-    doc.moveDown(0.6);
+    doc.moveDown(0.35);
 
     doc.text("GST (5%)", summaryLabelX);
     doc.text(
@@ -220,7 +231,7 @@ async function generatePaymentInvoicePDF(options) {
       doc.y,
       { width: summaryValueWidth, align: "right" }
     );
-    doc.moveDown(0.6);
+    doc.moveDown(0.35);
 
     doc.font("Helvetica-Bold").fontSize(11);
     doc.text("Total", summaryLabelX);
@@ -236,7 +247,7 @@ async function generatePaymentInvoicePDF(options) {
     doc.text(
       `You can contact us anytime at ${COMPANY.contact} or ${COMPANY.email}`,
       M,
-      PAGE_HEIGHT - 40,
+      doc.y + 6,
       {
         align: "center",
         width: PAGE_WIDTH - 2 * M,
