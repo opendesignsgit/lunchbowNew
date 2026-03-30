@@ -38,7 +38,7 @@ const TermAndConditions = () => {
                   <span className="block">Terms & Conditions of Use </span>
                 </h3>
                 <p> Lunch Bowl services are operated by Earth Tech Concepts Private Limited, a company <br /> registered under the Companies Act, 2013, having its
-                  registered office at: <br /> <address>1B, KG Natraj Palace, 53/22, Saravana Street, T. Nagar, <br />Chennai – 600017.</address><br /> By accessing or using our website and services, you agree to
+                  registered office at: <br /> <address>Saravana Street, T. Nagar, <br />Chennai – 600017.</address><br /> By accessing or using our website and services, you agree to
                   the following terms and conditions:</p>
               </div>
               <div className="policyintb">

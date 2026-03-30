@@ -449,8 +449,9 @@ const MenuCalendar = () => {
       // ⛔ SKIP: holidays
       if (isHoliday(day, currentMonth, currentYear)) continue;
 
-      // ⛔ SKIP: locked days
-      if (currentDate.diff(now, "hour") < 48) continue;
+      // ⛔ SKIP: only allow applying to future dates
+      // (no past dates, and not today's date)
+      if (!currentDate.isAfter(now, "day")) continue;
 
       // ⛔ SKIP: deleted meals
       const existing = menuSelections[mealDate]?.[childId];

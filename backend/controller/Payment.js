@@ -224,17 +224,17 @@ async function sendPaymentInvoiceEmail({
       from: process.env.EMAIL_USER,
       to,
       ...(bcc ? { bcc } : {}),
-      subject: `Your LunchBowl Pro Invoice – ${invoiceNumber}`,
+      subject: `Your LunchBowl Invoice – ${invoiceNumber}`,
       html: `
         <p>Hi ${customerName || "Customer"},</p>
         <p>Thank you for your payment. Please find your invoice attached as a PDF.</p>
         <p>Invoice #: <strong>${invoiceNumber}</strong></p>
         <p>Amount: ₹${amt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
-        <p>– Team LunchBowl Pro</p>
+        <p>– Team LunchBowl </p>
       `,
       attachments: [
         {
-          filename: `LunchBowl-Pro-Invoice-${invoiceNumber}.pdf`,
+          filename: `LunchBowl-Invoice-${invoiceNumber}.pdf`,
           content: pdfBuffer,
         },
       ],

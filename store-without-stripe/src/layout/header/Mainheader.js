@@ -197,7 +197,7 @@ useEffect(() => {
               {!(apiFreeTrial == true || stepCheck == 4 || freeTrialTaken == true) && (
                 <li className="trialbtn">
                   <button onClick={() => setShowFreeTrialPopup(true)}>
-                    <span>Start Free Trial</span>
+                    <span>Trial @ 99</span>
                   </button>
                 </li>
               )}

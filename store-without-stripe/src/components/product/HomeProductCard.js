@@ -123,10 +123,10 @@ const HomeProductCard = ({ limit }) => {
         {displayedProducts.map((item, index) => (
           <div
             key={item._id || index}
-            className="group progroupitem bg-FFF4D7 basis-sm flex-none relative rounded-[15px] overflow-hidden"
+            className="group progroupitem bg-white basis-sm flex-none relative rounded-[15px] overflow-hidden"
             onClick={() => handleOpenDialog(item)}
           >
-            <div className="proboxfront px-[2vw] py-[5vh] bg-FFF4D7 relative z-50 group-hover:z-0">
+            <div className="proboxfront px-[2vw] py-[5vh] bg-white relative z-50 group-hover:z-0">
               <div className="fontanimi pointer-events-none">
                 <div className="animitext animiOne">
                   <div className="animiintext">
@@ -196,7 +196,7 @@ const HomeProductCard = ({ limit }) => {
               </div>
             </div>
 
-            <div className="proboxBack px-[2vw] py-[3vh] bg-FFF4D7 absolute w-full h-full top-0 left-0 opacity-0 z-0 transition transition-all duration-[1s] ease-in-out group-hover:opacity-100 group-hover:z-50">
+            <div className="proboxBack px-[2vw] py-[3vh] bg-white absolute w-full h-full top-0 left-0 opacity-0 z-0 transition transition-all duration-[1s] ease-in-out group-hover:opacity-100 group-hover:z-50">
               <div className="arrowIcon absolute right-[2vw] top-[5vh] w-[45px] aspect-square bg-white rounded-full p-[12px]">
                 <Image
                   className="w-full h-auto"
@@ -279,10 +279,10 @@ const HomeProductCard = ({ limit }) => {
         {displayedProducts.map((item, index) => (
           <div
             key={item._id || index}
-            className="group progroupitem bg-FFF4D7 basis-sm flex-none relative rounded-[15px] overflow-hidden"
+            className="group progroupitem bg-white basis-sm flex-none relative rounded-[15px] overflow-hidden"
             onClick={() => handleOpenDialog(item)}
           >
-            <div className="proboxfront px-[2vw] py-[5vh] bg-FFF4D7 relative z-50 group-hover:z-0">
+            <div className="proboxfront px-[2vw] py-[5vh] bg-white relative z-50 group-hover:z-0">
               {/* Animation text sections remain the same */}
               <div className="profbboxs">
                 <div className="textcenter proboxtitle mb-[3vh]">
@@ -315,7 +315,7 @@ const HomeProductCard = ({ limit }) => {
               </div>
             </div>
 
-            <div className="proboxBack px-[2vw] py-[3vh] bg-FFF4D7 absolute w-full h-full top-0 left-0 opacity-0 z-0 transition transition-all duration-[1s] ease-in-out group-hover:opacity-100 group-hover:z-50">
+            <div className="proboxBack px-[2vw] py-[3vh] bg-white absolute w-full h-full top-0 left-0 opacity-0 z-0 transition transition-all duration-[1s] ease-in-out group-hover:opacity-100 group-hover:z-50">
               <div className="arrowIcon absolute right-[2vw] top-[5vh] w-[45px] aspect-square bg-white rounded-full p-[12px]">
                 <Image
                   className="w-full h-auto"

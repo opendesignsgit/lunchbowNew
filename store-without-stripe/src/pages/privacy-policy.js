@@ -42,7 +42,7 @@ const PrivacyPolicy = () => {
                   <br /> registered under the Companies Act, 2013, having its
                   registered office at:
                   <br />
-                  1B, KG Natraj Palace, 53/22, Saravana Street, T. Nagar,
+                  Saravana Street, T. Nagar,
                   <br />
                   Chennai – 600017
                   <br />
