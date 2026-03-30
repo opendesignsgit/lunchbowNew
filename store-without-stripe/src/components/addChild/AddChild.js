@@ -79,7 +79,7 @@ const getYesterdayDateString = () => {
 
 // Helper: earliest valid start date = today + 2 days, then next working day
 const getEarliestValidStartDate = (holidays) => {
-  let date = dayjs().add(2, "day");
+  let date = dayjs().add(1, "day");
   while (!isWorkingDay(date, holidays)) {
     date = date.add(1, "day");
   }
