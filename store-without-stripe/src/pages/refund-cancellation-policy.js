@@ -44,7 +44,7 @@ const RefundCancellationPolicy = () => {
                   Private Limited, a company
                   <br /> registered under the Companies Act, 2013, having its
                   registered office at: <br />
-                  1B, KG Natraj Palace, 53/22, Saravana Street, T. Nagar, Chennai – 600017
+                  Saravana Street, T. Nagar, Chennai – 600017
                   <br />
                   <br />
                   This Refund and Cancellation Policy applies to all
@@ -55,8 +55,8 @@ const RefundCancellationPolicy = () => {
                 <h4>1. Cancellations</h4>
                 <ul>
                   <li>
-                    Cancellation requests must be submitted at least forty-eight
-                    (48) hours before the scheduled delivery date.
+                    Cancellation requests must be submitted at least twenty-four
+                    (24) hours before the scheduled delivery date.
                   </li>
                   <li>
                     Cancellations requested after the specified period may not
