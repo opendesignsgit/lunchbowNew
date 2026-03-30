@@ -11,9 +11,37 @@ const UserMeal = require("../models/UserMeal");
 const Child = require("../models/childModel");
 // const Form = require("../models/Form");
 const Subscription = require("../models/subscriptionModel");
+const {
+  generatePaymentInvoicePDF,
+  buildInvoiceNumber,
+} = require("../lib/payment-invoice-pdf");
 
 const workingKey =
   process.env.CCAV_WORKING_KEY || "2A561B005709D8B4BAF69D049B23546B"; // Use env vars in production
+
+/** Receives a copy of every payment invoice PDF (override via env). */
+const INVOICE_COPY_EMAIL =
+  process.env.INVOICE_COPY_EMAIL || "csivarex.odi@gmail.com";
+
+function isValidInvoiceEmail(s) {
+  return typeof s === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+}
+
+/** Safe for logs (never log full passwords). */
+function maskEmailForLog(email) {
+  if (!email || typeof email !== "string") return "(none)";
+  const t = email.trim();
+  const at = t.indexOf("@");
+  if (at < 1) return "(invalid)";
+  return `${t.slice(0, 2)}***${t.slice(at)}`;
+}
+
+function logInvoiceDebug(source, payload) {
+  console.log(`[Invoice] DEBUG ${source}`, {
+    ts: new Date().toISOString(),
+    ...payload,
+  });
+}
 
 // Helper function to process payment response and save payment data
 async function processPaymentResponse(responseData, paymentType, paidFor = null) {
@@ -84,6 +112,162 @@ async function processPaymentResponse(responseData, paymentType, paidFor = null)
   return { order_status, merchant_param1, order_id, tracking_id };
 }
 
+/**
+ * Sends a payment invoice PDF email to the customer (and a copy to INVOICE_COPY_EMAIL).
+ * Does not throw; logs failures. Requires EMAIL_USER + EMAIL_PASS (Gmail app password).
+ */
+async function sendPaymentInvoiceEmail({
+  toEmail,
+  customerName,
+  customerAddress,
+  customerPhone,
+  customerId,
+  amount,
+  paymentReason,
+  reasonDetails = {},
+  orderId,
+  trackingId,
+}) {
+  logInvoiceDebug("sendPaymentInvoiceEmail:enter", {
+    paymentReason,
+    orderId,
+    trackingId,
+    amountRaw: amount,
+    amountType: typeof amount,
+    toEmailRaw: maskEmailForLog(toEmail),
+    customerId: customerId ? String(customerId) : null,
+    hasEMAIL_USER: !!process.env.EMAIL_USER,
+    hasEMAIL_PASS: !!process.env.EMAIL_PASS,
+    senderMasked: maskEmailForLog(process.env.EMAIL_USER),
+    copyEmail: INVOICE_COPY_EMAIL,
+    nodeEnv: process.env.NODE_ENV || "(unset)",
+  });
+
+  const amt = Number(amount);
+  if (Number.isNaN(amt) || amt <= 0) {
+    console.warn("[Invoice] skipped: invalid amount", {
+      amount,
+      amtComputed: amt,
+      orderId,
+      paymentReason,
+    });
+    return;
+  }
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error("[Invoice] skipped: EMAIL_USER or EMAIL_PASS missing", {
+      hasEMAIL_USER: !!process.env.EMAIL_USER,
+      hasEMAIL_PASS: !!process.env.EMAIL_PASS,
+      hint: "Use Gmail App Password if 2FA; put vars in .env for the process that runs the API",
+    });
+    return;
+  }
+
+  const customerAddr = isValidInvoiceEmail(toEmail) ? toEmail.trim() : null;
+  const copyAddr = INVOICE_COPY_EMAIL.trim();
+  const to =
+    customerAddr && customerAddr.toLowerCase() !== copyAddr.toLowerCase()
+      ? customerAddr
+      : copyAddr;
+  const bcc =
+    customerAddr && customerAddr.toLowerCase() !== copyAddr.toLowerCase()
+      ? copyAddr
+      : undefined;
+
+  logInvoiceDebug("sendPaymentInvoiceEmail:recipients", {
+    customerEmailValid: !!customerAddr,
+    to: maskEmailForLog(to),
+    bcc: bcc ? maskEmailForLog(bcc) : null,
+  });
+
+  try {
+    const invoiceNumber = buildInvoiceNumber(orderId, paymentReason);
+    logInvoiceDebug("sendPaymentInvoiceEmail:pdf:start", {
+      invoiceNumber,
+      orderId,
+    });
+
+    const pdfBuffer = await generatePaymentInvoicePDF({
+      invoiceNumber,
+      customerName: customerName || "Customer",
+      customerAddress: customerAddress || "",
+      customerPhone: customerPhone || "",
+      customerEmail: customerAddr || copyAddr,
+      customerId: customerId ? String(customerId) : "",
+      amount: amt,
+      paymentReason: paymentReason || "Payment",
+      reasonDetails,
+      orderId,
+      trackingId,
+    });
+
+    logInvoiceDebug("sendPaymentInvoiceEmail:pdf:done", {
+      invoiceNumber,
+      pdfBytes: pdfBuffer && pdfBuffer.length,
+    });
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    logInvoiceDebug("sendPaymentInvoiceEmail:smtp:sendMail", {
+      invoiceNumber,
+      from: maskEmailForLog(process.env.EMAIL_USER),
+      to: maskEmailForLog(to),
+      bcc: bcc ? maskEmailForLog(bcc) : null,
+    });
+
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      ...(bcc ? { bcc } : {}),
+      subject: `Your LunchBowl Pro Invoice – ${invoiceNumber}`,
+      html: `
+        <p>Hi ${customerName || "Customer"},</p>
+        <p>Thank you for your payment. Please find your invoice attached as a PDF.</p>
+        <p>Invoice #: <strong>${invoiceNumber}</strong></p>
+        <p>Amount: ₹${amt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
+        <p>– Team LunchBowl Pro</p>
+      `,
+      attachments: [
+        {
+          filename: `LunchBowl-Pro-Invoice-${invoiceNumber}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
+    });
+    console.log("[Invoice] sent OK", {
+      messageId: info.messageId,
+      response: info.response,
+      to: maskEmailForLog(to),
+      bcc: bcc ? maskEmailForLog(bcc) : null,
+      invoiceNumber,
+      orderId,
+    });
+  } catch (err) {
+    const resp = String((err && err.response) || (err && err.message) || "");
+    if (resp.includes("Daily user sending limit") || resp.includes("5.4.5")) {
+      console.error(
+        "[Invoice] Gmail: daily sending limit exceeded for this sender account (EMAIL_USER). " +
+          "Invoice PDF was built OK; SMTP blocked the message. " +
+          "Fix: wait for the limit to reset (~24h), reduce test emails, upgrade to Google Workspace, or use a transactional provider (SendGrid, SES, Resend, Mailgun). " +
+          "See https://support.google.com/a/answer/166852"
+      );
+    }
+    console.error("[Invoice] send failed (full error)", {
+      message: err && err.message,
+      code: err && err.code,
+      command: err && err.command,
+      responseCode: err && err.responseCode,
+      response: err && err.response,
+      stack: err && err.stack,
+    });
+  }
+}
+
 // Subscription Payment Response Handler
 exports.ccavenueResponse = async (req, res) => {
   let encResponse = "";
@@ -114,8 +298,23 @@ exports.ccavenueResponse = async (req, res) => {
       const { order_status, merchant_param1, order_id, tracking_id } =
         await processPaymentResponse(responseData, "subscription", paidFor);
 
+      logInvoiceDebug("ccavenueResponse:afterProcessPayment", {
+        order_status,
+        paidFor,
+        order_id_prefix: order_id ? String(order_id).slice(0, 3) : null,
+        order_id,
+        tracking_id,
+        amount: responseData.amount,
+        merchant_param1: merchant_param1 ? String(merchant_param1) : null,
+      });
+
       // 🟢 Handle successful payments
       if (order_status === "Success") {
+        if (!paidFor) {
+          logInvoiceDebug("ccavenueResponse:Success but paidFor is null (order_id must start with R or L for invoice)", {
+            order_id,
+          });
+        }
         if (!mongoose.Types.ObjectId.isValid(merchant_param1)) {
           console.error(
             "Invalid user ID in subscription payment handler:",
@@ -236,6 +435,33 @@ exports.ccavenueResponse = async (req, res) => {
             }
           }
 
+          const endDateStr = pendingSub.endDate
+            ? new Date(pendingSub.endDate).toLocaleDateString("en-IN")
+            : "";
+          logInvoiceDebug("ccavenueResponse:renewal:beforeInvoice", {
+            order_id,
+            tracking_id,
+            amount,
+            toEmailMasked: maskEmailForLog(email),
+          });
+          await sendPaymentInvoiceEmail({
+            toEmail: email,
+            customerName: parentName,
+            customerAddress: form.parentDetails?.address || "",
+            customerPhone: parentPhone,
+            customerId: merchant_param1,
+            amount,
+            orderId: order_id,
+            trackingId: tracking_id,
+            paymentReason: "Plan Renewal",
+            reasonDetails: {
+              "Billing Period":
+                startDate && endDateStr ? `${startDate} to ${endDateStr}` : "—",
+              "Next Billing Date": endDateStr || "—",
+              "Subscription ID": pendingSub._id ? String(pendingSub._id) : "—",
+            },
+          });
+
           return res.redirect("https://lunchbowl.co.in/user/menuCalendarPage");
         }
 
@@ -260,9 +486,71 @@ exports.ccavenueResponse = async (req, res) => {
             { new: true }
           );
 
-          // existing mail/SMS logic...
+          // Send invoice PDF email
+          try {
+            const formForInvoice = await Form.findOne({ user: merchant_param1 })
+              .populate("subscriptions")
+              .exec();
+
+            const parentName = formForInvoice?.parentDetails
+              ? `${formForInvoice.parentDetails.fatherFirstName} ${formForInvoice.parentDetails.fatherLastName}`
+              : "Customer";
+            const email = formForInvoice?.parentDetails?.email;
+            const customerPhone = formForInvoice?.parentDetails?.mobile;
+            const customerAddress = formForInvoice?.parentDetails?.address;
+
+            const pendingSub =
+              formForInvoice?.subscriptions?.filter(
+                (s) => s.status === "pending_payment"
+              ).sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0] ||
+              formForInvoice?.subscriptions?.filter((s) => !s.paymentDate).sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0];
+
+            const amountForInvoice =
+              pendingSub?.price || Number(responseData.amount || 0) || 0;
+
+            const startDateStr = pendingSub?.startDate
+              ? new Date(pendingSub.startDate).toLocaleDateString("en-IN")
+              : "";
+            const endDateStr = pendingSub?.endDate
+              ? new Date(pendingSub.endDate).toLocaleDateString("en-IN")
+              : "";
+
+            logInvoiceDebug("ccavenueResponse:subscription:beforeInvoice", {
+              order_id,
+              tracking_id,
+              amountForInvoice,
+              toEmailMasked: maskEmailForLog(email),
+            });
+            await sendPaymentInvoiceEmail({
+              toEmail: email,
+              customerName: parentName,
+              customerAddress: customerAddress || "",
+              customerPhone: customerPhone || "",
+              customerId: merchant_param1,
+              amount: amountForInvoice,
+              orderId: order_id,
+              trackingId: tracking_id,
+              paymentReason: "Subscription",
+              reasonDetails: {
+                "Billing Period":
+                  startDateStr && endDateStr
+                    ? `${startDateStr} to ${endDateStr}`
+                    : "—",
+                "Next Billing Date": endDateStr || "—",
+                "Subscription ID": pendingSub?._id ? String(pendingSub._id) : "—",
+              },
+            });
+          } catch (err) {
+            console.error("Subscription invoice generation error:", err);
+          }
+
           return res.redirect("https://lunchbowl.co.in/user/menuCalendarPage");
         }
+      } else {
+        logInvoiceDebug("ccavenueResponse:not Success — no invoice branch", {
+          order_status,
+          order_id,
+        });
       }
 
       // 🟥 Payment failed case
@@ -494,6 +782,36 @@ exports.holiydayPayment = async (req, res) => {
             if (err) console.error("📧 Email send error:", err);
             else console.log("📧 Email sent successfully");
           });
+
+          const holidayAmount =
+            Number(responseData.amount || 0) || childrenData.length * 200;
+          logInvoiceDebug("holidayPayment:beforeInvoice", {
+            order_id,
+            tracking_id,
+            holidayAmount,
+            toEmailMasked: maskEmailForLog(email),
+            childrenCount: childrenData.length,
+          });
+          await sendPaymentInvoiceEmail({
+            toEmail: email,
+            customerName: parentName,
+            customerAddress: userForm.parentDetails?.address || "",
+            customerPhone: userForm.parentDetails?.mobile,
+            customerId: userId,
+            amount: holidayAmount,
+            orderId: order_id,
+            trackingId: tracking_id,
+            paymentReason: "Holiday Payment",
+            reasonDetails: {
+              "Number of Meals": String(childrenData.length),
+              "Delivery Pincode": userForm.parentDetails?.pincode || "—",
+            },
+          });
+        } else {
+          logInvoiceDebug("holidayPayment:no userForm or parentDetails — invoice not sent", {
+            userId,
+            hasUserForm: !!userForm,
+          });
         }
       } catch (mailErr) {
         console.error("📧 Email sending failed:", mailErr);
@@ -700,6 +1018,26 @@ exports.addChildPaymentController = async (req, res) => {
         transporter.sendMail(mailOptions, (err) => {
           if (err) console.error("Add child email error:", err);
         });
+
+        logInvoiceDebug("addChildPayment:beforeInvoice", {
+          order_id,
+          tracking_id,
+          amount,
+          toEmailMasked: maskEmailForLog(email),
+          userId,
+        });
+        await sendPaymentInvoiceEmail({
+          toEmail: email,
+          customerName: parentName,
+          customerAddress: form.parentDetails?.address || "",
+          customerPhone: form.parentDetails?.mobile || "",
+          customerId: userId,
+          amount: amount,
+          orderId: order_id,
+          trackingId: tracking_id,
+          paymentReason: "Add Child Payment",
+          reasonDetails: {},
+        });
       } catch (mailErr) {
         console.error("Mail sending error:", mailErr);
       }
@@ -722,6 +1060,12 @@ exports.addChildPaymentController = async (req, res) => {
 exports.localPaymentSuccess = async (req, res) => {
   try {
     const { userId, orderId, transactionId, walletUsed, remainingWallet } = req.body;
+
+    logInvoiceDebug("localPaymentSuccess:enter", {
+      userId,
+      orderId,
+      hasTransactionId: !!transactionId,
+    });
 
     if (!userId || !orderId) {
       return res.status(400).json({ success: false, message: "Missing userId or orderId" });
@@ -816,6 +1160,42 @@ exports.localPaymentSuccess = async (req, res) => {
         { upsert: true, new: true, runValidators: true }
       );
 
+      // Send invoice PDF email (non-blocking)
+      const endDateStr = subscriptionToUpdate.endDate
+        ? new Date(subscriptionToUpdate.endDate).toLocaleDateString("en-IN")
+        : "";
+      const startDateStr = subscriptionToUpdate.startDate
+        ? new Date(subscriptionToUpdate.startDate).toLocaleDateString("en-IN")
+        : "";
+      logInvoiceDebug("localPaymentSuccess:renewal:beforeInvoice", {
+        orderId,
+        amount: subscriptionToUpdate.price,
+        toEmailMasked: maskEmailForLog(form.parentDetails?.email),
+      });
+      await sendPaymentInvoiceEmail({
+        toEmail: form.parentDetails?.email,
+        customerName: form.parentDetails
+          ? `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`
+          : "Customer",
+        customerAddress: form.parentDetails?.address || "",
+        customerPhone: form.parentDetails?.mobile || "",
+        customerId: userId,
+        amount: subscriptionToUpdate.price || 0,
+        orderId,
+        trackingId: transactionId,
+        paymentReason: "Plan Renewal",
+        reasonDetails: {
+          "Billing Period":
+            startDateStr && endDateStr
+              ? `${startDateStr} to ${endDateStr}`
+              : "—",
+          "Next Billing Date": endDateStr || "—",
+          "Subscription ID": subscriptionToUpdate._id
+            ? String(subscriptionToUpdate._id)
+            : "—",
+        },
+      });
+
       return res.json({ success: true, message: "Renewal payment simulated successfully", data: form });
     }
 
@@ -875,10 +1255,49 @@ exports.localPaymentSuccess = async (req, res) => {
         { upsert: true, new: true, runValidators: true }
       );
 
+      // Send invoice PDF email (non-blocking)
+      const startDateStr = subscriptionToUpdate.startDate
+        ? new Date(subscriptionToUpdate.startDate).toLocaleDateString("en-IN")
+        : "";
+      const endDateStr = subscriptionToUpdate.endDate
+        ? new Date(subscriptionToUpdate.endDate).toLocaleDateString("en-IN")
+        : "";
+      logInvoiceDebug("localPaymentSuccess:subscription:beforeInvoice", {
+        orderId,
+        amount: subscriptionToUpdate.price,
+        toEmailMasked: maskEmailForLog(form.parentDetails?.email),
+      });
+      await sendPaymentInvoiceEmail({
+        toEmail: form.parentDetails?.email,
+        customerName: form.parentDetails
+          ? `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`
+          : "Customer",
+        customerAddress: form.parentDetails?.address || "",
+        customerPhone: form.parentDetails?.mobile || "",
+        customerId: userId,
+        amount: subscriptionToUpdate.price || 0,
+        orderId,
+        trackingId: transactionId,
+        paymentReason: "Subscription",
+        reasonDetails: {
+          "Billing Period":
+            startDateStr && endDateStr
+              ? `${startDateStr} to ${endDateStr}`
+              : "—",
+          "Next Billing Date": endDateStr || "—",
+          "Subscription ID": subscriptionToUpdate._id
+            ? String(subscriptionToUpdate._id)
+            : "—",
+        },
+      });
+
       return res.json({ success: true, message: "New subscription payment simulated successfully", data: form });
     }
 
     // 🟥 Fallback
+    logInvoiceDebug("localPaymentSuccess:invalid order prefix — no invoice", {
+      orderId,
+    });
     return res.status(400).json({ success: false, message: "Invalid order prefix" });
 
   } catch (err) {
@@ -1016,6 +1435,28 @@ exports.localAddChildPaymentController = async (req, res) => {
       },
       { upsert: true, new: true, runValidators: true }
     );
+
+    // Send invoice PDF email (await so serverless / short-lived workers finish sending)
+    logInvoiceDebug("localAddChildPayment:beforeInvoice", {
+      orderId,
+      amount: paymentAmount || subscription.price || 0,
+      toEmailMasked: maskEmailForLog(form.parentDetails?.email),
+      userId,
+    });
+    await sendPaymentInvoiceEmail({
+      toEmail: form.parentDetails?.email,
+      customerName: form.parentDetails
+        ? `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`
+        : "Customer",
+      customerAddress: form.parentDetails?.address || "",
+      customerPhone: form.parentDetails?.mobile || "",
+      customerId: userId,
+      amount: paymentAmount || subscription.price || 0,
+      orderId,
+      trackingId: transactionId,
+      paymentReason: "Add Child Payment",
+      reasonDetails: {},
+    });
 
     // ✅ Return updated data
     const updatedForm = await Form.findById(form._id).populate({
