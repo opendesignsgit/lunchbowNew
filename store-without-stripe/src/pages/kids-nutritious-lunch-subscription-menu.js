@@ -34,7 +34,7 @@ const Menulist = () => {
                         <div className='hProListTitle combtntb comtilte textcenter mb-[8vh]'>
                             <h3>Little Plates, Big Flavors</h3>
                             <h2 className='flex flex-col textFF6514'>
-                                <span className='block'>30+ Nutritious Picks</span> 
+                  <span className='block'>50+ Nutritious Picks</span> 
                             </h2>
                             <p className=''>Select your child’s go-to cuisine and check out what’s on the menu.</p>
                         </div>

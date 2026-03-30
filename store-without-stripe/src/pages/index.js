@@ -273,7 +273,7 @@ const Home = () => {
                     <div className='hProListTitle combtntb comtilte textcenter mb-[8vh]'>
                         <h3>Small Bites, Huge Impact</h3>
                         <h2 className='flex flex-col text-white'>
-                            <span className='block'>30+ Healthy Packs</span> 
+                  <span className='block'>50+ Healthy Packs</span> 
                         </h2>
                           <p className='text-white'>Nutrient-dense, well-portioned meals with a variety of flavors that are <br />intended to entertain and feed kids every day.</p>
                     </div>

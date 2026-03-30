@@ -109,7 +109,7 @@ const Home = () => {
                     <div className='hProListTitle combtntb comtilte textcenter mb-[8vh]'>
                         <h3>The Mission Behind</h3>
                         <h2 className='flex flex-col text-white'>
-                            <span className='block'>30+ Nutritious Picks</span> 
+                              <span className='block'>50+ Nutritious Picks</span> 
                         </h2>
                         <p className='text-white'>Nutrient-dense, well-portioned meals with a variety of flavors that are <br/>intended to entertain and feed kids every day.</p>
                     </div>
