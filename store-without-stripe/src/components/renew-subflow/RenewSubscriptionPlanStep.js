@@ -229,18 +229,18 @@ const RenewSubscriptionPlanStep = ({
     ? activeSubscriptionEndDate.add(1, "day")
     : null;
 
-  const todayPlusTwo = dayjs().add(2, "day");
+  const tomorrow = dayjs().add(1, "day");
 
   let tentativeStartDate;
 
   if (afterEnd) {
-    if (afterEnd.isAfter(todayPlusTwo)) {
+    if (afterEnd.isAfter(tomorrow)) {
       tentativeStartDate = afterEnd;
     } else {
-      tentativeStartDate = todayPlusTwo;
+      tentativeStartDate = tomorrow;
     }
   } else {
-    tentativeStartDate = todayPlusTwo;
+    tentativeStartDate = tomorrow;
   }
 
   const minStartDate = getNextWorkingDay(tentativeStartDate, holidays);

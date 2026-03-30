@@ -76,7 +76,7 @@ const RightPanel = ({
   const selectedDateObj = dayjs(formatDate(selectedDate));
   const holiday = isHoliday(selectedDate);
   const isSelectedHoliday = !!holiday;
-  const isWithin48Hours = selectedDateObj.diff(dayjs(), "hour") < 24;
+  const isLocked = selectedDateObj.isSameOrBefore(dayjs(), "day");
   const isSunday = selectedDateObj.day() === 0;
   const { submitHandler, loading } = useRegistration();
 
@@ -163,8 +163,8 @@ const RightPanel = ({
   const handlePlanChange = (childId, planId) => {
     const dateObj = dayjs(formatDate(selectedDate));
 
-    // Block within 48 hours
-    if (isWithin48Hours) return;
+    // Block current & past dates
+    if (isLocked) return;
 
     // ✅ Only apply inside subscription period
     if (
@@ -194,7 +194,7 @@ const RightPanel = ({
 
 
   const handleApplyToAllChange = (e) => {
-    if (isWithin48Hours) return;
+    if (isLocked) return;
 
     const { checked } = e.target;
     setApplyToAll(checked);
@@ -221,7 +221,7 @@ const RightPanel = ({
 
 
   const handleFirstChildMenuChange = (childId, value) => {
-    if (isWithin48Hours) return;
+    if (isLocked) return;
 
     handleMenuChange(childId, value); // pass only string
 
@@ -235,7 +235,7 @@ const RightPanel = ({
 
 
   const handleMenuSelectionChange = (childId, value) => {
-    if (isWithin48Hours) return;
+    if (isLocked) return;
 
     handleMenuChange(childId, value); // pass only string
   };
@@ -318,9 +318,9 @@ const RightPanel = ({
             control={
               <Checkbox
                 checked={useMealPlan}
-                onChange={(e) => !isWithin48Hours && setUseMealPlan(e.target.checked)}
+                onChange={(e) => !isLocked && setUseMealPlan(e.target.checked)}
                 sx={{ color: "#fff" }}
-                disabled={isWithin48Hours}
+                disabled={isLocked}
               />
             }
             label={
@@ -362,13 +362,13 @@ const RightPanel = ({
       </div>
 
 
-      {isWithin48Hours ? (
+      {isLocked ? (
         <Box bgcolor="#fff" color="#000" borderRadius={2} p={2} textAlign="center" mb={2}>
           <Typography fontWeight="bold" fontSize="0.9rem">
-            Orders must be placed at least 48 hours in advance.
+            Menu selections cannot be changed for today or past dates.
           </Typography>
           <Typography fontSize="0.8rem" mt={1}>
-            Menu selections cannot be changed for this date.
+            Please pick a future date to edit your menu.
           </Typography>
         </Box>
       ) : isSunday ? (

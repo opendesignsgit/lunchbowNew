@@ -330,7 +330,7 @@ const WorkingDaysCalendar = ({
         </Typography>
         {!hideMessage && (
           <Typography align="center" fontSize="0.875rem">
-            This plan activates after 48 hrs
+            This plan starts on the next working day
           </Typography>
         )}
         <Typography align="center" fontSize="0.875rem">

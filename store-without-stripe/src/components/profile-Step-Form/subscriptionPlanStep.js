@@ -47,6 +47,14 @@ const isHoliday = (date, holidays) =>
 const isWorkingDay = (date, holidays) =>
   !isWeekend(date) && !isHoliday(date, holidays);
 
+const getNextWorkingDay = (date, holidays) => {
+  let current = dayjs(date);
+  while (!isWorkingDay(current, holidays)) {
+    current = current.add(1, "day");
+  }
+  return current;
+};
+
 const calculateWorkingDays = (startDate, endDate, holidays) => {
   let count = 0;
   let current = dayjs(startDate);
@@ -81,10 +89,7 @@ const calculateEndDateByWorkingDays = (startDate, workingDays, holidays) => {
 };
 
 const calculatePlans = (holidays, childCount = 1, customStartDates = {}) => {
-  let todayDefault = dayjs().add(2, "day");
-  while (!isWorkingDay(todayDefault, holidays)) {
-    todayDefault = todayDefault.add(1, "day");
-  }
+  const todayDefault = getNextWorkingDay(dayjs().add(1, "day"), holidays);
   const discounts =
     childCount >= 2
       ? { 22: 0.05, 66: 0.15, 132: 0.2 }
@@ -246,6 +251,11 @@ const SubscriptionPlanStep = ({
     );
     setPlans(computedPlans);
   }, [holidays, numberOfChildren, customStartDates]);
+
+  const minStartDate = React.useMemo(() => {
+    if (!holidays.length) return dayjs().add(1, "day");
+    return getNextWorkingDay(dayjs().add(1, "day"), holidays);
+  }, [holidays]);
 
 
 
@@ -566,7 +576,7 @@ const SubscriptionPlanStep = ({
                         onChange={(newDate) =>
                           handleCustomStartDateChange(plan.id, newDate)
                         }
-                        minDate={dayjs().add(2, "day")}
+                        minDate={minStartDate}
                         shouldDisableDate={(date) => !isWorkingDayMemo(date)}
                         label="Start Date"
                       />
@@ -772,7 +782,7 @@ const CustomDateSelection = ({
   isWorkingDay,
   numberOfChildren,
   openCalendar,
-  setHideMessage
+  setHideMessage,
 }) => (
   <Box
     className="custmontplan"
@@ -838,7 +848,7 @@ const CustomDateSelection = ({
             type="start"
             value={startDate}
             onChange={onStartDateChange}
-            minDate={dayjs().add(2, "day")}
+            minDate={getNextWorkingDay(dayjs().add(1, "day"), holidays)}
             shouldDisableDate={(date) => !isWorkingDay(date)}
           />
           {errors.startDate && (
@@ -854,7 +864,7 @@ const CustomDateSelection = ({
             type="end"
             value={endDate}
             onChange={onEndDateChange}
-            minDate={startDate || dayjs().add(2, "day")}
+            minDate={startDate || getNextWorkingDay(dayjs().add(1, "day"), holidays)}
             shouldDisableDate={(date) => !isWorkingDay(date)}
           />
           {errors.endDate && (
