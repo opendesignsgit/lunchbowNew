@@ -883,6 +883,10 @@ const useStoreHomeSubmit = () => {
               ...resData?.dashboard?.change_password,
               [language]: data.change_password || "",
             }),
+            price_per_day_per_child:
+              Number(data.price_per_day_per_child) > 0
+                ? Number(data.price_per_day_per_child)
+                : resData?.dashboard?.price_per_day_per_child || 200,
           },
           footer: {
             promo_status: true,
@@ -1468,6 +1472,10 @@ const useStoreHomeSubmit = () => {
           setValue(
             "change_password",
             res?.dashboard?.change_password[language || "en"]
+          );
+          setValue(
+            "price_per_day_per_child",
+            res?.dashboard?.price_per_day_per_child || 200
           );
 
           //footer

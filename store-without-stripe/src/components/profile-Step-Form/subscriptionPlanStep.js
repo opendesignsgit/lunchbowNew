@@ -22,11 +22,12 @@ import WorkingDaysCalendar from "./WorkingDaysCalendar";
 import SubscriptionDatePicker from "./SubscriptionDatePicker";
 import { useRouter } from "next/router";
 import useRegistration from "@hooks/useRegistration";
+import useGetSetting from "@hooks/useGetSetting";
 import AttributeServices from "../../services/AttributeServices";
 import useAsync from "../../hooks/useAsync";
 import CategoryServices from "../../services/CategoryServices";
 
-const BASE_PRICE_PER_DAY = 200;
+const DEFAULT_BASE_PRICE_PER_DAY = 200;
 
 const useHolidays = () => {
   const [holidays, setHolidays] = useState([]);
@@ -88,7 +89,12 @@ const calculateEndDateByWorkingDays = (startDate, workingDays, holidays) => {
   return current;
 };
 
-const calculatePlans = (holidays, childCount = 1, customStartDates = {}) => {
+const calculatePlans = (
+  holidays,
+  childCount = 1,
+  customStartDates = {},
+  basePricePerDay = DEFAULT_BASE_PRICE_PER_DAY
+) => {
   const todayDefault = getNextWorkingDay(dayjs().add(1, "day"), holidays);
   const discounts =
     childCount >= 2
@@ -101,7 +107,7 @@ const calculatePlans = (holidays, childCount = 1, customStartDates = {}) => {
       label: `22 Working Days`,
       workingDays: 22,
       price: Math.round(
-        22 * BASE_PRICE_PER_DAY * (1 - discounts[22]) * childCount
+        22 * basePricePerDay * (1 - discounts[22]) * childCount
       ),
       discount: discounts[22],
       isOneMonth: true,
@@ -117,7 +123,7 @@ const calculatePlans = (holidays, childCount = 1, customStartDates = {}) => {
       label: `66 Working Days`,
       workingDays: 66,
       price: Math.round(
-        66 * BASE_PRICE_PER_DAY * (1 - discounts[66]) * childCount
+        66 * basePricePerDay * (1 - discounts[66]) * childCount
       ),
       discount: discounts[66],
       isOneMonth: false,
@@ -133,7 +139,7 @@ const calculatePlans = (holidays, childCount = 1, customStartDates = {}) => {
       label: `132 Working Days`,
       workingDays: 132,
       price: Math.round(
-        132 * BASE_PRICE_PER_DAY * (1 - discounts[132]) * childCount
+        132 * basePricePerDay * (1 - discounts[132]) * childCount
       ),
       discount: discounts[132],
       isOneMonth: false,
@@ -157,11 +163,19 @@ const SubscriptionPlanStep = ({
   childrenData = [],
 }) => {
   const router = useRouter();
+  const { storeCustomizationSetting } = useGetSetting();
   const { holidays, holidaysLoading } = useHolidays();
   const isWorkingDayMemo = useCallback(
     (date) => isWorkingDay(date, holidays),
     [holidays]
   );
+  const configuredPricePerDay = Number(
+    storeCustomizationSetting?.dashboard?.price_per_day_per_child
+  );
+  const BASE_PRICE_PER_DAY =
+    Number.isFinite(configuredPricePerDay) && configuredPricePerDay > 0
+      ? configuredPricePerDay
+      : DEFAULT_BASE_PRICE_PER_DAY;
 
   const [selectedChildren, setSelectedChildren] = useState([]);
 
@@ -247,10 +261,11 @@ const SubscriptionPlanStep = ({
     const computedPlans = calculatePlans(
       holidays,
       numberOfChildren,
-      customStartDates
+      customStartDates,
+      BASE_PRICE_PER_DAY
     );
     setPlans(computedPlans);
-  }, [holidays, numberOfChildren, customStartDates]);
+  }, [holidays, numberOfChildren, customStartDates, BASE_PRICE_PER_DAY]);
 
   const minStartDate = React.useMemo(() => {
     if (!holidays.length) return dayjs().add(1, "day");
@@ -669,6 +684,7 @@ const SubscriptionPlanStep = ({
               endDate={endDate}
               holidays={holidays}
               numberOfChildren={numberOfChildren}
+              basePricePerDay={BASE_PRICE_PER_DAY}
             />
           )}
 
@@ -886,9 +902,10 @@ const CustomDateDetails = ({
   endDate,
   holidays,
   numberOfChildren = 1,
+  basePricePerDay = DEFAULT_BASE_PRICE_PER_DAY,
 }) => {
   const days = calculateWorkingDays(startDate, endDate, holidays);
-  const pricePerChild = days * BASE_PRICE_PER_DAY;
+  const pricePerChild = days * basePricePerDay;
   const totalPrice = pricePerChild * numberOfChildren;
 
   return (
@@ -906,11 +923,11 @@ const CustomDateDetails = ({
         <strong>Total Working Days:</strong> {days} days
       </Typography>
       <Typography variant="body2">
-        <strong>Price per day per child:</strong> Rs. {BASE_PRICE_PER_DAY}
+        <strong>Price per day per child:</strong> Rs. {basePricePerDay}
       </Typography>
       <Typography variant="body2">
         <strong>Price per child:</strong> Rs.{" "}
-        {pricePerChild.toLocaleString("en-IN")}({days} days × Rs. {BASE_PRICE_PER_DAY})
+        {pricePerChild.toLocaleString("en-IN")}({days} days × Rs. {basePricePerDay})
       </Typography>
       {numberOfChildren > 1 && (
         <>
@@ -919,7 +936,7 @@ const CustomDateDetails = ({
           </Typography>
           <Typography variant="body2">
             <strong>Total Price Calculation:</strong> {days} days × Rs.{" "}
-            {BASE_PRICE_PER_DAY} × {numberOfChildren} children
+            {basePricePerDay} × {numberOfChildren} children
           </Typography>
         </>
       )}

@@ -713,6 +713,7 @@ export const storeCustomization = {
       en: "Change Password",
       de: "Kennwort ändern",
     },
+    price_per_day_per_child: 200,
   },
   footer: {
     promo_status: true,

@@ -24,6 +24,7 @@ import useAsync from "../../hooks/useAsync";
 import CategoryServices from "../../services/CategoryServices";
 import { useSession } from "next-auth/react";
 import AccountServices from "@services/AccountServices";
+import useGetSetting from "@hooks/useGetSetting";
 import PriceBreakdownModal from "./PriceBreakdownModal";
 import { Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -32,7 +33,7 @@ import Tooltip from "@mui/material/Tooltip";
 
 
 
-const BASE_PRICE_PER_DAY = 200;
+const DEFAULT_BASE_PRICE_PER_DAY = 200;
 
 // Fetches holidays as ["YYYY-MM-DD", ...]
 const useHolidays = () => {
@@ -88,7 +89,12 @@ const calculateEndDateByWorkingDays = (startDate, workingDays, holidays) => {
 };
 
 // Always uses minStartDate for plans!
-const calculatePlans = (holidays, childCount = 1, minStartDate) => {
+const calculatePlans = (
+  holidays,
+  childCount = 1,
+  minStartDate,
+  basePricePerDay = DEFAULT_BASE_PRICE_PER_DAY
+) => {
   const discounts =
     childCount >= 2
       ? { 22: 0.05, 66: 0.15, 132: 0.2 }
@@ -99,7 +105,7 @@ const calculatePlans = (holidays, childCount = 1, minStartDate) => {
       label: `22 Working Days`,
       workingDays: 22,
       price: Math.round(
-        22 * BASE_PRICE_PER_DAY * (1 - discounts[22]) * childCount
+        22 * basePricePerDay * (1 - discounts[22]) * childCount
       ),
       discount: discounts[22],
       isOneMonth: true,
@@ -111,7 +117,7 @@ const calculatePlans = (holidays, childCount = 1, minStartDate) => {
       label: `66 Working Days`,
       workingDays: 66,
       price: Math.round(
-        66 * BASE_PRICE_PER_DAY * (1 - discounts[66]) * childCount
+        66 * basePricePerDay * (1 - discounts[66]) * childCount
       ),
       discount: discounts[66],
       isOneMonth: false,
@@ -123,7 +129,7 @@ const calculatePlans = (holidays, childCount = 1, minStartDate) => {
       label: `132 Working Days`,
       workingDays: 132,
       price: Math.round(
-        132 * BASE_PRICE_PER_DAY * (1 - discounts[132]) * childCount
+        132 * basePricePerDay * (1 - discounts[132]) * childCount
       ),
       discount: discounts[132],
       isOneMonth: false,
@@ -142,6 +148,7 @@ const RenewSubscriptionPlanStep = ({
   childrenData = [],
 }) => {
   const router = useRouter();
+  const { storeCustomizationSetting } = useGetSetting();
   const { holidays, holidaysLoading } = useHolidays();
   const isWorkingDayMemo = useCallback(
     (date) => isWorkingDay(date, holidays),
@@ -262,10 +269,23 @@ const RenewSubscriptionPlanStep = ({
 
   const numberOfChildren =
     selectedChildren.length > 0 ? selectedChildren.length : 1;
+  const configuredPricePerDay = Number(
+    storeCustomizationSetting?.dashboard?.price_per_day_per_child
+  );
+  const BASE_PRICE_PER_DAY =
+    Number.isFinite(configuredPricePerDay) && configuredPricePerDay > 0
+      ? configuredPricePerDay
+      : DEFAULT_BASE_PRICE_PER_DAY;
 
   const plans = useMemo(
-    () => calculatePlans(holidays, numberOfChildren, minStartDate),
-    [holidays, numberOfChildren, minStartDate]
+    () =>
+      calculatePlans(
+        holidays,
+        numberOfChildren,
+        minStartDate,
+        BASE_PRICE_PER_DAY
+      ),
+    [holidays, numberOfChildren, minStartDate, BASE_PRICE_PER_DAY]
   );
 
   useEffect(() => {
