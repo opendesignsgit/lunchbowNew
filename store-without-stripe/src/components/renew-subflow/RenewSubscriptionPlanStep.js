@@ -272,7 +272,7 @@ const RenewSubscriptionPlanStep = ({
   const configuredPricePerDay = Number(
     storeCustomizationSetting?.dashboard?.price_per_day_per_child
   );
-  const BASE_PRICE_PER_DAY =
+  const pricePerDay =
     Number.isFinite(configuredPricePerDay) && configuredPricePerDay > 0
       ? configuredPricePerDay
       : DEFAULT_BASE_PRICE_PER_DAY;
@@ -283,9 +283,9 @@ const RenewSubscriptionPlanStep = ({
         holidays,
         numberOfChildren,
         minStartDate,
-        BASE_PRICE_PER_DAY
+        pricePerDay
       ),
-    [holidays, numberOfChildren, minStartDate, BASE_PRICE_PER_DAY]
+    [holidays, numberOfChildren, minStartDate, pricePerDay]
   );
 
   useEffect(() => {
@@ -365,7 +365,7 @@ const RenewSubscriptionPlanStep = ({
       useEndDate = currentPlan?.endDate;
     } else {
       totalWorkingDays = calculateWorkingDays(startDate, endDate, holidays);
-      totalPrice = totalWorkingDays * BASE_PRICE_PER_DAY * numberOfChildren;
+      totalPrice = totalWorkingDays * pricePerDay * numberOfChildren;
       useStartDate = startDate;
       useEndDate = endDate;
     }
@@ -525,7 +525,7 @@ const RenewSubscriptionPlanStep = ({
                           {plan.discount > 0 ? (
                             <>
                               <Typography fontSize={13} color="#888" sx={{ textDecoration: "line-through" }}>
-                                Rs. {(plan.workingDays * BASE_PRICE_PER_DAY * numberOfChildren).toLocaleString("en-IN")}
+                                Rs. {(plan.workingDays * pricePerDay * numberOfChildren).toLocaleString("en-IN")}
                               </Typography>
                               <Typography fontSize={13} color="#FF6A00">
                                 {plan.discount * 100}% OFF - Rs. {plan.price.toLocaleString("en-IN")}
@@ -554,7 +554,7 @@ const RenewSubscriptionPlanStep = ({
                       <strong>Total Working Days:</strong> {plan.workingDays}
                     </Typography>
                     {/* <Typography fontSize={13} color="#232323">
-                      <strong>Price per day per child:</strong> Rs. {BASE_PRICE_PER_DAY}
+                      <strong>Price per day per child:</strong> Rs. {pricePerDay}
                     </Typography> */}
                     {/* {numberOfChildren > 1 && (
                       <>
@@ -563,7 +563,7 @@ const RenewSubscriptionPlanStep = ({
                         </Typography>
                         <Typography fontSize={13} color="#232323">
                           <strong>Total Price Calculation:</strong> {plan.workingDays} days × Rs.{" "}
-                          {BASE_PRICE_PER_DAY} × {numberOfChildren}
+                          {pricePerDay} × {numberOfChildren}
                         </Typography>
                       </>
                     )} */}
@@ -572,7 +572,7 @@ const RenewSubscriptionPlanStep = ({
                         Saved Rs.{" "}
                         {Math.round(
                           plan.workingDays *
-                          BASE_PRICE_PER_DAY *
+                          pricePerDay *
                           numberOfChildren *
                           plan.discount
                         ).toLocaleString("en-IN")}
@@ -729,7 +729,7 @@ const RenewSubscriptionPlanStep = ({
 
           <Typography mt={2} fontSize={12}>
             <strong>
-              Note: Per Day Meal = Rs. {BASE_PRICE_PER_DAY} (No. of Days × Rs. {BASE_PRICE_PER_DAY} × {numberOfChildren} {numberOfChildren > 1 ? "children" : "child"} = Subscription Amount)
+              Note: Per Day Meal = Rs. {pricePerDay} (No. of Days × Rs. {pricePerDay} × {numberOfChildren} {numberOfChildren > 1 ? "children" : "child"} = Subscription Amount)
             </strong>
           </Typography>
 
@@ -829,7 +829,7 @@ const RenewSubscriptionPlanStep = ({
         currentPlan={currentPlan}
         walletPoints={walletPoints}
         useWallet={useWallet}
-        BASE_PRICE_PER_DAY={BASE_PRICE_PER_DAY}
+        BASE_PRICE_PER_DAY={pricePerDay}
       />
     </LocalizationProvider>
   );
