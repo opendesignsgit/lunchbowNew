@@ -151,6 +151,7 @@ const useStoreHomeSubmit = () => {
     }
     try {
       setIsSubmitting(true);
+      const parsedPricePerDay = Number(data.price_per_day_per_child);
 
       const storeCustomizationSettingData = {
         name: "storeCustomizationSetting",
@@ -884,8 +885,8 @@ const useStoreHomeSubmit = () => {
               [language]: data.change_password || "",
             }),
             price_per_day_per_child:
-              Number(data.price_per_day_per_child) > 0
-                ? Number(data.price_per_day_per_child)
+              Number.isFinite(parsedPricePerDay) && parsedPricePerDay > 0
+                ? parsedPricePerDay
                 : resData?.dashboard?.price_per_day_per_child || 200,
           },
           footer: {

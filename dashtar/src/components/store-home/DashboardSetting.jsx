@@ -123,6 +123,8 @@ const DashboardSetting = ({ isSave, errors, register, isSubmitting }) => {
             label={t("PricePerDayPerChild")}
             name="price_per_day_per_child"
             type="number"
+            min="1"
+            step="1"
             placeholder={t("PricePerDayPerChild")}
           />
           <Error errorName={errors.price_per_day_per_child} />

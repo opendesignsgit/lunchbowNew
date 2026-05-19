@@ -8,6 +8,8 @@ const InputAreaTwo = ({
   label,
   type,
   placeholder,
+  min,
+  step,
 }) => {
   return (
     <>
@@ -18,6 +20,8 @@ const InputAreaTwo = ({
         defaultValue={defaultValue}
         type={type}
         placeholder={placeholder}
+        min={min}
+        step={step}
         name={name}
         autoComplete="new-password"
         className="mr-2 p-2"
