@@ -13,6 +13,7 @@ This document explains:
 The primary update point for meal (dish) price is the admin dish popup form:
 
 - **`/home/runner/work/lunchbowNew/lunchbowNew/dashtar/src/components/drawer/AddDishPopup.jsx`**
+- **Repo-relative:** `dashtar/src/components/drawer/AddDishPopup.jsx`
 
 This file is used when admin adds/edits a dish from the Menu/Products page.  
 If price fields are not present here, users cannot update meal price from UI.
@@ -110,3 +111,15 @@ After implementation, price is updated by admin in:
 
 In the current dish flow, the form and schema do not fully carry dedicated meal price fields.  
 Without adding those fields in all layers above, meal price updates will not be consistently saved and shown.
+
+---
+
+## 6) Scope clarification (important)
+
+This guide is specifically for **dish/menu meal pricing**.
+
+It is **not** for school/subscription pricing fields such as:
+
+- `price_per_day_per_child`
+
+Subscription pricing belongs to a separate flow and should be documented/updated separately to avoid mixing pricing models.
