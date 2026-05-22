@@ -108,7 +108,6 @@ const useStoreSettingSubmit = (id) => {
   };
 
   useEffect(() => {
-    setValue("price_per_day_per_child", 200);
     (async () => {
       try {
         const res = await SettingServices.getStoreSetting();
@@ -150,6 +149,8 @@ const useStoreSettingSubmit = (id) => {
             "price_per_day_per_child",
             storeCustomizationRes.dashboard.price_per_day_per_child || 200
           );
+        } else {
+          setValue("price_per_day_per_child", 200);
         }
       } catch (err) {
         notifyError(err?.response?.data?.message || err.message);

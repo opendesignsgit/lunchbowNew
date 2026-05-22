@@ -133,10 +133,10 @@ Subscription pricing belongs to a separate flow and should be documented/updated
 
 Use these files:
 
-- `dashtar/src/components/store-home/DashboardSetting.jsx`  
-  Admin UI input for `price_per_day_per_child`
-- `dashtar/src/hooks/useStoreHomeSubmit.js`  
-  Parses and submits subscription price value
+- `dashtar/src/pages/StoreSetting.jsx`  
+  Admin UI input for `price_per_day_per_child` in `/store/store-settings`
+- `dashtar/src/hooks/useStoreSettingSubmit.js`  
+  Loads and submits subscription price value
 - `store-without-stripe/src/utils/storeCustomizationSetting.js`  
   Default fallback value (`200`)
 - `store-without-stripe/src/components/profile-Step-Form/subscriptionPlanStep.js`  
