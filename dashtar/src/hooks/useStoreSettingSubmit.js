@@ -21,6 +21,8 @@ const useStoreSettingSubmit = (id) => {
   const [enabledGithubLogin, setEnabledGithubLogin] = useState(false);
   const [enabledFacebookLogin, setEnabledFacebookLogin] = useState(false);
   const [enabledGoogleAnalytics, setEnabledGoogleAnalytics] = useState(false);
+  const [storeCustomizationDashboard, setStoreCustomizationDashboard] =
+    useState({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,6 +41,12 @@ const useStoreSettingSubmit = (id) => {
     }
     try {
       setIsSubmitting(true);
+      const parsedPricePerDayPerChild = Number(data.price_per_day_per_child);
+      const normalizedPricePerDayPerChild =
+        Number.isFinite(parsedPricePerDayPerChild) &&
+        parsedPricePerDayPerChild > 0
+          ? parsedPricePerDayPerChild
+          : storeCustomizationDashboard?.price_per_day_per_child || 200;
       const settingData = {
         name: "storeSetting",
         setting: {
@@ -69,23 +77,29 @@ const useStoreSettingSubmit = (id) => {
           tawk_chat_widget_id: data.tawk_chat_widget_id,
         },
       };
+      const storeCustomizationSettingData = {
+        name: "storeCustomizationSetting",
+        setting: {
+          dashboard: {
+            ...storeCustomizationDashboard,
+            price_per_day_per_child: normalizedPricePerDayPerChild,
+          },
+        },
+      };
 
       // console.log("store setting", settingData, "data", data);
       // return;
 
-      if (!isSave) {
-        const res = await SettingServices.updateStoreSetting(settingData);
-        setIsUpdate(true);
-        setIsSubmitting(false);
-        window.location.reload();
-        notifySuccess(res.message);
-      } else {
-        const res = await SettingServices.addStoreSetting(settingData);
-        setIsUpdate(true);
-        setIsSubmitting(false);
-        window.location.reload();
-        notifySuccess(res.message);
-      }
+      const res = !isSave
+        ? await SettingServices.updateStoreSetting(settingData)
+        : await SettingServices.addStoreSetting(settingData);
+      await SettingServices.updateStoreCustomizationSetting(
+        storeCustomizationSettingData
+      );
+      setIsUpdate(true);
+      setIsSubmitting(false);
+      window.location.reload();
+      notifySuccess(res.message);
     } catch (err) {
       // console.log("err", err);
       notifyError(err?.response?.data?.message || err?.message);
@@ -94,9 +108,12 @@ const useStoreSettingSubmit = (id) => {
   };
 
   useEffect(() => {
+    setValue("price_per_day_per_child", 200);
     (async () => {
       try {
         const res = await SettingServices.getStoreSetting();
+        const storeCustomizationRes =
+          await SettingServices.getStoreCustomizationSetting();
         // console.log("res>>>", res);
         if (res) {
           setIsSave(false);
@@ -126,6 +143,13 @@ const useStoreSettingSubmit = (id) => {
           setValue("fb_pixel_key", res.fb_pixel_key);
           setValue("tawk_chat_property_id", res.tawk_chat_property_id);
           setValue("tawk_chat_widget_id", res.tawk_chat_widget_id);
+        }
+        if (storeCustomizationRes?.dashboard) {
+          setStoreCustomizationDashboard(storeCustomizationRes.dashboard);
+          setValue(
+            "price_per_day_per_child",
+            storeCustomizationRes.dashboard.price_per_day_per_child || 200
+          );
         }
       } catch (err) {
         notifyError(err?.response?.data?.message || err.message);

@@ -116,21 +116,6 @@ const DashboardSetting = ({ isSave, errors, register, isSubmitting }) => {
         </div>
         <div className="col-span-4">
           <label className="block md:text-sm md:col-span-1 sm:col-span-2 text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-            {t("PricePerDayPerChild")}
-          </label>
-          <InputAreaTwo
-            register={register}
-            label={t("PricePerDayPerChild")}
-            name="price_per_day_per_child"
-            type="number"
-            min="1"
-            step="1"
-            placeholder={t("PricePerDayPerChild")}
-          />
-          <Error errorName={errors.price_per_day_per_child} />
-        </div>
-        <div className="col-span-4">
-          <label className="block md:text-sm md:col-span-1 sm:col-span-2 text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
             {t("TotalOrder")}
           </label>
           <InputAreaTwo

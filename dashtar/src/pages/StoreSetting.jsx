@@ -181,6 +181,22 @@ const StoreSetting = () => {
                   </div>
                 </div>
 
+                <div className="grid md:grid-cols-5 items-center sm:grid-cols-12 gap-3 md:gap-5 xl:gap-6 lg:gap-6 mb-6">
+                  <Label label={t("PricePerDayPerChild")} />
+                  <div className="sm:col-span-4">
+                    <InputAreaTwo
+                      register={register}
+                      label={t("PricePerDayPerChild")}
+                      name="price_per_day_per_child"
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder={t("PricePerDayPerChild")}
+                    />
+                    <Error errorName={errors.price_per_day_per_child} />
+                  </div>
+                </div>
+
                 {/* Next api base Url/backend url */}
 
                 {/* <div className="grid md:grid-cols-5 items-center sm:grid-cols-12 gap-3 md:gap-5 xl:gap-6 lg:gap-6 mb-6">
