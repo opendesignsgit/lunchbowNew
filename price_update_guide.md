@@ -6,8 +6,8 @@ This document explains:
 2. **Which files control meal price flow**
 3. **What to change in each file**
 
-**Repository root for this task:** `/home/runner/work/lunchbowNew/lunchbowNew`  
-Use this as `<repo_root>` in all paths below.
+`<repo_root>` means the absolute path of your local clone root.  
+Use this as a prefix for all absolute paths below.
 
 ---
 
@@ -126,3 +126,20 @@ It is **not** for school/subscription pricing fields such as:
 - `price_per_day_per_child`
 
 Subscription pricing belongs to a separate flow and should be documented/updated separately to avoid mixing pricing models.
+
+---
+
+## 7) If you actually need subscription meal price (`price_per_day_per_child`)
+
+Use these files:
+
+- `dashtar/src/components/store-home/DashboardSetting.jsx`  
+  Admin UI input for `price_per_day_per_child`
+- `dashtar/src/hooks/useStoreHomeSubmit.js`  
+  Parses and submits subscription price value
+- `store-without-stripe/src/utils/storeCustomizationSetting.js`  
+  Default fallback value (`200`)
+- `store-without-stripe/src/components/profile-Step-Form/subscriptionPlanStep.js`  
+  Consumes dashboard subscription price
+- `store-without-stripe/src/components/renew-subflow/RenewSubscriptionPlanStep.js`  
+  Consumes dashboard subscription price during renew flow
