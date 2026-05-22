@@ -24,7 +24,9 @@ import dietitianMealPlanData from "../../jsonHelper/Dietitian_meal_plan.json";
 
 import { useSession } from "next-auth/react";
 import useRegistration from "@hooks/useRegistration";
+import useGetSetting from "@hooks/useGetSetting";
 
+const DEFAULT_BASE_PRICE_PER_DAY = 200;
 
 const mealPlanArray = mealPlanData.meal_plan;
 const dietitianMealPlanArray = dietitianMealPlanData.meal_plan;
@@ -63,6 +65,14 @@ const RightPanel = ({
   selectedPlanIndex,
 }) => {
   const { data: session } = useSession();
+  const { storeCustomizationSetting } = useGetSetting();
+  const configuredPricePerDay = Number(
+    storeCustomizationSetting?.dashboard?.price_per_day_per_child
+  );
+  const pricePerDay =
+    Number.isFinite(configuredPricePerDay) && configuredPricePerDay > 0
+      ? configuredPricePerDay
+      : DEFAULT_BASE_PRICE_PER_DAY;
 
   // const [useMealPlan, setUseMealPlan] = useState(false);
   // const [selectedPlans, setSelectedPlans] = useState({});
@@ -549,7 +559,7 @@ const RightPanel = ({
                                 setHolidayPaymentOpen(true);
                               }}
                             >
-                              <span>Pay ₹200</span>
+                              <span>Pay ₹{pricePerDay}</span>
                             </Button>
                           )}
                         </Box>

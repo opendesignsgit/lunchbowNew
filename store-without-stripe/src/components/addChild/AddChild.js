@@ -21,10 +21,13 @@ import useRegistration from "@hooks/useRegistration";
 import CategoryServices from "@services/CategoryServices";
 import AttributeServices from "@services/AttributeServices";
 import useAsync from "@hooks/useAsync";
+import useGetSetting from "@hooks/useGetSetting";
 import WorkingDaysCalendar from "../profile-Step-Form/WorkingDaysCalendar";
 import AddChildPayment from "./AddChildPayment";
 import { useRouter } from 'next/router';
 import stepTwo from "../../../public/profileStepImages/stepTwo.png";
+
+const DEFAULT_BASE_PRICE_PER_DAY = 200;
 
 const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
@@ -87,6 +90,15 @@ const getEarliestValidStartDate = (holidays) => {
 };
 
 const AddChild = ({ _id, onComplete }) => {
+  const { storeCustomizationSetting } = useGetSetting();
+  const configuredPricePerDay = Number(
+    storeCustomizationSetting?.dashboard?.price_per_day_per_child
+  );
+  const pricePerDay =
+    Number.isFinite(configuredPricePerDay) && configuredPricePerDay > 0
+      ? configuredPricePerDay
+      : DEFAULT_BASE_PRICE_PER_DAY;
+
   const { data: fetchedChildren = {}, loading: childrenLoading } = useAsync(() =>
     CategoryServices.getChildren(_id, "Add-Child")
   );
@@ -450,8 +462,8 @@ const AddChild = ({ _id, onComplete }) => {
     return count;
   }, 0);
 
-  // Total amount = 200 ₹ * remaining days * new selected children count
-  const totalToPay = newSelectedChildrenCount * remainingWorkingDays * 200;
+  // Total amount = pricePerDay ₹ * remaining days * new selected children count
+  const totalToPay = newSelectedChildrenCount * remainingWorkingDays * pricePerDay;
 
   // Selected children for payment and guard using Yup's synchronous validateSync
   const selectedChildrenForPayment = useMemo(
@@ -521,7 +533,7 @@ const AddChild = ({ _id, onComplete }) => {
             </Grid>
             <Grid className="curplanItem">
               <Typography variant="h5"><strong>Amount per Day per Child</strong></Typography>
-              <Typography>₹ 200</Typography>
+              <Typography>₹ {pricePerDay}</Typography>
             </Grid>
             <Grid className="curplanItem totalamountItem">
               <Typography variant="h5" color="primary" fontWeight="bold">

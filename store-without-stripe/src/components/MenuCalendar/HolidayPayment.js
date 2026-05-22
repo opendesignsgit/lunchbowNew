@@ -11,6 +11,9 @@ import {
 import CryptoJS from "crypto-js";
 import { useSession } from "next-auth/react";
 import useRegistration from "@hooks/useRegistration";
+import useGetSetting from "@hooks/useGetSetting";
+
+const DEFAULT_BASE_PRICE_PER_DAY = 200;
 
 const HolidayPayment = ({
   open,
@@ -22,6 +25,14 @@ const HolidayPayment = ({
 }) => {
   const { data: session } = useSession();
   const _id = session?.user?.id;
+  const { storeCustomizationSetting } = useGetSetting();
+  const configuredPricePerDay = Number(
+    storeCustomizationSetting?.dashboard?.price_per_day_per_child
+  );
+  const pricePerDay =
+    Number.isFinite(configuredPricePerDay) && configuredPricePerDay > 0
+      ? configuredPricePerDay
+      : DEFAULT_BASE_PRICE_PER_DAY;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,7 +45,7 @@ const HolidayPayment = ({
     mealDate: selectedDate,
   }));
 
-  const totalAmount = childrenData.length * 200;
+  const totalAmount = childrenData.length * pricePerDay;
   const orderId = `LB-HOLIDAY-${Date.now()}`;
 
   // ✅ CCAvenue Config
