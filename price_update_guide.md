@@ -6,13 +6,16 @@ This document explains:
 2. **Which files control meal price flow**
 3. **What to change in each file**
 
+**Repository root for this task:** `/home/runner/work/lunchbowNew/lunchbowNew`  
+Use this as `<repo_root>` in all paths below.
+
 ---
 
 ## 1) Where to update meal price (primary location)
 
 The primary update point for meal (dish) price is the admin dish popup form:
 
-- **`/home/runner/work/lunchbowNew/lunchbowNew/dashtar/src/components/drawer/AddDishPopup.jsx`**
+- **`<repo_root>/dashtar/src/components/drawer/AddDishPopup.jsx`**
 - **Repo-relative:** `dashtar/src/components/drawer/AddDishPopup.jsx`
 
 This file is used when admin adds/edits a dish from the Menu/Products page.  
