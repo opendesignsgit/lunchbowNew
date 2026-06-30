@@ -34,7 +34,7 @@ const HolidayPayment = ({
     mealDate: selectedDate,
   }));
 
-  const totalAmount = childrenData.length * 200;
+  const totalAmount = childrenData.length * 225;
   const orderId = `LB-HOLIDAY-${Date.now()}`;
 
   // ✅ CCAvenue Config

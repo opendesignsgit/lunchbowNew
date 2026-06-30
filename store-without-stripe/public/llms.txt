@@ -1,0 +1,24 @@
+# Lunchbowl
+
+> Lunchbowl is a service dedicated to simplifying mealtime for parents by delivering nutritious, kid-friendly lunch boxes tailored to children's tastes. With a focus on high-quality ingredients and eco-friendly packaging, Lunchbowl aims to provide healthy meals that are both convenient and enjoyable for children during school hours.
+
+Lunchbowl offers a variety of meal plans designed to cater to different dietary needs and preferences. The service is built around the idea of reducing the stress associated with preparing school lunches, allowing parents to focus on other important aspects of their day. The meals are crafted by nutritionists and are delivered fresh to schools, ensuring that children receive wholesome food that supports their growth and energy levels.
+
+## About Lunchbowl
+
+- [About Us](https://lunchbowl.co.in/about-us): This page details the story behind Lunchbowl, explaining its mission to alleviate the stress of daily lunch preparation for parents. It highlights the commitment to providing tasty, nutritious meals that are kid-approved and delivered fresh.
+
+## Meal Plans and Pricing
+
+- [Plan & Pricing](https://lunchbowl.co.in/plan-pricing): This section outlines the different meal plans available for families, including pricing details and the benefits of each plan. It emphasizes the affordability and flexibility of the service, catering to various family needs and dietary restrictions.
+
+## Additional Features
+
+- [Home](https://lunchbowl.co.in/): The homepage provides an overview of Lunchbowl's offerings, including a glimpse into the healthy meal options available and the convenience of the service.
+- [Food Menu](https://lunchbowl.co.in/Menulist): This link leads to the food menu, showcasing the variety of nutritious meals available for children.
+- [Contact Us](https://lunchbowl.co.in/contact-us): This page offers contact information for customer service, allowing parents to reach out with inquiries or feedback.
+
+## Social Media
+
+- [Instagram](https://www.instagram.com/lunch_bowl_?igsh=d3kxM3k3cHJwc2F0): Follow Lunchbowl on Instagram for updates, meal inspirations, and community engagement.
+- [Facebook](https://www.facebook.com/share/1CChGD5qf6/): Connect with Lunchbowl on Facebook to stay informed about new offerings and promotions.

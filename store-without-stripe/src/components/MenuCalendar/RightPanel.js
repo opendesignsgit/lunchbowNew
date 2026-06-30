@@ -549,7 +549,7 @@ const RightPanel = ({
                                 setHolidayPaymentOpen(true);
                               }}
                             >
-                              <span>Pay ₹200</span>
+                              <span>Pay ₹225</span>
                             </Button>
                           )}
                         </Box>

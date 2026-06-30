@@ -26,7 +26,7 @@ import AttributeServices from "../../services/AttributeServices";
 import useAsync from "../../hooks/useAsync";
 import CategoryServices from "../../services/CategoryServices";
 
-const BASE_PRICE_PER_DAY = 200;
+const BASE_PRICE_PER_DAY = 225;
 
 const useHolidays = () => {
   const [holidays, setHolidays] = useState([]);

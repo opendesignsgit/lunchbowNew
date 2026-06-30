@@ -32,7 +32,7 @@ import Tooltip from "@mui/material/Tooltip";
 
 
 
-const BASE_PRICE_PER_DAY = 200;
+const BASE_PRICE_PER_DAY = 225;
 
 // Fetches holidays as ["YYYY-MM-DD", ...]
 const useHolidays = () => {

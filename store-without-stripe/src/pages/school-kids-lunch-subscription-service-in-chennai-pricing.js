@@ -205,12 +205,12 @@ const PlanPricingPage = () => {
                                 <div className='ppriceitem'>
                                   <div className='ppricetbox'>
                                     <h4 className='permnt'>Per Month</h4>
-                                    <h2><small>₹</small>4,400</h2>
+                                    <h2><small>₹</small>4,950</h2>
                                     <h6>22 Working Days</h6>
                                   </div>
                                   <div className='ppricembox'>
                                     <ul>
-                                      <li>200 per meal (22 meals)</li>
+                                      <li>225 per meal (22 meals)</li>
                                       <li>Pre-planned, dietician-approved 30-day meal plan</li>
                                       <li>Add a sibling & save (5% off)</li>
                                       <li>Diet & allergy-friendly choices</li>
@@ -228,13 +228,13 @@ const PlanPricingPage = () => {
                                 </div>
                                 <div className='ppriceitem'>
                                   <div className='ppricetbox'>
-                                    <h4><del>₹ 13,200</del> / 3 months</h4>
-                                    <h2><small>₹</small>12,540</h2>
+                                    <h4><del>₹ 14,850</del> / 3 months</h4>
+                                    <h2><small>₹</small>14,107</h2>
                                     <h6>66 Working Days</h6>
                                   </div>
                                   <div className='ppricembox'>
                                     <ul>
-                                      <li>200 per meal (66 meals)</li>
+                                      <li>225 per meal (66 meals)</li>
                                       <li>Pre-planned, dietician-approved 30-day meal plan (renewed monthly)</li>
                                       <li>Already includes 5% savings</li>
                                       <li>Add a sibling & save even more (extra 5%)</li>
@@ -254,13 +254,13 @@ const PlanPricingPage = () => {
                                 </div>
                                 <div className='ppriceitem'>
                                   <div className='ppricetbox'>
-                                    <h4><del>₹ 26,400</del> / 6 months</h4>
-                                    <h2><small>₹</small>23,760</h2>
+                                    <h4><del>₹ 29,700</del> / 6 months</h4>
+                                    <h2><small>₹</small>26,730</h2>
                                     <h6>132 Working Days</h6>
                                   </div>
                                   <div className='ppricembox'>
                                     <ul>
-                                      <li>200 per meal (132 meals)</li>
+                                      <li>225 per meal (132 meals)</li>
                                       <li>Pre-planned, dietician-approved 30-day meal plan (renewed monthly)</li>
                                       <li>Already includes 10% savings</li>
                                       <li>Add a sibling & save even more (extra 5%)</li>
