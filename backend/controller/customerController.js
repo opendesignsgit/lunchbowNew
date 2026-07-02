@@ -668,6 +668,19 @@ const sendOtp = async (req, res) => {
     // Save new OTP
     await Otp.create({ mobile, otp, expiresAt });
 
+    // DEV ONLY: skip SMS locally and print the OTP. A master OTP also works in verify.
+    // Enabled via DEV_OTP_BYPASS=true in backend/.env.local (never set in production).
+    if (process.env.DEV_OTP_BYPASS === "true") {
+      console.log(
+        `[DEV OTP BYPASS] mobile=${mobile} generated OTP=${otp} | master OTP=${process.env.DEV_MASTER_OTP || "1234"}`
+      );
+      return res.status(200).json({
+        success: true,
+        message: "OTP generated (dev bypass — SMS skipped)",
+        expiresAt,
+      });
+    }
+
     try {
       const smsResult = await sendSMS(mobile, "OTP", [otp]);
       // console.log("OTP SMS Result:", smsResult);
@@ -726,20 +739,27 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "Invalid path" });
     }
 
-    const existingOtp = await Otp.findOne({ mobile });
-    if (!existingOtp) {
-      return res.status(400).json({ message: "OTP not found or expired" });
-    }
+    // DEV ONLY: a master OTP bypasses verification when DEV_OTP_BYPASS=true (local .env.local).
+    const devBypass =
+      process.env.DEV_OTP_BYPASS === "true" &&
+      otp === (process.env.DEV_MASTER_OTP || "1234");
 
-    if (existingOtp.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
+    if (!devBypass) {
+      const existingOtp = await Otp.findOne({ mobile });
+      if (!existingOtp) {
+        return res.status(400).json({ message: "OTP not found or expired" });
+      }
 
-    if (existingOtp.expiresAt < new Date()) {
-      return res.status(400).json({ message: "OTP has expired" });
-    }
+      if (existingOtp.otp !== otp) {
+        return res.status(400).json({ message: "Invalid OTP" });
+      }
 
-    await Otp.deleteOne({ mobile }); // cleanup after successful verification
+      if (existingOtp.expiresAt < new Date()) {
+        return res.status(400).json({ message: "OTP has expired" });
+      }
+
+      await Otp.deleteOne({ mobile }); // cleanup after successful verification
+    }
 
     if (path === "signUp-otp") {
       const result = await createCustomer({
@@ -1919,7 +1939,7 @@ const deleteMeal = async (req, res) => {
     }
 
     // ------------------
-    // 6. WALLET UPDATE (ADD +200)
+    // 6. WALLET UPDATE (ADD +225)
     // ------------------
 
     let parentName = "";
@@ -1933,10 +1953,10 @@ const deleteMeal = async (req, res) => {
       parentEmail = form.parentDetails.email || "";
       parentMobile = form.parentDetails.mobile || "";
 
-      form.wallet.points += 200;
+      form.wallet.points += 225;
 
       form.wallet.history.push({
-        change: +200,
+        change: +225,
         reason: "Meal deleted",
         childName,
         mealName: meal.mealName,
