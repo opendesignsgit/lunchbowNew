@@ -12,6 +12,9 @@ import {
   Input,
 } from "@windmill/react-ui";
 import PageTitle from "@/components/Typography/PageTitle";
+import { FiZoomIn } from "react-icons/fi";
+import Tooltip from "@/components/tooltip/Tooltip";
+import OrderViewModal from "@/components/order/OrderViewModal";
 import OrderServices from "@/services/OrderServices";
 
 const PAGE_SIZE = 50;
@@ -41,6 +44,10 @@ const Orders = () => {
 
   // Dish summary state
   const [dishSummary, setDishSummary] = useState([]);
+
+  // View popup state
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewData, setViewData] = useState(null);
 
   // Fetch orders function
   const fetchOrders = async (
@@ -199,6 +206,15 @@ const Orders = () => {
     <div>
       <PageTitle>Orders</PageTitle>
 
+      <OrderViewModal
+        open={viewOpen}
+        onClose={() => {
+          setViewOpen(false);
+          setViewData(null);
+        }}
+        data={viewData}
+      />
+
       <Card className="min-w-0 shadow-xs overflow-hidden bg-white dark:bg-gray-800 mb-5">
         <CardBody>
           <form
@@ -284,6 +300,7 @@ const Orders = () => {
                     <TableCell>Location</TableCell>
                     <TableCell>Date</TableCell>
                     <TableCell>Food</TableCell>
+                    <TableCell className="text-right">Actions</TableCell>
                   </tr>
                 </TableHeader>
                 <TableBody>
@@ -303,6 +320,23 @@ const Orders = () => {
                           : ""}
                       </TableCell>
                       <TableCell>{order.food}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end text-right">
+                          <span
+                            onClick={() => {
+                              setViewData(order);
+                              setViewOpen(true);
+                            }}
+                          >
+                            <Tooltip
+                              id={`order-view-${order.childId}-${order.date}`}
+                              Icon={FiZoomIn}
+                              title="View Details"
+                              bgColor="#1e40af"
+                            />
+                          </span>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

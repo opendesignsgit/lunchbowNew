@@ -268,6 +268,37 @@ async function sendPaymentInvoiceEmail({
   }
 }
 
+// Notifies the admin/company when a subscription payment completes.
+// Recipient is configurable via ADMIN_NOTIFY_EMAILS in .env (comma-separated).
+// Failures are logged only — never block the payment flow.
+async function sendSubscriptionAdminEmail({ type, customerName, customerEmail, amount, orderId, trackingId }) {
+  const adminTo = process.env.ADMIN_NOTIFY_EMAILS || "kavirajan@opendesignsin.com";
+  if (!adminTo) return;
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: adminTo,
+      subject: `${type} – ${customerName || "Customer"} (${orderId || "N/A"})`,
+      html: `
+        <p>A subscription payment was completed.</p>
+        <p><strong>Type:</strong> ${type}</p>
+        <p><strong>Customer:</strong> ${customerName || "—"}</p>
+        <p><strong>Email:</strong> ${customerEmail || "—"}</p>
+        <p><strong>Amount:</strong> ₹${amount || 0}</p>
+        <p><strong>Order ID:</strong> ${orderId || "—"}</p>
+        <p><strong>Transaction ID:</strong> ${trackingId || "—"}</p>
+      `,
+    });
+    console.log("📧 Subscription admin email sent:", orderId);
+  } catch (err) {
+    console.error("Subscription admin email error:", err);
+  }
+}
+
 // Subscription Payment Response Handler
 exports.ccavenueResponse = async (req, res) => {
   let encResponse = "";
@@ -462,6 +493,15 @@ exports.ccavenueResponse = async (req, res) => {
             },
           });
 
+          await sendSubscriptionAdminEmail({
+            type: "Subscription Renewal",
+            customerName: parentName,
+            customerEmail: email,
+            amount,
+            orderId: order_id,
+            trackingId: tracking_id,
+          });
+
           return res.redirect("https://lunchbowl.co.in/user/menuCalendarPage");
         }
 
@@ -539,6 +579,15 @@ exports.ccavenueResponse = async (req, res) => {
                 "Next Billing Date": endDateStr || "—",
                 "Subscription ID": pendingSub?._id ? String(pendingSub._id) : "—",
               },
+            });
+
+            await sendSubscriptionAdminEmail({
+              type: "New Subscription",
+              customerName: parentName,
+              customerEmail: email,
+              amount: amountForInvoice,
+              orderId: order_id,
+              trackingId: tracking_id,
             });
           } catch (err) {
             console.error("Subscription invoice generation error:", err);
@@ -1196,6 +1245,17 @@ exports.localPaymentSuccess = async (req, res) => {
         },
       });
 
+      await sendSubscriptionAdminEmail({
+        type: "Subscription Renewal",
+        customerName: form.parentDetails
+          ? `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`
+          : "Customer",
+        customerEmail: form.parentDetails?.email,
+        amount: subscriptionToUpdate.price || 0,
+        orderId,
+        trackingId: transactionId,
+      });
+
       return res.json({ success: true, message: "Renewal payment simulated successfully", data: form });
     }
 
@@ -1289,6 +1349,17 @@ exports.localPaymentSuccess = async (req, res) => {
             ? String(subscriptionToUpdate._id)
             : "—",
         },
+      });
+
+      await sendSubscriptionAdminEmail({
+        type: "New Subscription",
+        customerName: form.parentDetails
+          ? `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`
+          : "Customer",
+        customerEmail: form.parentDetails?.email,
+        amount: subscriptionToUpdate.price || 0,
+        orderId,
+        trackingId: transactionId,
       });
 
       return res.json({ success: true, message: "New subscription payment simulated successfully", data: form });
