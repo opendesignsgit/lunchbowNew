@@ -1,397 +1,206 @@
+import React, { useEffect, useState } from "react";
 import {
-  Pagination,
+  Card,
+  CardBody,
   Table,
-  TableCell,
   TableContainer,
-  TableFooter,
   TableHeader,
-  WindmillContext,
+  TableCell,
+  TableBody,
+  TableRow,
 } from "@windmill/react-ui";
-import dayjs from "dayjs";
-import isBetween from "dayjs/plugin/isBetween";
-import isToday from "dayjs/plugin/isToday";
-import isYesterday from "dayjs/plugin/isYesterday";
-import { useContext, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { FiCheck, FiRefreshCw, FiShoppingCart, FiTruck } from "react-icons/fi";
-import { ImCreditCard, ImStack } from "react-icons/im";
+import { FiShoppingCart, FiUsers, FiCreditCard } from "react-icons/fi";
 
-//internal import
-import useAsync from "@/hooks/useAsync";
-import useFilter from "@/hooks/useFilter";
-import LineChart from "@/components/chart/LineChart/LineChart";
-import PieChart from "@/components/chart/Pie/PieChart";
-import CardItem from "@/components/dashboard/CardItem";
-import CardItemTwo from "@/components/dashboard/CardItemTwo";
-import ChartCard from "@/components/chart/ChartCard";
-import OrderTable from "@/components/order/OrderTable";
-import TableLoading from "@/components/preloader/TableLoading";
-import NotFound from "@/components/table/NotFound";
 import PageTitle from "@/components/Typography/PageTitle";
-import { SidebarContext } from "@/context/SidebarContext";
 import OrderServices from "@/services/OrderServices";
-import AnimatedContent from "@/components/common/AnimatedContent";
+import CustomerServices from "@/services/CustomerServices";
+import requests from "@/services/httpService";
+
+const getTodayString = () => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const formatDateDMY = (date) => {
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const StatCard = ({ title, value, Icon, iconClass }) => (
+  <Card>
+    <CardBody className="flex items-center">
+      <div className={`p-3 rounded-full mr-4 ${iconClass}`}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <div>
+        <p className="mb-1 text-sm font-medium text-gray-600 dark:text-gray-400">
+          {title}
+        </p>
+        <p className="text-2xl font-semibold text-gray-700 dark:text-gray-200">
+          {value}
+        </p>
+      </div>
+    </CardBody>
+  </Card>
+);
 
 const Dashboard = () => {
-  const { t } = useTranslation();
-  const { mode } = useContext(WindmillContext);
+  const today = getTodayString();
 
-  dayjs.extend(isBetween);
-  dayjs.extend(isToday);
-  dayjs.extend(isYesterday);
-
-  const { currentPage, handleChangePage } = useContext(SidebarContext);
-
-  // react hook
-  const [todayOrderAmount, setTodayOrderAmount] = useState(0);
-  const [yesterdayOrderAmount, setYesterdayOrderAmount] = useState(0);
-  const [salesReport, setSalesReport] = useState([]);
-  const [todayCashPayment, setTodayCashPayment] = useState(0);
-  const [todayCardPayment, setTodayCardPayment] = useState(0);
-  const [todayCreditPayment, setTodayCreditPayment] = useState(0);
-  const [yesterdayCashPayment, setYesterdayCashPayment] = useState(0);
-  const [yesterdayCardPayment, setYesterdayCardPayment] = useState(0);
-  const [yesterdayCreditPayment, setYesterdayCreditPayment] = useState(0);
-
-  const {
-    data: bestSellerProductChart,
-    loading: loadingBestSellerProduct,
-    error,
-  } = useAsync(OrderServices.getBestSellerProductChart);
-
-  const { data: dashboardRecentOrder, loading: loadingRecentOrder } = useAsync(
-    () => OrderServices.getDashboardRecentOrder({ page: currentPage, limit: 8 })
-  );
-
-  const { data: dashboardOrderCount, loading: loadingOrderCount } = useAsync(
-    OrderServices.getDashboardCount
-  );
-
-  const { data: dashboardOrderAmount, loading: loadingOrderAmount } = useAsync(
-    OrderServices.getDashboardAmount
-  );
-
-  // console.log("dashboardOrderCount", dashboardOrderCount);
-
-  const { dataTable, serviceData } = useFilter(dashboardRecentOrder?.orders);
+  const [loading, setLoading] = useState(true);
+  const [todayOrders, setTodayOrders] = useState([]);
+  const [todayOrderCount, setTodayOrderCount] = useState(0);
+  const [dishSummary, setDishSummary] = useState([]);
+  const [subscriptionCount, setSubscriptionCount] = useState(0);
+  const [customerCount, setCustomerCount] = useState(0);
 
   useEffect(() => {
-    // today orders show
-    const todayOrder = dashboardOrderAmount?.ordersData?.filter((order) =>
-      dayjs(order.updatedAt).isToday()
-    );
-    //  console.log('todayOrder',dashboardOrderAmount.ordersData)
-    const todayReport = todayOrder?.reduce((pre, acc) => pre + acc.total, 0);
-    setTodayOrderAmount(todayReport);
+    let mounted = true;
 
-    // yesterday orders
-    const yesterdayOrder = dashboardOrderAmount?.ordersData?.filter((order) =>
-      dayjs(order.updatedAt).set(-1, "day").isYesterday()
-    );
+    const load = async () => {
+      setLoading(true);
 
-    const yesterdayReport = yesterdayOrder?.reduce(
-      (pre, acc) => pre + acc.total,
-      0
-    );
-    setYesterdayOrderAmount(yesterdayReport);
-
-    // sales orders chart data
-    const salesOrderChartData = dashboardOrderAmount?.ordersData?.filter(
-      (order) =>
-        dayjs(order.updatedAt).isBetween(
-          new Date().setDate(new Date().getDate() - 7),
-          new Date()
-        )
-    );
-
-    salesOrderChartData?.reduce((res, value) => {
-      let onlyDate = value.updatedAt.split("T")[0];
-
-      if (!res[onlyDate]) {
-        res[onlyDate] = { date: onlyDate, total: 0, order: 0 };
-        salesReport.push(res[onlyDate]);
-      }
-      res[onlyDate].total += value.total;
-      res[onlyDate].order += 1;
-      return res;
-    }, {});
-
-    setSalesReport(salesReport);
-
-    const todayPaymentMethodData = [];
-    const yesterDayPaymentMethodData = [];
-
-    // today order payment method
-    dashboardOrderAmount?.ordersData?.filter((item, value) => {
-      if (dayjs(item.updatedAt).isToday()) {
-        if (item.paymentMethod === "Cash") {
-          let cashMethod = {
-            paymentMethod: "Cash",
-            total: item.total,
-          };
-          todayPaymentMethodData.push(cashMethod);
+      // Today's orders (+ dish summary)
+      try {
+        const res = await OrderServices.searchOrders({ date: today, limit: 1000 });
+        const data = res?.data || res;
+        if (mounted) {
+          setTodayOrders(data?.orders || []);
+          setTodayOrderCount(data?.total || (data?.orders || []).length);
+          setDishSummary(data?.dishSummary || []);
         }
-
-        if (item.paymentMethod === "Credit") {
-          const cashMethod = {
-            paymentMethod: "Credit",
-            total: item.total,
-          };
-
-          todayPaymentMethodData.push(cashMethod);
-        }
-
-        if (item.paymentMethod === "Card") {
-          const cashMethod = {
-            paymentMethod: "Card",
-            total: item.total,
-          };
-
-          todayPaymentMethodData.push(cashMethod);
-        }
+      } catch (e) {
+        console.error("Dashboard: today's orders failed", e);
       }
 
-      return item;
-    });
-    // yesterday order payment method
-    dashboardOrderAmount?.ordersData?.filter((item, value) => {
-      if (dayjs(item.updatedAt).set(-1, "day").isYesterday()) {
-        if (item.paymentMethod === "Cash") {
-          let cashMethod = {
-            paymentMethod: "Cash",
-            total: item.total,
-          };
-          yesterDayPaymentMethodData.push(cashMethod);
-        }
-
-        if (item.paymentMethod === "Credit") {
-          const cashMethod = {
-            paymentMethod: "Credit",
-            total: item?.total,
-          };
-
-          yesterDayPaymentMethodData.push(cashMethod);
-        }
-
-        if (item.paymentMethod === "Card") {
-          const cashMethod = {
-            paymentMethod: "Card",
-            total: item?.total,
-          };
-
-          yesterDayPaymentMethodData.push(cashMethod);
-        }
+      // Active subscriptions (total)
+      try {
+        const res = await requests.get(
+          "/orders/get-All/user-Subscription?page=1&limit=1"
+        );
+        if (mounted) setSubscriptionCount(res?.total || 0);
+      } catch (e) {
+        console.error("Dashboard: subscriptions failed", e);
       }
 
-      return item;
-    });
+      // Total customers
+      try {
+        const res = await CustomerServices.getAllCustomers({ searchText: "" });
+        const list = Array.isArray(res) ? res : res?.customers || [];
+        if (mounted) setCustomerCount(list.length);
+      } catch (e) {
+        console.error("Dashboard: customers failed", e);
+      }
 
-    const todayCsCdCit = Object.values(
-      todayPaymentMethodData.reduce((r, { paymentMethod, total }) => {
-        if (!r[paymentMethod]) {
-          r[paymentMethod] = { paymentMethod, total: 0 };
-        }
-        r[paymentMethod].total += total;
+      if (mounted) setLoading(false);
+    };
 
-        return r;
-      }, {})
-    );
-    const today_cash_payment = todayCsCdCit.find(
-      (el) => el.paymentMethod === "Cash"
-    );
-    setTodayCashPayment(today_cash_payment?.total);
-    const today_card_payment = todayCsCdCit.find(
-      (el) => el.paymentMethod === "Card"
-    );
-    setTodayCardPayment(today_card_payment?.total);
-    const today_credit_payment = todayCsCdCit.find(
-      (el) => el.paymentMethod === "Credit"
-    );
-    setTodayCreditPayment(today_credit_payment?.total);
-
-    const yesterDayCsCdCit = Object.values(
-      yesterDayPaymentMethodData.reduce((r, { paymentMethod, total }) => {
-        if (!r[paymentMethod]) {
-          r[paymentMethod] = { paymentMethod, total: 0 };
-        }
-        r[paymentMethod].total += total;
-
-        return r;
-      }, {})
-    );
-    const yesterday_cash_payment = yesterDayCsCdCit.find(
-      (el) => el.paymentMethod === "Cash"
-    );
-    setYesterdayCashPayment(yesterday_cash_payment?.total);
-    const yesterday_card_payment = yesterDayCsCdCit.find(
-      (el) => el.paymentMethod === "Card"
-    );
-    setYesterdayCardPayment(yesterday_card_payment?.total);
-    const yesterday_credit_payment = yesterDayCsCdCit.find(
-      (el) => el.paymentMethod === "Credit"
-    );
-    setYesterdayCreditPayment(yesterday_credit_payment?.total);
-
+    load();
+    return () => {
+      mounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dashboardOrderAmount]);
+  }, []);
 
   return (
-    // <>
-    //   <PageTitle>{t("DashboardOverview")}</PageTitle>
+    <div>
+      <PageTitle>Dashboard</PageTitle>
 
-    //   <AnimatedContent>
-    //     <div className="grid gap-2 mb-8 xl:grid-cols-5 md:grid-cols-2">
-    //       <CardItemTwo
-    //         mode={mode}
-    //         title="Today Order"
-    //         title2="TodayOrder"
-    //         Icon={ImStack}
-    //         cash={todayCashPayment || 0}
-    //         card={todayCardPayment || 0}
-    //         credit={todayCreditPayment || 0}
-    //         price={todayOrderAmount || 0}
-    //         className="text-white dark:text-emerald-100 bg-teal-600"
-    //         loading={loadingOrderAmount}
-    //       />
+      {/* Stat cards */}
+      <div className="grid gap-4 mb-8 md:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          title="Orders Today"
+          value={loading ? "…" : todayOrderCount}
+          Icon={FiShoppingCart}
+          iconClass="text-emerald-600 dark:text-emerald-100 bg-emerald-100 dark:bg-emerald-600"
+        />
+        <StatCard
+          title="Active Subscriptions"
+          value={loading ? "…" : subscriptionCount}
+          Icon={FiCreditCard}
+          iconClass="text-blue-600 dark:text-blue-100 bg-blue-100 dark:bg-blue-600"
+        />
+        <StatCard
+          title="Total Customers"
+          value={loading ? "…" : customerCount}
+          Icon={FiUsers}
+          iconClass="text-orange-600 dark:text-orange-100 bg-orange-100 dark:bg-orange-500"
+        />
+      </div>
 
-    //       <CardItemTwo
-    //         mode={mode}
-    //         title="Yesterday Order"
-    //         title2="YesterdayOrder"
-    //         Icon={ImStack}
-    //         cash={yesterdayCashPayment || 0}
-    //         card={yesterdayCardPayment || 0}
-    //         credit={yesterdayCreditPayment || 0}
-    //         price={yesterdayOrderAmount || 0}
-    //         className="text-white dark:text-orange-100 bg-orange-400"
-    //         loading={loadingOrderAmount}
-    //       />
+      {/* Today's dish summary */}
+      {dishSummary.length > 0 && (
+        <>
+          <PageTitle>Today's Meals ({formatDateDMY(today)})</PageTitle>
+          <div className="mb-8 flex flex-wrap gap-4">
+            {dishSummary.map((item) => (
+              <Card
+                key={item.dish}
+                className="w-full sm:w-1/2 md:w-1/3 lg:w-1/5 xl:w-1/6 min-w-[170px] bg-gradient-to-br from-emerald-200 to-emerald-100 border border-emerald-300"
+              >
+                <CardBody className="flex flex-col items-center text-center">
+                  <span className="text-lg font-semibold text-emerald-800 mb-1">
+                    {item.dish}
+                  </span>
+                  <span className="text-3xl font-bold text-emerald-900">
+                    {item.count}
+                  </span>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
 
-    //       <CardItemTwo
-    //         mode={mode}
-    //         title2="ThisMonth"
-    //         Icon={FiShoppingCart}
-    //         price={dashboardOrderAmount?.thisMonthlyOrderAmount || 0}
-    //         className="text-white dark:text-emerald-100 bg-blue-500"
-    //         loading={loadingOrderAmount}
-    //       />
-
-    //       <CardItemTwo
-    //         mode={mode}
-    //         title2="LastMonth"
-    //         Icon={ImCreditCard}
-    //         loading={loadingOrderAmount}
-    //         price={dashboardOrderAmount?.lastMonthOrderAmount || 0}
-    //         className="text-white dark:text-teal-100 bg-cyan-600"
-    //       />
-
-    //       <CardItemTwo
-    //         mode={mode}
-    //         title2="AllTimeSales"
-    //         Icon={ImCreditCard}
-    //         price={dashboardOrderAmount?.totalAmount || 0}
-    //         className="text-white dark:text-emerald-100 bg-emerald-600"
-    //         loading={loadingOrderAmount}
-    //       />
-    //     </div>
-
-    //     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-    //       <CardItem
-    //         title="Total Order"
-    //         Icon={FiShoppingCart}
-    //         loading={loadingOrderCount}
-    //         quantity={dashboardOrderCount?.totalOrder || 0}
-    //         className="text-orange-600 dark:text-orange-100 bg-orange-100 dark:bg-orange-500"
-    //       />
-    //       <CardItem
-    //         title={t("OrderPending")}
-    //         Icon={FiRefreshCw}
-    //         loading={loadingOrderCount}
-    //         quantity={dashboardOrderCount?.totalPendingOrder?.count || 0}
-    //         amount={dashboardOrderCount?.totalPendingOrder?.total || 0}
-    //         className="text-blue-600 dark:text-blue-100 bg-blue-100 dark:bg-blue-500"
-    //       />
-    //       <CardItem
-    //         title={t("OrderProcessing")}
-    //         Icon={FiTruck}
-    //         loading={loadingOrderCount}
-    //         quantity={dashboardOrderCount?.totalProcessingOrder || 0}
-    //         className="text-teal-600 dark:text-teal-100 bg-teal-100 dark:bg-teal-500"
-    //       />
-    //       <CardItem
-    //         title={t("OrderDelivered")}
-    //         Icon={FiCheck}
-    //         loading={loadingOrderCount}
-    //         quantity={dashboardOrderCount?.totalDeliveredOrder || 0}
-    //         className="text-emerald-600 dark:text-emerald-100 bg-emerald-100 dark:bg-emerald-500"
-    //       />
-    //     </div>
-
-    //     <div className="grid gap-4 md:grid-cols-2 my-8">
-    //       <ChartCard
-    //         mode={mode}
-    //         loading={loadingOrderAmount}
-    //         title={t("WeeklySales")}
-    //       >
-    //         <LineChart salesReport={salesReport} />
-    //       </ChartCard>
-
-    //       <ChartCard
-    //         mode={mode}
-    //         loading={loadingBestSellerProduct}
-    //         title={t("BestSellingProducts")}
-    //       >
-    //         <PieChart data={bestSellerProductChart} />
-    //       </ChartCard>
-    //     </div>
-    //   </AnimatedContent>
-
-    //   <PageTitle>{t("RecentOrder")}</PageTitle>
-
-    //   {/* <Loading loading={loading} /> */}
-
-    //   {loadingRecentOrder ? (
-    //     <TableLoading row={5} col={4} />
-    //   ) : error ? (
-    //     <span className="text-center mx-auto text-red-500">{error}</span>
-    //   ) : serviceData?.length !== 0 ? (
-    //     <TableContainer className="mb-8">
-    //       <Table>
-    //         <TableHeader>
-    //           <tr>
-    //             <TableCell>{t("InvoiceNo")}</TableCell>
-    //             <TableCell>{t("TimeTbl")}</TableCell>
-    //             <TableCell>{t("CustomerName")} </TableCell>
-    //             <TableCell> {t("MethodTbl")} </TableCell>
-    //             <TableCell> {t("AmountTbl")} </TableCell>
-    //             <TableCell>{t("OderStatusTbl")}</TableCell>
-    //             <TableCell>{t("ActionTbl")}</TableCell>
-    //             <TableCell className="text-right">{t("InvoiceTbl")}</TableCell>
-    //           </tr>
-    //         </TableHeader>
-
-    //         <OrderTable orders={dataTable} />
-    //       </Table>
-    //       <TableFooter>
-    //         <Pagination
-    //           totalResults={dashboardRecentOrder?.totalOrder}
-    //           resultsPerPage={8}
-    //           onChange={handleChangePage}
-    //           label="Table navigation"
-    //         />
-    //       </TableFooter>
-    //     </TableContainer>
-    //   ) : (
-    //     <NotFound title="Sorry, There are no orders right now." />
-    //   )}
-    // </>
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-3xl font-semibold text-gray-600 dark:text-gray-200 mt-20 mb-4">
-        Page is under construction
-      </h1>
-      <p className="text-lg text-gray-500 dark:text-gray-400">
-        Check back later for updates.
-      </p>
+      {/* Today's orders table */}
+      <PageTitle>Today's Orders</PageTitle>
+      <Card className="min-w-0 shadow-xs overflow-hidden">
+        <CardBody>
+          {loading ? (
+            <p>Loading...</p>
+          ) : todayOrders.length === 0 ? (
+            <p>No orders for today.</p>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHeader>
+                  <tr>
+                    <TableCell>#</TableCell>
+                    <TableCell>Child Name</TableCell>
+                    <TableCell>Class &amp; Section</TableCell>
+                    <TableCell>School</TableCell>
+                    <TableCell>Location</TableCell>
+                    <TableCell>Food</TableCell>
+                  </tr>
+                </TableHeader>
+                <TableBody>
+                  {todayOrders.map((order, idx) => (
+                    <TableRow key={(order.childId || idx) + "-" + order.food}>
+                      <TableCell>{idx + 1}</TableCell>
+                      <TableCell>
+                        {order.childFirstName} {order.childLastName}
+                      </TableCell>
+                      <TableCell>
+                        {order.childClass} - {order.section}
+                      </TableCell>
+                      <TableCell>{order.school}</TableCell>
+                      <TableCell>{order.location}</TableCell>
+                      <TableCell>{order.food}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 };

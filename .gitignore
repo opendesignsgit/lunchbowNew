@@ -1,0 +1,10 @@
+# Editor / workspace
+.vscode/
+lunchbowl.code-workspace
+run.bat
+
+# Server configs
+server-conf/
+
+# Backend uploads
+backend/uploads/

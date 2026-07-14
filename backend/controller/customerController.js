@@ -1939,7 +1939,7 @@ const deleteMeal = async (req, res) => {
     }
 
     // ------------------
-    // 6. WALLET UPDATE (ADD +225)
+    // 6. WALLET UPDATE (ADD +200)
     // ------------------
 
     let parentName = "";
@@ -1953,10 +1953,10 @@ const deleteMeal = async (req, res) => {
       parentEmail = form.parentDetails.email || "";
       parentMobile = form.parentDetails.mobile || "";
 
-      form.wallet.points += 225;
+      form.wallet.points += 200;
 
       form.wallet.history.push({
-        change: +225,
+        change: +200,
         reason: "Meal deleted",
         childName,
         mealName: meal.mealName,

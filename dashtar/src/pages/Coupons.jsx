@@ -12,6 +12,9 @@ import {
   Input,
 } from "@windmill/react-ui";
 import PageTitle from "@/components/Typography/PageTitle";
+import { FiZoomIn } from "react-icons/fi";
+import Tooltip from "@/components/tooltip/Tooltip";
+import SubscriptionViewModal from "@/components/coupon/SubscriptionViewModal";
 import axios from "axios";
 
 const PAGE_SIZE = 10;
@@ -27,6 +30,10 @@ const SubscriptionTable = () => {
   const [fatherName, setFatherName] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
+
+  // View popup state
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewData, setViewData] = useState(null);
 
   // Local state to store last used filters
   const [lastFilters, setLastFilters] = useState({
@@ -134,6 +141,15 @@ const SubscriptionTable = () => {
     <div>
       <PageTitle>User Subscriptions</PageTitle>
 
+      <SubscriptionViewModal
+        open={viewOpen}
+        onClose={() => {
+          setViewOpen(false);
+          setViewData(null);
+        }}
+        data={viewData}
+      />
+
       <Card className="min-w-0 shadow-xs overflow-hidden bg-white dark:bg-gray-800 mb-5">
         <CardBody>
           <form
@@ -206,6 +222,7 @@ const SubscriptionTable = () => {
                     <TableCell>Start Date</TableCell>
                     <TableCell>End Date</TableCell>
                       <TableCell>Working Days</TableCell>
+                    <TableCell className="text-right">Actions</TableCell>
 
                       {/* <TableCell>Amount</TableCell> */}
                       {/* <TableCell>Payment Status</TableCell> */}
@@ -244,6 +261,25 @@ const SubscriptionTable = () => {
                         {/* Working Days */}
                         <TableCell>
                           {sub.subscriptionDetails?.workingDays || ""}
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell>
+                          <div className="flex justify-end text-right">
+                            <span
+                              onClick={() => {
+                                setViewData(sub);
+                                setViewOpen(true);
+                              }}
+                            >
+                              <Tooltip
+                                id={`sub-view-${idx}`}
+                                Icon={FiZoomIn}
+                                title="View Details"
+                                bgColor="#1e40af"
+                              />
+                            </span>
+                          </div>
                         </TableCell>
 
                         {/* Optional: Price */}

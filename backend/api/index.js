@@ -1,4 +1,6 @@
 require("dotenv").config();
+// Local overrides: .env.local wins over .env (gitignored, dev only)
+require("dotenv").config({ path: `${__dirname}/../.env.local`, override: true });
 require("./../jobs/renewalReminder");
 const express = require("express");
 const cors = require("cors");
