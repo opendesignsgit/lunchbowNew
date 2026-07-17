@@ -526,7 +526,7 @@ const AddChild = ({ _id, onComplete }) => {
             </Grid>
             <Grid className="curplanItem">
               <Typography variant="h5"><strong>Amount per Day per Child</strong></Typography>
-              <Typography>₹ 200</Typography>
+              <Typography>₹ {pricing.addChildPricePerDay}</Typography>
             </Grid>
             <Grid className="curplanItem totalamountItem">
               <Typography variant="h5" color="primary" fontWeight="bold">

@@ -41,7 +41,15 @@ const AppSettings = () => {
         setPricing(data?.pricing || null);
         setMail(data?.mail || null);
       } catch (e) {
-        setMsg({ type: "error", text: e?.response?.data?.message || "Failed to load settings" });
+        // Surface the real reason (status + message) — a silent "No settings found"
+        // hides 401/404/500 and makes this impossible to debug.
+        const status = e?.response?.status;
+        const detail = e?.response?.data?.message || e?.message || "Unknown error";
+        console.error("AppSettings load failed:", status, detail, e);
+        setMsg({
+          type: "error",
+          text: `Failed to load settings${status ? ` (HTTP ${status})` : ""}: ${detail}`,
+        });
       } finally {
         setLoading(false);
       }
@@ -101,7 +109,23 @@ const AppSettings = () => {
   };
 
   if (loading) return <div className="p-6">Loading settings...</div>;
-  if (!pricing || !mail) return <div className="p-6">No settings found.</div>;
+
+  // Render the error banner instead of returning early, otherwise a failed fetch
+  // shows a bare "No settings found." and the actual cause is invisible.
+  if (!pricing || !mail) {
+    return (
+      <div>
+        <PageTitle>Settings</PageTitle>
+        {msg && (
+          <div className="mb-4 px-4 py-2 rounded bg-red-100 text-red-700">{msg.text}</div>
+        )}
+        <p className="text-gray-600 dark:text-gray-400">
+          No settings loaded. Check the browser Network tab for the{" "}
+          <code>/settings</code> request and the API logs.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
