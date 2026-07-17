@@ -22,6 +22,10 @@ import useRegistration from "@hooks/useRegistration";
 import AttributeServices from "../../services/AttributeServices";
 import useAsync from "../../hooks/useAsync";
 import CategoryServices from "../../services/CategoryServices";
+import useAppSettings, {
+  DEFAULT_PRICING,
+  getDiscountMap,
+} from "../../hooks/useAppSettings";
 import { useSession } from "next-auth/react";
 import AccountServices from "@services/AccountServices";
 import PriceBreakdownModal from "./PriceBreakdownModal";
@@ -32,7 +36,8 @@ import Tooltip from "@mui/material/Tooltip";
 
 
 
-const BASE_PRICE_PER_DAY = 225;
+// Fallback only — live value comes from admin Settings via useAppSettings().
+const BASE_PRICE_PER_DAY = DEFAULT_PRICING.basePricePerDay;
 
 // Fetches holidays as ["YYYY-MM-DD", ...]
 const useHolidays = () => {
@@ -88,11 +93,15 @@ const calculateEndDateByWorkingDays = (startDate, workingDays, holidays) => {
 };
 
 // Always uses minStartDate for plans!
-const calculatePlans = (holidays, childCount = 1, minStartDate) => {
-  const discounts =
-    childCount >= 2
-      ? { 22: 0.05, 66: 0.15, 132: 0.2 }
-      : { 22: 0, 66: 0.05, 132: 0.1 };
+// `pricing` comes from admin Settings (useAppSettings); see hooks/useAppSettings.js.
+const calculatePlans = (
+  holidays,
+  childCount = 1,
+  minStartDate,
+  pricing = DEFAULT_PRICING
+) => {
+  const BASE_PRICE_PER_DAY = pricing.basePricePerDay;
+  const discounts = getDiscountMap(pricing, childCount);
   return [
     {
       id: 1,
@@ -143,6 +152,10 @@ const RenewSubscriptionPlanStep = ({
 }) => {
   const router = useRouter();
   const { holidays, holidaysLoading } = useHolidays();
+  // Admin-controlled pricing. Shadows the module fallback so the JSX below reads
+  // the live value without further changes.
+  const { pricing } = useAppSettings();
+  const BASE_PRICE_PER_DAY = pricing.basePricePerDay;
   const isWorkingDayMemo = useCallback(
     (date) => isWorkingDay(date, holidays),
     [holidays]
@@ -264,8 +277,8 @@ const RenewSubscriptionPlanStep = ({
     selectedChildren.length > 0 ? selectedChildren.length : 1;
 
   const plans = useMemo(
-    () => calculatePlans(holidays, numberOfChildren, minStartDate),
-    [holidays, numberOfChildren, minStartDate]
+    () => calculatePlans(holidays, numberOfChildren, minStartDate, pricing),
+    [holidays, numberOfChildren, minStartDate, pricing]
   );
 
   useEffect(() => {
@@ -357,7 +370,8 @@ const RenewSubscriptionPlanStep = ({
     if (useWallet && walletPoints > 0) {
 
       // 80% MAX REDEEM RULE
-      const maxRedeemable = totalPrice * 0.8;
+      // Wallet redemption cap is admin-controlled (Settings → Pricing)
+      const maxRedeemable = totalPrice * (pricing.walletRedeemCapPercent / 100);
 
       // Wallet can be used up to min(walletPoints, maxRedeemable)
       walletUsed = Math.min(walletPoints, maxRedeemable);

@@ -21,6 +21,7 @@ const EditProfile = lazy(() => import("@/pages/EditProfile"));
 const Languages = lazy(() => import("@/pages/Languages"));
 const Currencies = lazy(() => import("@/pages/Currencies"));
 const Setting = lazy(() => import("@/pages/Setting"));
+const AppSettings = lazy(() => import("@/pages/AppSettings"));
 const StoreHome = lazy(() => import("@/pages/StoreHome"));
 const StoreSetting = lazy(() => import("@/pages/StoreSetting"));
 const Notifications = lazy(() => import("@/pages/Notifications"));
@@ -39,6 +40,10 @@ const routes = [
   {
     path: "/dashboard",
     component: Dashboard,
+  },
+  {
+    path: "/app-settings",
+    component: AppSettings,
   },
   {
     path: "/products",

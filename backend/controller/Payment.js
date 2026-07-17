@@ -3,6 +3,8 @@ const ccav = require("../utils/ccavutil");
 const mongoose = require("mongoose"); // Add this import for ObjectId validation
 const Form = require("../models/Form");
 const UserPayment = require("../models/Payment");
+const AppSettings = require("../models/AppSettings");
+const { getMailEvent } = require("./appSettingsController");
 const nodemailer = require("nodemailer");
 const { sendSMS } = require("../lib/sms-sender/smsService");
 const SmsLog = require("../models/SmsLog");
@@ -272,8 +274,11 @@ async function sendPaymentInvoiceEmail({
 // Recipient is configurable via ADMIN_NOTIFY_EMAILS in .env (comma-separated).
 // Failures are logged only — never block the payment flow.
 async function sendSubscriptionAdminEmail({ type, customerName, customerEmail, amount, orderId, trackingId }) {
-  const adminTo = process.env.ADMIN_NOTIFY_EMAILS || "kavirajan@opendesignsin.com";
-  if (!adminTo) return;
+  // Recipients/subject/enabled come from admin Settings → Mail (subscription).
+  // ADMIN_NOTIFY_EMAILS remains a fallback for environments not yet seeded.
+  const ev = await getMailEvent("subscription");
+  const adminTo = ev.recipients || process.env.ADMIN_NOTIFY_EMAILS || "";
+  if (!adminTo || !ev.enabled) return;
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -282,7 +287,7 @@ async function sendSubscriptionAdminEmail({ type, customerName, customerEmail, a
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: adminTo,
-      subject: `${type} – ${customerName || "Customer"} (${orderId || "N/A"})`,
+      subject: `${ev.subject || type} – ${customerName || "Customer"} (${orderId || "N/A"})`,
       html: `
         <p>A subscription payment was completed.</p>
         <p><strong>Type:</strong> ${type}</p>
@@ -832,8 +837,12 @@ exports.holiydayPayment = async (req, res) => {
             else console.log("📧 Email sent successfully");
           });
 
+          // Fallback price comes from admin settings (was hardcoded 200 while the
+          // store charged 225 — see ADMIN-SETTINGS-AND-EXPORT-PLAN.md §0.2).
+          const holidaySettings = await AppSettings.getSettings();
           const holidayAmount =
-            Number(responseData.amount || 0) || childrenData.length * 200;
+            Number(responseData.amount || 0) ||
+            childrenData.length * holidaySettings.pricing.holidayMealPrice;
           logInvoiceDebug("holidayPayment:beforeInvoice", {
             order_id,
             tracking_id,

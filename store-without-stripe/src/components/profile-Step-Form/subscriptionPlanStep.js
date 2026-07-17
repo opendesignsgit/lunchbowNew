@@ -25,8 +25,13 @@ import useRegistration from "@hooks/useRegistration";
 import AttributeServices from "../../services/AttributeServices";
 import useAsync from "../../hooks/useAsync";
 import CategoryServices from "../../services/CategoryServices";
+import useAppSettings, {
+  DEFAULT_PRICING,
+  getDiscountMap,
+} from "../../hooks/useAppSettings";
 
-const BASE_PRICE_PER_DAY = 225;
+// Fallback only — the live value comes from admin Settings via useAppSettings().
+const BASE_PRICE_PER_DAY = DEFAULT_PRICING.basePricePerDay;
 
 const useHolidays = () => {
   const [holidays, setHolidays] = useState([]);
@@ -88,12 +93,17 @@ const calculateEndDateByWorkingDays = (startDate, workingDays, holidays) => {
   return current;
 };
 
-const calculatePlans = (holidays, childCount = 1, customStartDates = {}) => {
+// `pricing` comes from admin Settings (useAppSettings). Discounts and the base
+// price are no longer hardcoded — see hooks/useAppSettings.js for the fallback.
+const calculatePlans = (
+  holidays,
+  childCount = 1,
+  customStartDates = {},
+  pricing = DEFAULT_PRICING
+) => {
   const todayDefault = getNextWorkingDay(dayjs().add(1, "day"), holidays);
-  const discounts =
-    childCount >= 2
-      ? { 22: 0.05, 66: 0.15, 132: 0.2 }
-      : { 22: 0, 66: 0.05, 132: 0.1 };
+  const BASE_PRICE_PER_DAY = pricing.basePricePerDay;
+  const discounts = getDiscountMap(pricing, childCount);
 
   return [
     {
@@ -158,6 +168,10 @@ const SubscriptionPlanStep = ({
 }) => {
   const router = useRouter();
   const { holidays, holidaysLoading } = useHolidays();
+  // Admin-controlled pricing. Shadows the module fallback so every JSX usage of
+  // BASE_PRICE_PER_DAY below reads the live value without further changes.
+  const { pricing } = useAppSettings();
+  const BASE_PRICE_PER_DAY = pricing.basePricePerDay;
   const isWorkingDayMemo = useCallback(
     (date) => isWorkingDay(date, holidays),
     [holidays]
@@ -247,10 +261,11 @@ const SubscriptionPlanStep = ({
     const computedPlans = calculatePlans(
       holidays,
       numberOfChildren,
-      customStartDates
+      customStartDates,
+      pricing
     );
     setPlans(computedPlans);
-  }, [holidays, numberOfChildren, customStartDates]);
+  }, [holidays, numberOfChildren, customStartDates, pricing]);
 
   const minStartDate = React.useMemo(() => {
     if (!holidays.length) return dayjs().add(1, "day");

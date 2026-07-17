@@ -11,6 +11,7 @@ import {
 import CryptoJS from "crypto-js";
 import { useSession } from "next-auth/react";
 import useRegistration from "@hooks/useRegistration";
+import useAppSettings from "@hooks/useAppSettings";
 
 const HolidayPayment = ({
   open,
@@ -26,6 +27,8 @@ const HolidayPayment = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { submitHandler } = useRegistration();
+  // Admin-controlled holiday meal price (Settings → Pricing)
+  const { pricing } = useAppSettings();
 
   // ✅ Always attach current planId to each child entry
   const childrenDataWithPlan = childrenData.map((child) => ({
@@ -34,7 +37,7 @@ const HolidayPayment = ({
     mealDate: selectedDate,
   }));
 
-  const totalAmount = childrenData.length * 225;
+  const totalAmount = childrenData.length * pricing.holidayMealPrice;
   const orderId = `LB-HOLIDAY-${Date.now()}`;
 
   // ✅ CCAvenue Config

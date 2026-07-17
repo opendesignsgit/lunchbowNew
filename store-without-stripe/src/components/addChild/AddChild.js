@@ -21,6 +21,7 @@ import useRegistration from "@hooks/useRegistration";
 import CategoryServices from "@services/CategoryServices";
 import AttributeServices from "@services/AttributeServices";
 import useAsync from "@hooks/useAsync";
+import useAppSettings from "@hooks/useAppSettings";
 import WorkingDaysCalendar from "../profile-Step-Form/WorkingDaysCalendar";
 import AddChildPayment from "./AddChildPayment";
 import { useRouter } from 'next/router';
@@ -144,6 +145,8 @@ const AddChild = ({ _id, onComplete }) => {
   const [selectedChildren, setSelectedChildren] = useState({});
 
   const { submitHandler, loading } = useRegistration();
+  // Admin-controlled pricing (Settings → Pricing)
+  const { pricing } = useAppSettings();
 
   useEffect(() => {
     if (fetchedChildren.children?.length > 0) {
@@ -450,8 +453,10 @@ const AddChild = ({ _id, onComplete }) => {
     return count;
   }, 0);
 
-  // Total amount = 200 ₹ * remaining days * new selected children count
-  const totalToPay = newSelectedChildrenCount * remainingWorkingDays * 200;
+  // Total amount = add-child day rate (admin Settings) * remaining days * new children.
+  // NOTE: this was hardcoded to 200 while the rest of the app charged 225.
+  const totalToPay =
+    newSelectedChildrenCount * remainingWorkingDays * pricing.addChildPricePerDay;
 
   // Selected children for payment and guard using Yup's synchronous validateSync
   const selectedChildrenForPayment = useMemo(

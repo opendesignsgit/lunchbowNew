@@ -5,7 +5,10 @@ import NotFoundPage from "@/components/common/NotFoundPage";
 const Main = ({ children }) => {
   const { path, accessList } = useGetCData();
 
-  if (!accessList?.includes(path)) {
+  // "app-settings" is allowed for any signed-in admin without needing it added to
+  // every admin's access_list. The real security boundary is the API itself,
+  // which is protected by isAuth + isAdmin.
+  if (path !== "app-settings" && !accessList?.includes(path)) {
     return <NotFoundPage />;
   }
   return (

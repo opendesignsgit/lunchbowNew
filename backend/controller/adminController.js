@@ -9,6 +9,7 @@ const {
   handleEncryptData,
 } = require("../config/auth");
 const { sendEmail } = require("../lib/email-sender/sender");
+const { getMailEvent } = require("./appSettingsController");
 const Admin = require("../models/Admin");
 const School = require("../models/School");
 const Holiday = require("../models/holidaySchema");
@@ -609,11 +610,14 @@ const talkNutrition = async (req, res) => {
     },
   });
 
+  // Recipients/subject from admin Settings → Mail (nutrition)
+  const nutritionMail = await getMailEvent("nutrition");
+
   // Compose the admin/team email
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com, yourpersonalrd.sujatha@gmail.com, sujatha@nutritureclinic.com",
-    subject: "New Nutrition Enquiry Received",
+    to: nutritionMail.recipients,
+    subject: nutritionMail.subject || "New Nutrition Enquiry Received",
     html: `
       <h2>Nutrition Enquiry Details</h2>
       <p><strong>Name:</strong> ${firstName} ${lastName}</p>
@@ -709,11 +713,14 @@ const freeTrialEnquiry = async (req, res) => {
     },
   });
 
+  // Recipients/subject from admin Settings → Mail (trialMeal)
+  const trialMealMail = await getMailEvent("trialMeal");
+
   // Compose admin notification email
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
-    subject: "New Trail Meal @ 99 Enquiry",
+    to: trialMealMail.recipients,
+    subject: trialMealMail.subject || "New Trail Meal @ 99 Enquiry",
     html: `
       <h2>Trail Meal @ 99 Enquiry Received</h2>
       <p><strong>Name:</strong> ${firstName} ${lastName}</p>
@@ -805,11 +812,14 @@ const getInTouch = async (req, res) => {
     },
   });
 
+  // Recipients/subject from admin Settings → Mail (general)
+  const generalMail = await getMailEvent("general");
+
   // Compose the email
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com", // Change to your desired recipient
-    subject: "New General Enquiry Received",
+    to: generalMail.recipients,
+    subject: generalMail.subject || "New General Enquiry Received",
     html: `
       <h2>General Enquiry Details</h2>
       <p><strong>Name:</strong> ${firstName} ${lastName}</p>
@@ -862,11 +872,14 @@ const contactUs = async (req, res) => {
     },
   });
 
+  // Recipients/subject from admin Settings → Mail (contact)
+  const contactMail = await getMailEvent("contact");
+
   // Email to admins
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
-    subject: "New Contact Us Enquiry",
+    to: contactMail.recipients,
+    subject: contactMail.subject || "New Contact Us Enquiry",
     html: `
       <h2>Contact Us Enquiry Details</h2>
       <p><strong>Name:</strong> ${firstname} ${Lastname}</p>
@@ -940,10 +953,12 @@ const schoolServiceEnquiry = async (req, res) => {
     },
   });
 
+  const schoolMail = await getMailEvent("school");
+
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
-    subject: "New School Service Enquiry Received",
+    to: schoolMail.recipients,
+    subject: schoolMail.subject || "New School Service Enquiry Received",
     html: `
       <h2>School Service Enquiry Details</h2>
       <p><strong>Name:</strong> ${cleanFirstName} ${cleanLastName}</p>

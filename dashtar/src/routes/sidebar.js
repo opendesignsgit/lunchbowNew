@@ -55,6 +55,11 @@ const sidebar = [
     icon: FiCompass,
     name: "Orders",
   },
+  {
+    path: "/app-settings",
+    icon: FiSettings,
+    name: "Settings",
+  },
 
   // {
   //   path: "/our-staff",

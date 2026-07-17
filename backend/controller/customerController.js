@@ -22,6 +22,12 @@ const mongoose = require("mongoose");
 const HolidayPayment = require("../models/HolidayPayment");
 const Form = require("../models/Form");
 const Child = require("../models/childModel");
+const AppSettings = require("../models/AppSettings");
+const {
+  getMailEvent,
+  calculateSubscriptionPrice,
+  auditSubscriptionPrice,
+} = require("./appSettingsController");
 const Subscription = require("../models/subscriptionModel");
 const UserPayment = require('../models/Payment');
 const { Types: { ObjectId } } = mongoose;
@@ -970,6 +976,18 @@ const stepFormRegister = async (req, res) => {
       // Find form with populated subscriptions
       const form = await Form.findOne({ user: _id }).populate("subscriptions").exec();
 
+      // SERVER-SIDE PRICE CHECK — log-only for now. Recomputes the authoritative
+      // price from admin settings and logs any mismatch with the client's value.
+      // Once [PRICE-AUDIT] logs are clean, use the returned value instead of
+      // payload.totalPrice to enforce it.
+      await auditSubscriptionPrice({
+        label: "step-Form-SubscriptionPlan",
+        userId: _id,
+        workingDays: payload.workingDays,
+        childCount: payload.children?.length,
+        clientPrice: payload.totalPrice,
+      });
+
       // Look for active subscription with same planId
       const existingSubscription = await Subscription.findOne({
         user: _id,
@@ -1037,6 +1055,17 @@ const stepFormRegister = async (req, res) => {
           .status(400)
           .json({ success: false, message: "Missing subscription fields" });
       }
+
+      // SERVER-SIDE PRICE CHECK — log-only (see step-Form-SubscriptionPlan above).
+      // Renewal posts (price - walletUsed), so the wallet offset is passed in.
+      await auditSubscriptionPrice({
+        label: "step-Form-Renew-SubscriptionPlan",
+        userId: _id,
+        workingDays: payload.workingDays,
+        childCount: payload.children?.length,
+        clientPrice: payload.totalPrice,
+        walletUsed: payload.walletUsed || 0,
+      });
 
       // Retrieve user form with populated subscriptions
       const form = await Form.findOne({ user: _id }).populate("subscriptions").exec();
@@ -1939,12 +1968,16 @@ const deleteMeal = async (req, res) => {
     }
 
     // ------------------
-    // 6. WALLET UPDATE (ADD +225 — matches the 225 meal price)
+    // 6. WALLET UPDATE (amount comes from admin settings)
     // ------------------
 
     let parentName = "";
     let parentEmail = "";
     let parentMobile = "";
+
+    // Admin-controlled wallet credit for a cancelled meal (Settings → Pricing)
+    const appSettings = await AppSettings.getSettings();
+    const walletCredit = appSettings.pricing.walletCreditOnMealDelete;
 
     const form = await Form.findOne({ user: userId });
 
@@ -1953,10 +1986,10 @@ const deleteMeal = async (req, res) => {
       parentEmail = form.parentDetails.email || "";
       parentMobile = form.parentDetails.mobile || "";
 
-      form.wallet.points += 225;
+      form.wallet.points += walletCredit;
 
       form.wallet.history.push({
-        change: +225,
+        change: +walletCredit,
         reason: "Meal deleted",
         childName,
         mealName: meal.mealName,
@@ -2021,10 +2054,12 @@ const deleteMeal = async (req, res) => {
         // ------------------------------------
         // CLIENT (ADMIN) EMAIL TEMPLATE
         // ------------------------------------
+        // Recipients/subject come from admin Settings → Mail (mealDelete)
+        const mealDeleteMail = await getMailEvent("mealDelete");
         const clientMailOptions = {
           from: process.env.EMAIL_USER,
-          to: "contactus@lunchbowl.co.in",
-          subject: "New Meal Deletion Alert",
+          to: mealDeleteMail.recipients,
+          subject: mealDeleteMail.subject || "New Meal Deletion Alert",
           html: `
         <h3>Meal Deletion Details</h3>
 
@@ -2041,9 +2076,11 @@ const deleteMeal = async (req, res) => {
       `,
         };
 
-        transporter.sendMail(clientMailOptions, (err) => {
-          if (err) console.log("Client Meal Delete Email Error:", err);
-        });
+        if (mealDeleteMail.enabled && mealDeleteMail.recipients) {
+          transporter.sendMail(clientMailOptions, (err) => {
+            if (err) console.log("Client Meal Delete Email Error:", err);
+          });
+        }
 
       } catch (error) {
         console.log("Email sending failed:", error);

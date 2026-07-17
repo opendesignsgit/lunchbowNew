@@ -43,6 +43,10 @@ const SidebarContent = () => {
       }
       // Handle top-level route: check root path part
       const routeKey = route.path?.split("?")[0].split("/")[1];
+      // "app-settings" is shown to any signed-in admin without needing it added to
+      // every admin's access_list (matches the bypass in layout/Main.jsx). The real
+      // security boundary is the API, which is protected by isAuth + isAdmin.
+      if (routeKey === "app-settings") return route;
       return routeKey && accessList.includes(routeKey) ? route : null;
     })
     .filter(Boolean);

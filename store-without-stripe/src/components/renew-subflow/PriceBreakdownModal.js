@@ -7,6 +7,7 @@ import {
   Button,
   Typography
 } from "@mui/material";
+import { DEFAULT_PRICING } from "@hooks/useAppSettings";
 
 const PriceBreakdownModal = ({
   open,
@@ -15,7 +16,9 @@ const PriceBreakdownModal = ({
   currentPlan,
   walletPoints,
   useWallet,
-  BASE_PRICE_PER_DAY = 200,
+  // Fallback only — callers pass the live admin-controlled value.
+  // (Was 200 while the rest of the app charged 225.)
+  BASE_PRICE_PER_DAY = DEFAULT_PRICING.basePricePerDay,
 }) => {
 
   if (!currentPlan) return null;

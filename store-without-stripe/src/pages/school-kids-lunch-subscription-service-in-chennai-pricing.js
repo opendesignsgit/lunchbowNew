@@ -17,9 +17,53 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import useRegistration from "@hooks/useRegistration";
+import axios from "axios";
+import { DEFAULT_PRICING } from "@hooks/useAppSettings";
 
+/**
+ * Prices are fetched at BUILD time and pre-rendered into the HTML, so crawlers see
+ * real numbers (identical SEO to hardcoding) while still following admin Settings.
+ * `revalidate` re-generates the page periodically after a settings change.
+ *
+ * If the API is unreachable at build time we fall back to DEFAULT_PRICING rather
+ * than failing the build.
+ */
+export async function getStaticProps() {
+  let pricing = DEFAULT_PRICING;
+  try {
+    const { data } = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/settings/public`,
+      { timeout: 8000 }
+    );
+    if (data?.pricing) pricing = { ...DEFAULT_PRICING, ...data.pricing };
+  } catch (e) {
+    console.warn(
+      "[pricing page] settings fetch failed, using defaults —",
+      e?.message
+    );
+  }
+  return { props: { pricing }, revalidate: 300 };
+}
 
-const PlanPricingPage = () => {
+const PlanPricingPage = ({ pricing = DEFAULT_PRICING }) => {
+  // Derive each card from admin Settings (single-child pricing is what we advertise).
+  const basePrice = pricing?.basePricePerDay ?? DEFAULT_PRICING.basePricePerDay;
+  const tiers =
+    pricing?.planTiers?.length ? pricing.planTiers : DEFAULT_PRICING.planTiers;
+  const fmt = (n) => Number(n).toLocaleString("en-IN");
+  const buildCard = (t) => {
+    if (!t) return null;
+    const original = t.days * basePrice;
+    const off = t.discountSingle || 0;
+    return {
+      days: t.days,
+      original,
+      final: Math.round(original * (1 - off)),
+      pct: Math.round(off * 100),
+    };
+  };
+  const [card1, card2, card3] = [buildCard(tiers[0]), buildCard(tiers[1]), buildCard(tiers[2])];
+
   const { data: session } = useSession();
   const { submitHandler, loading, error } = useRegistration();
   const [stepCheck, setStepCheck] = useState(null);
@@ -201,16 +245,25 @@ const PlanPricingPage = () => {
                             <div className='ppriceTitle combtntb comtilte mb-[4vh] text-center'>
                                 <h4>Wholesome food choices supporting active <strong>kids with energy and strength</strong></h4>
                             </div>
+                            {/*
+                              Prices below are DERIVED from Dashtar → Settings → Pricing via
+                              getStaticProps (see top of file), so they always match checkout.
+                              They are still pre-rendered into the HTML, so SEO is unaffected.
+
+                              Cards map to planTiers[0..2] using the SINGLE-CHILD discount, which is
+                              what we advertise. The "Per Month / 3 months / 6 months" labels and the
+                              sibling-discount copy remain static — revisit them if tier days change.
+                            */}
                             <div className='ppricebox flex'>
                                 <div className='ppriceitem'>
                                   <div className='ppricetbox'>
                                     <h4 className='permnt'>Per Month</h4>
-                                    <h2><small>₹</small>4,950</h2>
-                                    <h6>22 Working Days</h6>
+                                    <h2><small>₹</small>{fmt(card1.final)}</h2>
+                                    <h6>{card1.days} Working Days</h6>
                                   </div>
                                   <div className='ppricembox'>
                                     <ul>
-                                      <li>225 per meal (22 meals)</li>
+                                      <li>{basePrice} per meal ({card1.days} meals)</li>
                                       <li>Pre-planned, dietician-approved 30-day meal plan</li>
                                       <li>Add a sibling & save (5% off)</li>
                                       <li>Diet & allergy-friendly choices</li>
@@ -228,15 +281,15 @@ const PlanPricingPage = () => {
                                 </div>
                                 <div className='ppriceitem'>
                                   <div className='ppricetbox'>
-                                    <h4><del>₹ 14,850</del> / 3 months</h4>
-                                    <h2><small>₹</small>14,107</h2>
-                                    <h6>66 Working Days</h6>
+                                    <h4><del>₹ {fmt(card2.original)}</del> / 3 months</h4>
+                                    <h2><small>₹</small>{fmt(card2.final)}</h2>
+                                    <h6>{card2.days} Working Days</h6>
                                   </div>
                                   <div className='ppricembox'>
                                     <ul>
-                                      <li>225 per meal (66 meals)</li>
+                                      <li>{basePrice} per meal ({card2.days} meals)</li>
                                       <li>Pre-planned, dietician-approved 30-day meal plan (renewed monthly)</li>
-                                      <li>Already includes 5% savings</li>
+                                      <li>Already includes {card2.pct}% savings</li>
                                       <li>Add a sibling & save even more (extra 5%)</li>
                                       <li>Diet & allergy-friendly choices</li>
                                       <li>Multi-child subscription options</li>
@@ -249,20 +302,20 @@ const PlanPricingPage = () => {
                                   </div>
                     )}
                                   <div className="offerbox">
-                                      <strong>5</strong><small>% <br/>OFF</small>
+                                      <strong>{card2.pct}</strong><small>% <br/>OFF</small>
                                   </div>
                                 </div>
                                 <div className='ppriceitem'>
                                   <div className='ppricetbox'>
-                                    <h4><del>₹ 29,700</del> / 6 months</h4>
-                                    <h2><small>₹</small>26,730</h2>
-                                    <h6>132 Working Days</h6>
+                                    <h4><del>₹ {fmt(card3.original)}</del> / 6 months</h4>
+                                    <h2><small>₹</small>{fmt(card3.final)}</h2>
+                                    <h6>{card3.days} Working Days</h6>
                                   </div>
                                   <div className='ppricembox'>
                                     <ul>
-                                      <li>225 per meal (132 meals)</li>
+                                      <li>{basePrice} per meal ({card3.days} meals)</li>
                                       <li>Pre-planned, dietician-approved 30-day meal plan (renewed monthly)</li>
-                                      <li>Already includes 10% savings</li>
+                                      <li>Already includes {card3.pct}% savings</li>
                                       <li>Add a sibling & save even more (extra 5%)</li>
                                       <li>Diet & allergy-friendly choices</li>
                                       <li>Multi-child subscription options</li>
@@ -275,7 +328,7 @@ const PlanPricingPage = () => {
                                   </div>
                     )}
                                   <div className="offerbox">
-                                      <strong>10</strong><small>% <br/>OFF</small>
+                                      <strong>{card3.pct}</strong><small>% <br/>OFF</small>
                                   </div>
                                 </div>
                   {/*<div className='ppriceitem customitem'>
