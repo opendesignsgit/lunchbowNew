@@ -2059,6 +2059,8 @@ const deleteMeal = async (req, res) => {
         const clientMailOptions = {
           from: process.env.EMAIL_USER,
           to: mealDeleteMail.recipients,
+          cc: mealDeleteMail.cc,
+          bcc: mealDeleteMail.bcc,
           subject: mealDeleteMail.subject || "New Meal Deletion Alert",
           html: `
         <h3>Meal Deletion Details</h3>

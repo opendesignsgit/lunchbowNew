@@ -22,7 +22,9 @@ const planTierSchema = new mongoose.Schema(
 // One transactional mail type: who receives it, its subject, and a kill switch.
 const mailEventSchema = new mongoose.Schema(
   {
-    recipients: { type: [String], default: [] }, // admin recipients; empty = customer-only mail
+    recipients: { type: [String], default: [] }, // "To" — empty = customer-only mail
+    cc: { type: [String], default: [] },
+    bcc: { type: [String], default: [] },
     subject: { type: String, default: "" },
     enabled: { type: Boolean, default: true },
   },

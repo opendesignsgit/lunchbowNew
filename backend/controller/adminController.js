@@ -617,6 +617,8 @@ const talkNutrition = async (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: nutritionMail.recipients,
+    cc: nutritionMail.cc,
+    bcc: nutritionMail.bcc,
     subject: nutritionMail.subject || "New Nutrition Enquiry Received",
     html: `
       <h2>Nutrition Enquiry Details</h2>
@@ -720,6 +722,8 @@ const freeTrialEnquiry = async (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: trialMealMail.recipients,
+    cc: trialMealMail.cc,
+    bcc: trialMealMail.bcc,
     subject: trialMealMail.subject || "New Trail Meal @ 99 Enquiry",
     html: `
       <h2>Trail Meal @ 99 Enquiry Received</h2>
@@ -819,6 +823,8 @@ const getInTouch = async (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: generalMail.recipients,
+    cc: generalMail.cc,
+    bcc: generalMail.bcc,
     subject: generalMail.subject || "New General Enquiry Received",
     html: `
       <h2>General Enquiry Details</h2>
@@ -879,6 +885,8 @@ const contactUs = async (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: contactMail.recipients,
+    cc: contactMail.cc,
+    bcc: contactMail.bcc,
     subject: contactMail.subject || "New Contact Us Enquiry",
     html: `
       <h2>Contact Us Enquiry Details</h2>
@@ -958,6 +966,8 @@ const schoolServiceEnquiry = async (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: schoolMail.recipients,
+    cc: schoolMail.cc,
+    bcc: schoolMail.bcc,
     subject: schoolMail.subject || "New School Service Enquiry Received",
     html: `
       <h2>School Service Enquiry Details</h2>

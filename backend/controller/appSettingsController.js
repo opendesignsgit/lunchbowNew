@@ -87,16 +87,18 @@ const updateSettings = async (req, res) => {
       if (mail.fromName !== undefined) s.mail.fromName = String(mail.fromName);
       if (mail.companyEmail !== undefined) s.mail.companyEmail = String(mail.companyEmail);
       if (mail.events) {
+        // Accepts an array or a comma-separated string; drops invalid addresses.
+        const parseEmails = (value) =>
+          (Array.isArray(value) ? value : String(value).split(","))
+            .map((e) => String(e).trim())
+            .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
         for (const [key, ev] of Object.entries(mail.events)) {
           if (!s.mail.events[key]) continue; // ignore unknown events
-          if (ev.recipients !== undefined) {
-            const list = Array.isArray(ev.recipients)
-              ? ev.recipients
-              : String(ev.recipients).split(",");
-            s.mail.events[key].recipients = list
-              .map((e) => String(e).trim())
-              .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
-          }
+          if (ev.recipients !== undefined)
+            s.mail.events[key].recipients = parseEmails(ev.recipients);
+          if (ev.cc !== undefined) s.mail.events[key].cc = parseEmails(ev.cc);
+          if (ev.bcc !== undefined) s.mail.events[key].bcc = parseEmails(ev.bcc);
           if (ev.subject !== undefined) s.mail.events[key].subject = String(ev.subject);
           if (ev.enabled !== undefined) s.mail.events[key].enabled = !!ev.enabled;
         }
@@ -117,20 +119,28 @@ const updateSettings = async (req, res) => {
 // Shared helpers — import these instead of hardcoding prices/recipients.
 // ------------------------------------------------------------------
 
-/** Resolve a mail event's recipients/subject/enabled from settings. */
+/**
+ * Resolve a mail event's To/Cc/Bcc/subject/enabled from settings.
+ * cc/bcc are `undefined` when empty so they can be spread straight into
+ * nodemailer's mailOptions without sending empty headers.
+ */
 const getMailEvent = async (key) => {
+  const empty = { recipients: "", cc: undefined, bcc: undefined, subject: "", enabled: false };
   try {
     const s = await AppSettings.getSettings();
     const ev = s.mail.events[key];
-    if (!ev) return { recipients: "", subject: "", enabled: false };
+    if (!ev) return empty;
+    const join = (arr) => ((arr || []).length ? arr.join(", ") : undefined);
     return {
       recipients: (ev.recipients || []).join(", "),
+      cc: join(ev.cc),
+      bcc: join(ev.bcc),
       subject: ev.subject || "",
       enabled: ev.enabled !== false,
     };
   } catch (e) {
     console.error(`getMailEvent(${key}) failed:`, e.message);
-    return { recipients: "", subject: "", enabled: false };
+    return empty;
   }
 };
 

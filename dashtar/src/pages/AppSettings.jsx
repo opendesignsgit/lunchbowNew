@@ -282,7 +282,7 @@ const AppSettings = () => {
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <Label>
-                      <span>Recipients</span>
+                      <span>Recipients (To)</span>
                       <Input
                         className="mt-1"
                         value={
@@ -298,6 +298,24 @@ const AppSettings = () => {
                         className="mt-1"
                         value={ev.subject || ""}
                         onChange={(e) => setEvent(key, "subject", e.target.value)}
+                      />
+                    </Label>
+                    <Label>
+                      <span>Cc</span>
+                      <Input
+                        className="mt-1"
+                        value={Array.isArray(ev.cc) ? ev.cc.join(", ") : ev.cc || ""}
+                        onChange={(e) => setEvent(key, "cc", e.target.value.split(","))}
+                        placeholder="optional"
+                      />
+                    </Label>
+                    <Label>
+                      <span>Bcc</span>
+                      <Input
+                        className="mt-1"
+                        value={Array.isArray(ev.bcc) ? ev.bcc.join(", ") : ev.bcc || ""}
+                        onChange={(e) => setEvent(key, "bcc", e.target.value.split(","))}
+                        placeholder="optional"
                       />
                     </Label>
                   </div>

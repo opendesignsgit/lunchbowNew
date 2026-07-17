@@ -287,6 +287,8 @@ async function sendSubscriptionAdminEmail({ type, customerName, customerEmail, a
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: adminTo,
+      cc: ev.cc,
+      bcc: ev.bcc,
       subject: `${ev.subject || type} – ${customerName || "Customer"} (${orderId || "N/A"})`,
       html: `
         <p>A subscription payment was completed.</p>
