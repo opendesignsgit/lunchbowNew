@@ -176,7 +176,7 @@ const MyAccount = () => {
       title: "Can I order meals for a specific day only?",
       content: (
         <>
-          Yes, you can order adhoc meals for ₹250 per meal by calling or
+          Yes, you can order adhoc meals for ₹300 per meal by calling or
           messaging us on <a href="tel:+919176917602">9176 9176 02</a>.
         </>
       ),
