@@ -17,6 +17,7 @@ import useRegistration from "@hooks/useRegistration";
 import FreeTrialSchoolPopup from "../../components/logInSignUp/FreeTrialSchoolPopup";
 import useAsync from "../../hooks/useAsync";
 import CategoryServices from "../../services/CategoryServices";
+import { TRIAL_ENABLED } from "../../utils/featureFlags";
 
 
 
@@ -194,13 +195,15 @@ useEffect(() => {
                     <span>Start Free Trial</span>
                   </button>
                 </li> */}
-              {!(apiFreeTrial == true || stepCheck == 4 || freeTrialTaken == true) && (
-                <li className="trialbtn">
-                  <button onClick={() => setShowFreeTrialPopup(true)}>
-                    <span>Trial @ 99</span>
-                  </button>
-                </li>
-              )}
+              {/* Trial @ 99 CTA — temporarily disabled via NEXT_PUBLIC_ENABLE_TRIAL (see src/utils/featureFlags.js) */}
+              {TRIAL_ENABLED &&
+                !(apiFreeTrial == true || stepCheck == 4 || freeTrialTaken == true) && (
+                  <li className="trialbtn">
+                    <button onClick={() => setShowFreeTrialPopup(true)}>
+                      <span>Trial @ 99</span>
+                    </button>
+                  </li>
+                )}
 
               {/* Only show user menu if user is logged in */}
               {session && (
