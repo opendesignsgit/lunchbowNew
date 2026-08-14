@@ -22,6 +22,7 @@ import Mainfooter from "@layout/footer/Mainfooter";
 import CategoryServices from "@services/CategoryServices";
 import useAsync from "@hooks/useAsync";
 import useEmail from "@hooks/useEmail";
+import { TRIAL_ENABLED } from "@utils/featureFlags";
 
 import abbanicon1 from "../../public/about/icons/herosec/pink-rounded-lines.svg";
 import abbanicon2 from "../../public/about/icons/herosec/pink-smileflower.svg";
@@ -51,6 +52,14 @@ const classOptions = [
 export default function TrailMealPage() {
   const { data: session } = useSession();
   const router = useRouter();
+
+  // Trial funnel temporarily disabled — bounce direct URL hits back to home.
+  // Re-enable with NEXT_PUBLIC_ENABLE_TRIAL=true (see src/utils/featureFlags.js).
+  useEffect(() => {
+    if (!TRIAL_ENABLED) {
+      router.replace("/");
+    }
+  }, [router]);
 
   // Added ref for scrolling
   const formSectionRef = useRef(null);

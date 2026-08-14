@@ -8,6 +8,7 @@ import { signIn } from "next-auth/react";
 
 import { notifyError, notifySuccess } from "@utils/toast";
 import CustomerServices from "@services/CustomerServices";
+import { TRIAL_ENABLED } from "@utils/featureFlags";
 
 const useLoginSubmit = () => {
   const router = useRouter();
@@ -59,7 +60,11 @@ const useLoginSubmit = () => {
         try {
           const res = await CustomerServices.verifyOtp({ firstName, lastName, email, mobile: phone, otp, path, freeTrialCheck })
           if (res.success) {
-            const targetUrl = res.freeTrialCheck ? "/free-trial" : "/user/DataRoutingPage";
+            // Trial funnel temporarily disabled — never route to /free-trial while off.
+            const targetUrl =
+              TRIAL_ENABLED && res.freeTrialCheck
+                ? "/free-trial"
+                : "/user/DataRoutingPage";
             const loginResult = await signIn("credentials", {
               redirect: false,
               email: res.email, // or whatever your provider expects
