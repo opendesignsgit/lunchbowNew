@@ -671,9 +671,8 @@ const sendOtp = async (req, res) => {
     // DEV ONLY: skip SMS locally and print the OTP. A master OTP also works in verify.
     // Enabled via DEV_OTP_BYPASS=true in backend/.env.local (never set in production).
     if (process.env.DEV_OTP_BYPASS === "true") {
-      console.log(
-        `[DEV OTP BYPASS] mobile=${mobile} generated OTP=${otp} | master OTP=${process.env.DEV_MASTER_OTP || "1234"}`
-      );
+      // Dev bypass: SMS is skipped. Use DEV_MASTER_OTP to log in.
+      // (OTP is intentionally NOT logged to the console.)
       return res.status(200).json({
         success: true,
         message: "OTP generated (dev bypass — SMS skipped)",

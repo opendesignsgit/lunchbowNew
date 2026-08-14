@@ -82,8 +82,6 @@ const LoginPopup = ({ open, onClose }) => {
     try {
       setLoading(true);
       const res = await submitHandler({ phone: mobileNumber, path: "logIn" });
-      console.log("sendOtp res:", res);
-
       if (res.success) {
         setLoading(false);
         setMessage({ type: "success", text: res.message || "OTP sent successfully!" });
@@ -113,8 +111,6 @@ const LoginPopup = ({ open, onClose }) => {
     try {
       setLoading(true);
       const res = await submitHandler({ phone: mobileNumber, path: "logIn" });
-      console.log("resendOtp res:", res);
-
       if (res.success) {
         setLoading(false);
         setMessage({ type: "success", text: res.message || "OTP resent successfully!" });
@@ -142,8 +138,6 @@ const LoginPopup = ({ open, onClose }) => {
         phone: mobileNumber,
         path: "logIn-otp",
       });
-      console.log("verifyOtp res:", res);
-
       if (res.success) {
         setLoading(false);
         setMessage({ type: "success", text: res.message || "OTP verified successfully!" });

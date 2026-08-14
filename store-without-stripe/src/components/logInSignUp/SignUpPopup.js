@@ -131,8 +131,6 @@ const SignUpPopup = ({ open, onClose, freeTrial }) => {
       try {
         setLoading(true);
         const res = await submitHandler({ email: form.email, phone: form.mobile, path: "signUp" });
-        console.log("sendOtp response:", res);
-
         if (res.success) {
           setLoading(false);
           setMessage({ type: "success", text: res.message || "OTP sent successfully!" });
@@ -169,8 +167,6 @@ const SignUpPopup = ({ open, onClose, freeTrial }) => {
     try {
       setLoading(true);
       const res = await submitHandler({ phone: form.mobile, path: "signUp" });
-      console.log("resendOtp response:", res);
-
       if (res.success) {
         setLoading(false);
         setMessage({ type: "success", text: res.message || "OTP resent successfully!" });
@@ -210,8 +206,6 @@ const SignUpPopup = ({ open, onClose, freeTrial }) => {
         lastName: form.lastName,
         freeTrialCheck: freeTrial,
       });
-      console.log("verifyOtp---->", res);
-
       if (res.success) {
         setLoading(false);
         setMessage({ type: "success", text: res.message || "OTP verified successfully!" });

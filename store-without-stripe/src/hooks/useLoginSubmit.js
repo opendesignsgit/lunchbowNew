@@ -48,7 +48,6 @@ const useLoginSubmit = () => {
       if (path == "signUp" || path == "logIn") {
         try {
           const res = await CustomerServices.sendOtp({ email, mobile: phone, path });
-          console.log("sendOtp response:", res);
           return res;
         } catch (error) {
           console.error("Error sending OTP:", error);
