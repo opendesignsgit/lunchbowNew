@@ -103,7 +103,7 @@ const Home = () => {
       content:
         (
           <>
-            Yes, you can order adhoc meals for ₹250 per meal by calling or messaging us on <a href="tel:+919176917602">9176 9176 02</a>.
+            Yes, you can order adhoc meals for ₹300 per meal by calling or messaging us on <a href="tel:+919176917602">9176 9176 02</a>.
           </>
         ),
     },
