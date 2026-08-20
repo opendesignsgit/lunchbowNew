@@ -158,6 +158,7 @@ const Orders = () => {
       "Location",
       "Date",
       "Food",
+      "Status",
     ].join(",");
 
     // Prepare CSV rows
@@ -170,6 +171,7 @@ const Orders = () => {
         order.location,
         order.date ? `\t${formatDateDMY(order.date)}` : "",
         order.food,
+        order.deleted ? "CANCELLED - DO NOT DISPATCH" : "Active",
       ]
         .map((field) => `"${String(field).replace(/"/g, '""')}"`)
         .join(",")
@@ -305,21 +307,43 @@ const Orders = () => {
                 </TableHeader>
                 <TableBody>
                   {orders.map((order, idx) => (
-                    <TableRow key={order.childId + order.date + order.food}>
+                    <TableRow
+                      key={order.childId + order.date + order.food}
+                      className={
+                        order.deleted
+                          ? "bg-red-50 dark:bg-red-900/30"
+                          : ""
+                      }
+                    >
                       <TableCell>{(page - 1) * PAGE_SIZE + idx + 1}</TableCell>
                       <TableCell>
-                        {order.childFirstName} {order.childLastName}
+                        <span className={order.deleted ? "line-through text-red-600 dark:text-red-400" : ""}>
+                          {order.childFirstName} {order.childLastName}
+                        </span>
                       </TableCell>
                       <TableCell>{order.childClass} - {order.section}</TableCell>
                       <TableCell>{order.school}</TableCell>
-                      {/* <TableCell>{order.lunchTime}</TableCell> */}  
+                      {/* <TableCell>{order.lunchTime}</TableCell> */}
                       <TableCell>{order.location}</TableCell>
                       <TableCell>
                         {order.date
                           ? formatDateDMY(order.date)
                           : ""}
                       </TableCell>
-                      <TableCell>{order.food}</TableCell>
+                      <TableCell>
+                        {order.deleted ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="line-through text-red-600 dark:text-red-400">
+                              {order.food}
+                            </span>
+                            <span className="px-2 py-0.5 text-xs font-bold uppercase rounded bg-red-600 text-white">
+                              Cancelled — do not dispatch
+                            </span>
+                          </span>
+                        ) : (
+                          order.food
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex justify-end text-right">
                           <span

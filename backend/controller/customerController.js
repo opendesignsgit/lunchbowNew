@@ -1974,7 +1974,7 @@ const deleteMeal = async (req, res) => {
     // ------------------
     // 8. SEND EMAILS (Using your existing email setup)
     // ------------------
-    if (form && parentEmail) {
+    if (form) {
       try {
         const transporter = nodemailer.createTransport({
           service: "gmail",
@@ -1988,6 +1988,8 @@ const deleteMeal = async (req, res) => {
 
         // ------------------------------------
         // USER EMAIL TEMPLATE
+        // (only if the parent actually has an email on file —
+        //  phone/OTP signups often don't)
         // ------------------------------------
         const userMailOptions = {
           from: process.env.EMAIL_USER,
@@ -2014,12 +2016,19 @@ const deleteMeal = async (req, res) => {
       `,
         };
 
-        transporter.sendMail(userMailOptions, (err) => {
-          if (err) console.log("User Meal Delete Email Error:", err);
-        });
+        if (parentEmail) {
+          transporter.sendMail(userMailOptions, (err) => {
+            if (err) console.log("User Meal Delete Email Error:", err);
+          });
+        } else {
+          console.log(
+            `Meal delete: no parent email on file for user ${userId} — customer confirmation skipped, admin alert still sent.`
+          );
+        }
 
         // ------------------------------------
         // CLIENT (ADMIN) EMAIL TEMPLATE
+        // (ALWAYS sent — this is what the kitchen relies on)
         // ------------------------------------
         const clientMailOptions = {
           from: process.env.EMAIL_USER,

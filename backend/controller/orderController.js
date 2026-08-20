@@ -735,6 +735,7 @@ const getAllFoodOrders = async (req, res) => {
                 childId,
                 date: meal.mealDate,
                 food: meal.mealName,
+                deleted: !!meal.deleted,
                 // Enriched details
                 childFirstName: childDetails?.childFirstName || "",
                 childLastName: childDetails?.childLastName || "",
@@ -829,16 +830,16 @@ const searchOrders = async (req, res) => {
           childEntry.meals.forEach((meal) => {
             if (!meal.mealDate || !meal.mealName) return;
 
-            // ❗ Skip deleted meals
-            if (meal.deleted) return;
-
-            // Include only meals from today onwards
+            // Deleted (cancelled) meals are STILL returned — flagged as `deleted`
+            // so the kitchen can see the cancellation and not dispatch them.
+            // They are excluded from the dish-summary counts below.
               orders.push({
                 userId,
                 planId: plan.planId,
                 childId,
                 date: meal.mealDate,
                 food: meal.mealName,
+                deleted: !!meal.deleted,
                 childFirstName: childDetails?.childFirstName || "",
                 childLastName: childDetails?.childLastName || "",
                 school: childDetails?.school || "",
@@ -873,6 +874,8 @@ const searchOrders = async (req, res) => {
       // Dish summary for this date
       const dishCountMap = {};
       orders.forEach((order) => {
+        // Do not count cancelled/deleted meals toward the kitchen prep totals
+        if (order.deleted) return;
         dishCountMap[order.food] = (dishCountMap[order.food] || 0) + 1;
       });
 
