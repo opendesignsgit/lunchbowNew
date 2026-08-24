@@ -22,6 +22,18 @@ const SubscriptionSchema = new mongoose.Schema({
     default: "upcoming",
   },
   children: [{ type: mongoose.Schema.Types.ObjectId, ref: "Child" }],
+  // Audit + idempotency for holiday-driven adjustments (see services/holidaySync.js).
+  // Each entry: { date:"YYYY-MM-DD", action:"add", endDateBefore, endDateAfter, appliedAt }
+  holidayAdjustments: [
+    {
+      date: { type: String },
+      action: { type: String },
+      endDateBefore: { type: Date },
+      endDateAfter: { type: Date },
+      appliedAt: { type: Date, default: Date.now },
+      _id: false,
+    },
+  ],
 });
 
 

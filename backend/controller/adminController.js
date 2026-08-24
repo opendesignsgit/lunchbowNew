@@ -16,6 +16,7 @@ const nodemailer = require("nodemailer");
 const Customer = require("../models/Customer");
 const { sendSMS } = require("../lib/sms-sender/smsService");
 const SmsLog = require("../models/SmsLog");
+const holidaySync = require("../services/holidaySync");
 
 const registerAdmin = async (req, res) => {
   try {
@@ -358,7 +359,8 @@ const deleteSchool = async (req, res) => {
 // @access  Private/Admin
 const addHoliday = async (req, res) => {
   try {
-    const { date, name } = req.body;
+    // applySubscriptions (default true) -> extend affected existing subscriptions
+    const { date, name, applySubscriptions = true } = req.body;
 
     // Check if holiday already exists for this date
     const existingHoliday = await Holiday.findOne({ date });
@@ -372,16 +374,45 @@ const addHoliday = async (req, res) => {
     const holiday = new Holiday({ date, name });
     await holiday.save();
 
+    // Extend existing subscriptions that span this new holiday (pull-to-end).
+    let sync = { applied: 0 };
+    if (applySubscriptions) {
+      sync = await holidaySync.applyHolidayAdd(date);
+    }
+
     res.status(201).json({
       success: true,
       message: "Holiday created successfully",
       data: holiday,
+      subscriptionsUpdated: sync.applied,
     });
   } catch (error) {
     res.status(400).json({
       success: false,
       message: error.message,
     });
+  }
+};
+
+// @desc    Preview the impact of adding/deleting a holiday on existing subscriptions
+// @route   POST /api/holidays/preview-impact
+// @access  Private/Admin
+const previewHolidayImpact = async (req, res) => {
+  try {
+    const { date, action = "add" } = req.body;
+    if (!date) {
+      return res
+        .status(400)
+        .json({ success: false, message: "date is required" });
+    }
+    const impact =
+      action === "delete"
+        ? await holidaySync.planHolidayDelete(date)
+        : await holidaySync.planHolidayAdd(date);
+
+    res.status(200).json({ success: true, action, data: impact });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -429,14 +460,25 @@ const updateHoliday = async (req, res) => {
       }
     }
 
+    const dateChanged =
+      date && holiday.date.toString() !== new Date(date).toString();
+
     holiday.date = date || holiday.date;
     holiday.name = name || holiday.name;
     const updatedHoliday = await holiday.save();
+
+    // If the date moved, the NEW date behaves like a fresh add (old date is
+    // forward-only, no rollback). Extend affected subscriptions.
+    let sync = { applied: 0 };
+    if (dateChanged && req.body.applySubscriptions !== false) {
+      sync = await holidaySync.applyHolidayAdd(date);
+    }
 
     res.status(200).json({
       success: true,
       message: "Holiday updated successfully",
       data: updatedHoliday,
+      subscriptionsUpdated: sync.applied,
     });
   } catch (error) {
     res.status(400).json({
@@ -1005,6 +1047,7 @@ module.exports = {
   getAllHolidays,
   updateHoliday,
   deleteHoliday,
+  previewHolidayImpact,
   // sendSchoolEnquiryMail,
   talkNutrition,
   freeTrialEnquiry,

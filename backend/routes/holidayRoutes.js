@@ -4,8 +4,12 @@ const {
   addHoliday,
   getAllHolidays,
   updateHoliday,
-  deleteHoliday
+  deleteHoliday,
+  previewHolidayImpact
 } = require("../controller/adminController");
+
+// Preview impact on existing subscriptions before committing
+router.post("/preview-impact", previewHolidayImpact);
 
 // Add a holiday
 router.post("/add-holiday", addHoliday);

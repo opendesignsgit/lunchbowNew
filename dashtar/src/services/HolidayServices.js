@@ -7,6 +7,11 @@ const HolidayServices = {
     return response.data || [];
   },
 
+  previewImpact: async (body) => {
+    // body: { date: "YYYY-MM-DD", action: "add" | "delete" }
+    return requests.post("/holidays/preview-impact", body);
+  },
+
   addHoliday: async (body) => {
     return requests.post("/holidays/add-holiday", body);
   },
