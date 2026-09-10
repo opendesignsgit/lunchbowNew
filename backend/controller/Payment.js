@@ -364,14 +364,35 @@ exports.ccavenueResponse = async (req, res) => {
           if (!form) {
             return res.status(404).send("Form not found");
           }
+          // Find the most recent pending_payment subscription.
+          // Rows created before { timestamps: true } was added to SubscriptionSchema
+          // have no createdAt, and new Date(undefined) is NaN - which made the old
+          // sort a no-op. Fall back to the ObjectId's embedded creation time.
+          const pendingCreatedAt = (s) =>
+            s.createdAt ? new Date(s.createdAt).getTime() : s._id.getTimestamp().getTime();
 
-          // 1️⃣ Find the most recent pending payment subscription
           const pendingSub = form.subscriptions
             .filter((s) => s.status === "pending_payment")
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+            .sort((a, b) => pendingCreatedAt(b) - pendingCreatedAt(a))[0];
 
           if (!pendingSub) {
-            console.error("No pending payment subscription found for renew");
+            // Money was captured but there is no subscription row to promote.
+            // Never fail silently here: the parent has paid and would just see an
+            // empty calendar. Alert the team so it can be repaired the same day.
+            console.error(
+              "[RENEWAL ORPHANED] Payment succeeded but no pending_payment subscription exists",
+              { order_id, tracking_id, user: String(merchant_param1), amount: responseData.amount }
+            );
+            await sendSubscriptionAdminEmail({
+              type: "ORPHANED RENEWAL - payment captured, NO subscription created",
+              customerName: form && form.parentDetails
+                ? `${form.parentDetails.fatherFirstName || ""} ${form.parentDetails.fatherLastName || ""}`.trim()
+                : "Unknown",
+              customerEmail: form && form.parentDetails ? form.parentDetails.email : "",
+              amount: responseData.amount,
+              orderId: order_id,
+              trackingId: tracking_id,
+            });
             return res.redirect("https://lunchbowl.co.in/payment/subscriptionFailed");
           }
 
@@ -1138,9 +1159,11 @@ exports.localPaymentSuccess = async (req, res) => {
     // 🟢 Handle Renewal (R-prefixed orderId)
     if (paidForValue === "RENEW_SUBSCRIPTION") {
       // 1️⃣ Find the most recent pending payment subscription
+      const pendingCreatedAtLocal = (s) =>
+        s.createdAt ? new Date(s.createdAt).getTime() : s._id.getTimestamp().getTime();
       let subscriptionToUpdate = form.subscriptions
         .filter((sub) => sub.status === "pending_payment")
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        .sort((a, b) => pendingCreatedAtLocal(b) - pendingCreatedAtLocal(a))[0];
 
       if (!subscriptionToUpdate) {
         return res.status(404).json({

@@ -676,7 +676,7 @@ const freeTrialEnquiry = async (req, res) => {
   // Update/create customer with freeTrial: true (used as "trial customer" flag in the app)
   let _id = userId;
 
-  console.log("Trail meal @ 99 enquiry received for user:", _id);
+  console.log("Trial meal @ 99 enquiry received for user:", _id);
 
   if (email && _id) {
     try {
@@ -713,9 +713,9 @@ const freeTrialEnquiry = async (req, res) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: "contactus@lunchbowl.co.in, maniyarasanodi20@gmail.com",
-    subject: "New Trail Meal @ 99 Enquiry",
+    subject: "New Trial Meal @ 99 Enquiry",
     html: `
-      <h2>Trail Meal @ 99 Enquiry Received</h2>
+      <h2>Trial Meal @ 99 Enquiry Received</h2>
       <p><strong>Name:</strong> ${firstName} ${lastName}</p>
       <p><strong>Child Name:</strong> ${childName}</p>
       <p><strong>Email:</strong> ${email}</p>
@@ -726,7 +726,7 @@ const freeTrialEnquiry = async (req, res) => {
       <p><strong>Primary Mobile:</strong> ${mobileNumber}</p>
       <p><strong>Alternative Mobile:</strong> ${altMobileNumber || "N/A"}</p>
       <p><strong>Message:</strong><br/>${message}</p>
-      <p>This is a Trail Meal @ 99 enquiry. Payment is to be collected manually by our team after contacting the customer.</p>
+      <p>This is a Trial Meal @ 99 enquiry. Payment is to be collected manually by our team after contacting the customer.</p>
       <br>
       <p>This enquiry was submitted through the website contact form.</p>
     `,
@@ -737,11 +737,11 @@ const freeTrialEnquiry = async (req, res) => {
   const feedbackMailOptions = {
   from: process.env.EMAIL_USER,
   to: email,
-    subject: "ONE BOWL, ENDLESS FRESHNESS—TRAIL MEAL INSIDE",
+    subject: "ONE BOWL, ENDLESS FRESHNESS—TRIAL MEAL INSIDE",
   html: `
     <p>Dear ${parentName},</p>
-    <p>Thank you for enquiring about our Lunch Bowl Trail Meal @ Rs 99.</p>
-    <p>Our team will contact you shortly to collect the Rs 99 payment manually and then confirm your Trail Meal delivery.</p>
+    <p>Thank you for enquiring about our Lunch Bowl Trial Meal @ Rs 99.</p>
+    <p>Our team will contact you shortly to collect the Rs 99 payment manually and then confirm your Trial Meal delivery.</p>
     <p>Warm regards,<br/>The Lunch Bowl Team</p>
   `,
 };
@@ -783,7 +783,7 @@ const freeTrialEnquiry = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Trail meal request submitted successfully. We will contact you soon to collect payment manually (Rs 99).",
+      message: "Trial meal request submitted successfully. We will contact you soon to collect payment manually (Rs 99).",
     });
   } catch (error) {
     console.error("Error sending email:", error);

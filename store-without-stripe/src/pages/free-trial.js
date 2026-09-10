@@ -48,7 +48,7 @@ const classOptions = [
   "Class 6", "Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12"
 ];
 
-export default function TrailMealPage() {
+export default function TrialMealPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -218,8 +218,8 @@ export default function TrailMealPage() {
     <div className="freetrilpage">
       <Mainheader
         freeTrialTaken={freeTrialTaken}
-        title="Trail Meal"
-        description="This is Trail Meal page"
+        title="Trial Meal"
+        description="This is Trial Meal page"
       />
       <div className="pagebody">
         <section className="pagebansec freetrilbanersec relative">
@@ -228,11 +228,11 @@ export default function TrailMealPage() {
               <div className="hworkTitle combtntb comtilte">
                 <h1 className="flex flex-col textFF6514">
                   <span className="block firstspan">YOUR FIRST </span>
-                  <span className="block">TRAIL MEAL @ 99</span>
+                  <span className="block">TRIAL MEAL @ 99</span>
                 </h1>
                 <p>
                   Worried if your little one will like it? Don’t worry we provide a <br />
-                  Trail Meal for Rs 99. No commitments - our team will contact you after
+                  Trial Meal for Rs 99. No commitments - our team will contact you after
                   your request to arrange payment manually.
                 </p>
                 <Breadcrumbs />
@@ -257,7 +257,7 @@ export default function TrailMealPage() {
                 <ImageBox className="ftLImg">
                   <Image
                     src={"/LogInSignUp/free-trial-img.jpg"}
-                    alt="Trail Meal"
+                    alt="Trial Meal"
                     layout="fill"
                     objectFit="cover"
                     quality={100}
@@ -274,20 +274,20 @@ export default function TrailMealPage() {
                   ref={formSectionRef}
                 >
                   <Typography variant="h4" fontWeight="bold" mb={2}>
-                    START YOUR TRAIL MEAL (Rs 99)
+                    START YOUR TRIAL MEAL (Rs 99)
                   </Typography>
                   <Typography variant="body2" gutterBottom>
-                    Provide the required information in the form to request your Trail Meal
+                    Provide the required information in the form to request your Trial Meal
                   </Typography>
                   {submitted ? (
                     <Box mt={5}>
                       <Typography variant="h6" color="success.main" gutterBottom>
-                        Thanks! Our team will contact you to collect payment of Rs 99 and confirm your Trail Meal delivery.
+                        Thanks! Our team will contact you to collect payment of Rs 99 and confirm your Trial Meal delivery.
                       </Typography>
                       <Typography>Child Name: {formData.childName}</Typography>
                       <Typography>Dish: {formData.food}</Typography>
                       <Typography>Class: {formData.class}</Typography>
-                      <Typography>Trail Meal Price: Rs 99</Typography>
+                      <Typography>Trial Meal Price: Rs 99</Typography>
                       <Typography>Address:</Typography>
                       <Typography>{`Door No./Building/Street: ${formData.doorNo}`}</Typography>
                       <Typography>{`Area/City: ${formData.areaCity}`}</Typography>
@@ -505,7 +505,7 @@ export default function TrailMealPage() {
                         disabled={loading || emailLoading}
                         endIcon={(loading || emailLoading) && <CircularProgress size={20} />}
                       >
-                        Request Trail Meal @ 99
+                        Request Trial Meal @ 99
                       </Button>
                     </>
                   )}

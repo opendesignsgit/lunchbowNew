@@ -22,7 +22,7 @@ const SubscriptionSchema = new mongoose.Schema({
     default: "upcoming",
   },
   children: [{ type: mongoose.Schema.Types.ObjectId, ref: "Child" }],
-});
+}, { timestamps: true }); // createdAt/updatedAt - the renewal handler sorts pending rows by creation time
 
 
 const Subscription = mongoose.model("Subscription", SubscriptionSchema);

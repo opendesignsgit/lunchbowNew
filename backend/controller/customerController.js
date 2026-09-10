@@ -1332,35 +1332,90 @@ const localAddChildPaymentController = async (req, res) => {
 };
 
 
-const activateNextSubscriptionPlans = async () => {
-  const now = new Date();
 
-  // Find forms with active subscriptions that have ended
-  const forms = await Form.find({
-    "subscriptions.status": "active",
-    "subscriptions.endDate": { $lt: now }
+// ─────────────────────────────────────────────────────────────────────────────
+// Pending-payment subscription cleanup.
+//
+// A renewal is written as status:"pending_payment" BEFORE the user is sent to
+// CCAvenue, and is only promoted to active/upcoming when CCAvenue posts back.
+// The old code deleted every pending_payment row on each read, so any page the
+// parent opened while the payment was in flight (dashboard, my-account, wallet,
+// renew flow, menu calendar) destroyed the row. When CCAvenue then posted back
+// there was nothing to promote: money captured, no subscription, no calendar.
+//
+// Only rows older than the grace window below are abandoned checkouts. Age is
+// read from the ObjectId timestamp so no migration/backfill is needed.
+// ─────────────────────────────────────────────────────────────────────────────
+const PENDING_SUBSCRIPTION_GRACE_MINUTES = Number(
+  process.env.PENDING_SUBSCRIPTION_GRACE_MINUTES || 180
+);
+
+const cleanupStalePendingSubscriptions = async (userObjectId) => {
+  const cutoffSeconds = Math.floor(
+    (Date.now() - PENDING_SUBSCRIPTION_GRACE_MINUTES * 60 * 1000) / 1000
+  );
+  const staleBefore = mongoose.Types.ObjectId.createFromTime(cutoffSeconds);
+
+  const staleSubs = await Subscription.find({
+    user: userObjectId,
+    status: "pending_payment",
+    _id: { $lt: staleBefore },
+  }).select("_id");
+
+  if (staleSubs.length === 0) return 0;
+
+  const staleIds = staleSubs.map((s) => s._id);
+  await Subscription.deleteMany({ _id: { $in: staleIds } });
+  await Form.updateOne(
+    { user: userObjectId },
+    { $pull: { subscriptions: { $in: staleIds } } }
+  );
+  console.log(
+    `Cleaned up ${staleIds.length} stale pending_payment subscriptions (older than ${PENDING_SUBSCRIPTION_GRACE_MINUTES}m) for user ${userObjectId}`
+  );
+  return staleIds.length;
+};
+
+// Rolls every user's subscription statuses forward.
+//
+// Was previously querying Form on "subscriptions.status" / "subscriptions.endDate".
+// Form.subscriptions is an array of ObjectId REFS to the Subscription collection,
+// not embedded documents, so that filter never matched a single form and the
+// upcoming -> active promotion silently never ran. Rewritten to work directly on
+// the Subscription collection, mirroring rollSubscriptionsForUserNoSession().
+const activateNextSubscriptionPlans = async () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // endDate is inclusive for the whole calendar day
+
+  // 1) Expire every active subscription that ended before today
+  const expired = await Subscription.updateMany(
+    { status: "active", endDate: { $lt: today } },
+    { $set: { status: "deactivated" } }
+  );
+
+  // 2) For each user left without an active plan, promote the earliest
+  //    upcoming plan whose startDate has arrived.
+  const candidates = await Subscription.distinct("user", {
+    status: "upcoming",
+    startDate: { $lte: today },
   });
 
-  for (const form of forms) {
-    // Deactivate the ended active plan
-    await Form.updateOne(
-      { _id: form._id, "subscriptions.status": "active", "subscriptions.endDate": { $lt: now } },
-      { $set: { "subscriptions.$.status": "deactivated" } }
+  let activated = 0;
+  for (const userId of candidates) {
+    const hasActive = await Subscription.exists({ user: userId, status: "active" });
+    if (hasActive) continue;
+    const promoted = await Subscription.findOneAndUpdate(
+      { user: userId, status: "upcoming", startDate: { $lte: today } },
+      { $set: { status: "active" } },
+      { sort: { startDate: 1 }, new: true }
     );
-
-    // Find the next upcoming plan where startDate is <= now (time to activate)
-    const nextPlanIndex = form.subscriptions.findIndex(
-      sub => sub.status === "upcoming" && sub.startDate <= now
-    );
-    if (nextPlanIndex !== -1) {
-      // Activate the next plan only when its startDate has arrived or passed
-      const subsKey = `subscriptions.${nextPlanIndex}.status`;
-      await Form.updateOne(
-        { _id: form._id },
-        { $set: { [subsKey]: "active" } }
-      );
-    }
+    if (promoted) activated++;
   }
+
+  console.log(
+    `[subscriptions] rolled forward: ${expired.nModified || expired.modifiedCount || 0} expired, ${activated} activated`
+  );
+  return { activated };
 };
 
 // const getAllChildrenForUser = async (req, res) => {
@@ -1425,28 +1480,8 @@ const getAllChildrenForUser = async (req, res) => {
 
     const userObjectId = mongoose.Types.ObjectId(userId);
 
-    // 🧹 STEP 1: Cleanup pending_payment subscriptions before doing anything else
-    const pendingSubs = await Subscription.find({
-      user: userObjectId,
-      status: "pending_payment",
-    }).select("_id");
-
-    if (pendingSubs.length > 0) {
-      const pendingIds = pendingSubs.map((s) => s._id);
-
-      // 🗑️ Delete from Subscription collection
-      await Subscription.deleteMany({ _id: { $in: pendingIds } });
-
-      // 🧩 Remove from Form.subscriptions array
-      await Form.updateOne(
-        { user: userObjectId },
-        { $pull: { subscriptions: { $in: pendingIds } } }
-      );
-
-      console.log(
-        `Cleaned up ${pendingIds.length} pending_payment subscriptions for user ${userId}`
-      );
-    }
+    // Remove only abandoned checkouts — never a payment that is still in flight.
+    await cleanupStalePendingSubscriptions(userObjectId);
 
     // STEP 2: Fetch all children for the user
     const children = await Child.find({ user: userId });
@@ -1690,26 +1725,8 @@ const getMenuCalendarDate = async (req, res) => {
     // Run status roller first (no transaction/session)
     await rollSubscriptionsForUserNoSession(userId);
 
-    // 🧹 STEP 1: Find pending payment subscriptions (to delete)
-    const pendingSubs = await Subscription.find({
-      user: userId,
-      status: "pending_payment",
-    }).select("_id");
-
-    if (pendingSubs.length > 0) {
-      const pendingIds = pendingSubs.map((s) => s._id);
-
-      // 🗑️ Delete all pending subscriptions
-      await Subscription.deleteMany({ _id: { $in: pendingIds } });
-
-      // 🧩 Also remove them from the Form.subscriptions array
-      await Form.updateOne(
-        { user: userId },
-        { $pull: { subscriptions: { $in: pendingIds } } }
-      );
-
-      console.log(`Cleaned up ${pendingIds.length} pending_payment subscriptions for user ${_id}`);
-    }
+    // Remove only abandoned checkouts — never a payment that is still in flight.
+    await cleanupStalePendingSubscriptions(userId);
 
     // STEP 2: Fetch user's form and populate subscriptions + children
     const form = await Form.findOne({ user: userId })
@@ -2167,28 +2184,8 @@ const accountDetails = async (req, res) => {
 
     const userObjectId = mongoose.Types.ObjectId(userId);
 
-    // 🧹 STEP 1: Cleanup pending_payment subscriptions for this user
-    const pendingSubs = await Subscription.find({
-      user: userObjectId,
-      status: "pending_payment",
-    }).select("_id");
-
-    if (pendingSubs.length > 0) {
-      const pendingIds = pendingSubs.map((s) => s._id);
-
-      // 🗑️ Delete them from Subscription collection
-      await Subscription.deleteMany({ _id: { $in: pendingIds } });
-
-      // 🧩 Remove their references from the Form
-      await Form.updateOne(
-        { user: userObjectId },
-        { $pull: { subscriptions: { $in: pendingIds } } }
-      );
-
-      console.log(
-        `Cleaned up ${pendingIds.length} pending_payment subscriptions for user ${userId}`
-      );
-    }
+    // Remove only abandoned checkouts — never a payment that is still in flight.
+    await cleanupStalePendingSubscriptions(userObjectId);
 
     // 🧾 STEP 2: If updateField & updateValue provided, update both Customer + Form
     if (
