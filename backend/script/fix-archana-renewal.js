@@ -49,7 +49,33 @@ const CAPTURE = {
 };
 
 const APPLY = process.argv.includes("--apply");
-const URI = process.argv.includes("--live") ? process.env.MONGO_SOURCE_URI : process.env.MONGO_URI;
+// ── Which database? ──────────────────────────────────────────────────────────
+// On a DEV machine   : MONGO_URI = local clone, MONGO_SOURCE_URI = live (.env.local)
+// On the PROD server : MONGO_URI IS live and there is no .env.local, so --live
+//                      falls back to it rather than failing.
+// --uri=<...> overrides everything.
+const uriArg = process.argv.find((a) => a.startsWith("--uri="));
+const wantLive = process.argv.includes("--live");
+let URI, TARGET_LABEL;
+if (uriArg) {
+  URI = uriArg.slice(6);
+  TARGET_LABEL = "explicit --uri";
+} else if (wantLive && process.env.MONGO_SOURCE_URI) {
+  URI = process.env.MONGO_SOURCE_URI;
+  TARGET_LABEL = "MONGO_SOURCE_URI (live)";
+} else if (wantLive) {
+  URI = process.env.MONGO_URI;
+  TARGET_LABEL = "MONGO_URI (no MONGO_SOURCE_URI here — this is normal on the server)";
+} else {
+  URI = process.env.MONGO_URI;
+  TARGET_LABEL = "MONGO_URI";
+}
+const isLocal = /localhost|127\.0\.0\.1/.test(URI || "");
+const showTarget = () => {
+  console.log(`DB:   ${String(URI).replace(/\/\/[^@]*@/, "//***@")}`);
+  console.log(`From: ${TARGET_LABEL}`);
+  if (!isLocal) console.log("      *** THIS IS NOT localhost — you are pointed at a REMOTE database ***");
+};
 
 // ---- date helpers, copied verbatim in behaviour from the renew screen ----
 const ymd = (d) => new Date(d).toISOString().slice(0, 10);
@@ -65,9 +91,14 @@ const endByWorkingDays = (start, days, hol) => {
 };
 
 (async () => {
-  if (!URI) throw new Error("No Mongo URI — run from backend/ with .env present.");
+  if (!URI) throw new Error(
+    "No Mongo URI resolved.\n" +
+    "  On the server : run WITHOUT --live (MONGO_URI in .env is already live), or pass --uri=<connection string>.\n" +
+    "  On your PC    : --live needs MONGO_SOURCE_URI in backend/.env.local."
+  );
   await mongoose.connect(URI, { useNewUrlParser: true, useUnifiedTopology: true });
-  console.log(`\nDB:   ${URI.replace(/\/\/[^@]*@/, "//***@")}`);
+  console.log("");
+  showTarget();
   console.log(`Mode: ${APPLY ? "APPLY (writing)" : "DRY RUN (no writes)"}`);
   console.log("=".repeat(72));
 

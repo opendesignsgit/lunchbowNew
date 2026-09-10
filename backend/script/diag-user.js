@@ -22,9 +22,33 @@ const UserPayment = require("../models/Payment");
 const args = process.argv.slice(2).filter((a) => a !== "--live");
 const PHONE = args[0];
 const ORDER = args[1] || null;
-const URI = process.argv.includes("--live")
-  ? process.env.MONGO_SOURCE_URI
-  : process.env.MONGO_URI;
+// ── Which database? ──────────────────────────────────────────────────────────
+// On a DEV machine   : MONGO_URI = local clone, MONGO_SOURCE_URI = live (.env.local)
+// On the PROD server : MONGO_URI IS live and there is no .env.local, so --live
+//                      falls back to it rather than failing.
+// --uri=<...> overrides everything.
+const uriArg = process.argv.find((a) => a.startsWith("--uri="));
+const wantLive = process.argv.includes("--live");
+let URI, TARGET_LABEL;
+if (uriArg) {
+  URI = uriArg.slice(6);
+  TARGET_LABEL = "explicit --uri";
+} else if (wantLive && process.env.MONGO_SOURCE_URI) {
+  URI = process.env.MONGO_SOURCE_URI;
+  TARGET_LABEL = "MONGO_SOURCE_URI (live)";
+} else if (wantLive) {
+  URI = process.env.MONGO_URI;
+  TARGET_LABEL = "MONGO_URI (no MONGO_SOURCE_URI here — this is normal on the server)";
+} else {
+  URI = process.env.MONGO_URI;
+  TARGET_LABEL = "MONGO_URI";
+}
+const isLocal = /localhost|127\.0\.0\.1/.test(URI || "");
+const showTarget = () => {
+  console.log(`DB:   ${String(URI).replace(/\/\/[^@]*@/, "//***@")}`);
+  console.log(`From: ${TARGET_LABEL}`);
+  if (!isLocal) console.log("      *** THIS IS NOT localhost — you are pointed at a REMOTE database ***");
+};
 
 if (!PHONE) { console.error("Pass a phone number, e.g. node script/diag-user.js 9176888759"); process.exit(1); }
 
@@ -32,7 +56,7 @@ const line = (t) => console.log("\n" + t + "\n" + "=".repeat(t.length));
 
 (async () => {
   await mongoose.connect(URI, { useNewUrlParser: true, useUnifiedTopology: true });
-  console.log("DB:", URI.replace(/\/\/[^@]*@/, "//***@"));
+  showTarget();
 
   const u = await Customer.findOne({
     $or: [{ phone: PHONE }, { phone: "+91" + PHONE }, { phone: Number(PHONE) }],
