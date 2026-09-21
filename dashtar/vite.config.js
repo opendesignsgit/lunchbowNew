@@ -110,6 +110,8 @@ export default defineConfig({
     allowedHosts: [
       "pro-dashboard.lunchbowl.co.in",
       "dashboard.lunchbowl.co.in",
+      "dev-dashboard.lunchbowl.co.in",
+      "dev-pro-dashboard.lunchbowl.co.in",
       "lunchbowl.co.in",
       "api.lunchbowl.co.in",
       "localhost",
