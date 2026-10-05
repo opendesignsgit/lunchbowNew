@@ -123,8 +123,9 @@ const PaymentStep = ({ prevStep, _id }) => {
       const paymentData = {
         merchant_id: ccavenueConfig.merchant_id,
         order_id: orderId,
-        amount: subscriptionPlan.price.toFixed(2),
-        // amount: "1.00", // For testing purposes, always charge ₹1
+        // DEV ONLY: NEXT_PUBLIC_DEV_RE1_PAYMENT=true (dev store .env) charges ₹1 so the
+        // real CCAvenue gateway can be tested cheaply. NEVER set this in production.
+        amount: (process.env.NEXT_PUBLIC_DEV_RE1_PAYMENT === "true" ? 1 : subscriptionPlan.price).toFixed(2),
         currency: ccavenueConfig.currency,
         redirect_url: ccavenueConfig.redirect_url,
         cancel_url: ccavenueConfig.cancel_url,

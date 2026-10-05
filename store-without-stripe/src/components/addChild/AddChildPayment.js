@@ -120,8 +120,8 @@ const AddChildPayment = ({
         const paymentData = {
           merchant_id: ccavenueConfig.merchant_id,
           order_id: orderId,
-          amount: totalAmount.toFixed(2),
-          // amount: "1.00", // ⚠️ For testing; use totalAmount.toFixed(2) for live
+          // DEV ONLY: NEXT_PUBLIC_DEV_RE1_PAYMENT=true charges ₹1 (test gateway). NEVER in prod.
+          amount: (process.env.NEXT_PUBLIC_DEV_RE1_PAYMENT === "true" ? 1 : totalAmount).toFixed(2),
           currency: ccavenueConfig.currency,
           redirect_url: ccavenueConfig.redirect_url_live,
           cancel_url: ccavenueConfig.cancel_url_live,
