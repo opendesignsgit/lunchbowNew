@@ -18,7 +18,7 @@ const {
 
 const PaymentIntent = require("../models/PaymentIntent");
 const { getCcavConfig, getApiPublicUrl } = require("../lib/ccavenue");
-const { getPricingConfig } = require("../lib/pricing");
+const { getPricingConfig, toDateKey } = require("../lib/pricing");
 
 const workingKey = getCcavConfig().workingKey;
 
@@ -850,9 +850,7 @@ exports.holiydayPayment = async (req, res) => {
           });
         } else {
           const existingMeal = childEntry.meals.find(
-            (m) =>
-              new Date(m.mealDate).toISOString().slice(0, 10) ===
-              new Date(mealDate).toISOString().slice(0, 10)
+            (m) => toDateKey(m.mealDate) === toDateKey(mealDate)
           );
           if (existingMeal) {
             existingMeal.mealName = mealName;

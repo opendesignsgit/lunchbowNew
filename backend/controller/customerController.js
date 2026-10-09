@@ -3,7 +3,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Customer = require("../models/Customer");
 const UserMeal = require("../models/UserMeal");
-const dayjs = require("dayjs");
 const nodemailer = require("nodemailer");
 const { signInToken, tokenForVerify } = require("../config/auth");
 const { sendEmail } = require("../lib/email-sender/sender");
@@ -1895,8 +1894,11 @@ const saveMealPlans = async (req, res) => {
         const childIndex = plan.children.findIndex(c => c.childId.equals(newChild.childId));
         if (childIndex >= 0) {
           newChild.meals.forEach(newMeal => {
+            // Match by India calendar day: the website and the app send different
+            // timestamps for the same day (local midnight vs "YYYY-MM-DD").
+            const newKey = toDateKey(newMeal.mealDate);
             const mealIndex = plan.children[childIndex].meals.findIndex(m =>
-              +new Date(m.mealDate) === +new Date(newMeal.mealDate)
+              toDateKey(m.mealDate) === newKey
             );
             if (mealIndex >= 0) {
               plan.children[childIndex].meals[mealIndex] = {
@@ -1934,11 +1936,8 @@ const deleteMeal = async (req, res) => {
       });
     }
 
-    const normalize = (d) => {
-      const nd = new Date(d);
-      nd.setHours(0, 0, 0, 0);
-      return nd.getTime();
-    };
+    // Compare India calendar days (see saveMealPlans).
+    const normalize = (d) => toDateKey(d);
 
     // ------------------
     // 1. FIND USER MEAL DOCUMENT
@@ -2215,7 +2214,7 @@ const getSavedMeals = async (req, res) => {
 
       plan.children.forEach((child) => {
         child.meals.forEach((meal) => {
-          const dateKey = dayjs(meal.mealDate).format("YYYY-MM-DD");
+          const dateKey = toDateKey(meal.mealDate);
 
           if (!menuSelections[dateKey]) {
             menuSelections[dateKey] = {};
