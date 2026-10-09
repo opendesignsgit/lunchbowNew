@@ -495,12 +495,14 @@ exports.ccavenueResponse = async (req, res) => {
           // ⭐ UPDATE WALLET POINTS
           // The remaining balance is computed here from the stored balance; the client's
           // merchant_param5 is ignored so a tampered request cannot set the wallet.
-          const requestedWalletUsed = Number(
-            (intent && intent.meta && intent.meta.walletUsed) ??
-              pendingSub.walletUsed ??
-              responseData.merchant_param4 ??
-              0
-          ) || 0;
+          // Source of truth: the app's payment intent, else the amount stored on the plan
+          // at checkout, else (plans created before walletUsed was stored) the web's param.
+          const requestedWalletUsed =
+            intent && intent.meta && intent.meta.walletUsed != null
+              ? Number(intent.meta.walletUsed) || 0
+              : Number(pendingSub.walletUsed) > 0
+                ? Number(pendingSub.walletUsed)
+                : Number(responseData.merchant_param4 || 0) || 0;
 
           if (form.wallet && requestedWalletUsed > 0) {
             const previous = form.wallet.points || 0;
@@ -1260,7 +1262,10 @@ exports.localPaymentSuccess = async (req, res) => {
       form.subscriptionCount = (form.subscriptionCount || 0) + 1;
 
       // ⭐ UPDATE WALLET POINTS FOR LOCAL PAYMENT (computed from the stored balance)
-      const requestedWalletUsed = Number(subscriptionToUpdate.walletUsed ?? walletUsed ?? 0) || 0;
+      const requestedWalletUsed =
+        Number(subscriptionToUpdate.walletUsed) > 0
+          ? Number(subscriptionToUpdate.walletUsed)
+          : Number(walletUsed || 0) || 0;
       if (form.wallet && requestedWalletUsed > 0) {
         const previous = form.wallet.points || 0;
         const used = Math.min(Math.max(requestedWalletUsed, 0), previous);
