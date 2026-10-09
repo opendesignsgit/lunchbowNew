@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const rateLimit = require("express-rate-limit");
 const { ccavenueResponse, holiydayPayment, getHolidayPaymentsByDate, addChildPaymentController, localPaymentSuccess, localAddChildPaymentController, localHolidayPaymentSuccess } = require("../controller/Payment");
+const { initiatePayment, appPaymentResult } = require("../controller/paymentIntentController");
+const { isAuth } = require("../config/auth");
+const localPaymentsOnly = require("../middleware/localPaymentsOnly");
 
 // Rate limiter for test/local payment endpoints (10 requests per 15 min per IP)
 const localPaymentLimiter = rateLimit({
@@ -16,19 +19,24 @@ router.post("/response/holiydayPayment", holiydayPayment);
 
 router.post("/response/addChildPayment", addChildPaymentController);
 
+// Server-priced, server-encrypted payment (mobile app). The client never sees the working key.
+const initiateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { success: false, message: "Too many payment attempts, please try again later." },
+});
+router.post("/initiate", initiateLimiter, isAuth, initiatePayment);
+
+// Where app payments land after CCAvenue; the app intercepts this URL.
+router.get("/app-result", appPaymentResult);
+
 // New endpoint — POST with body { date, userId }
 router.post("/holiday-payments", getHolidayPaymentsByDate);
 
-router.post("/local-success", localPaymentSuccess);
+// Test-only endpoints (no CCAvenue). Disabled on the live API; see middleware/localPaymentsOnly.js.
+router.post("/local-success", localPaymentsOnly, localPaymentLimiter, localPaymentSuccess);
 
-router.post("/local-success/local-add-childPayment", localAddChildPaymentController);
-
-// Test-only endpoints mark meals as paid without going through CCAvenue, so they must
-// never be reachable on the live API. Enabled only when ALLOW_LOCAL_PAYMENTS=true or CCAV_MODE=test.
-const localPaymentsOnly = (req, res, next) => {
-  if (process.env.ALLOW_LOCAL_PAYMENTS === "true" || process.env.CCAV_MODE === "test") return next();
-  return res.status(404).json({ success: false, message: "Not found" });
-};
+router.post("/local-success/local-add-childPayment", localPaymentsOnly, localPaymentLimiter, localAddChildPaymentController);
 
 // Test/local holiday payment (no CCAvenue gateway)
 router.post("/local-holiday-success", localPaymentsOnly, localPaymentLimiter, localHolidayPaymentSuccess);

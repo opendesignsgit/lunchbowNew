@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const rateLimit = require("express-rate-limit");
 const { isAuth } = require("../config/auth");
+const localPaymentsOnly = require("../middleware/localPaymentsOnly");
+const isAdminUser = require("../middleware/isAdminUser");
 const {
   loginCustomer,
   registerCustomer,
@@ -105,22 +107,22 @@ router.put("/reset-password", resetPassword);
 router.post("/change-password", changePassword);
 
 //add all users
-router.post("/add/all", addAllCustomers);
+router.post("/add/all", isAuth, isAdminUser, addAllCustomers);
 
 //get all user
-router.get("/", getAllCustomers);
+router.get("/", isAuth, isAdminUser, getAllCustomers);
 
 //get a user
-router.get("/:id", getCustomerById);
+router.get("/:id", isAuth, isAdminUser, getCustomerById);
 
 // Get form data by user ID
 router.get("/form/:userId", getFormData);
 
 //update a user
-router.put("/:id", updateCustomer);
+router.put("/:id", isAuth, isAdminUser.orSelf("id"), updateCustomer);
 
 //delete a user
-router.delete("/:id", deleteCustomer);
+router.delete("/:id", isAuth, isAdminUser, deleteCustomer);
 
 //send OTP
 router.post("/sendOtp", sendOtp);
@@ -152,9 +154,10 @@ router.post("/get-paid-holidays", paidHolidaysLimit, getPaidHolidays);
 
 router.post("/get-all-children", getAllChildrenForUser);
 
-router.post("/local-success", localPaymentSuccess);
+// Test-only endpoints (no CCAvenue). Disabled on the live API; see middleware/localPaymentsOnly.js.
+router.post("/local-success", localPaymentsOnly, localPaymentSuccess);
 
-router.post("/local-success/local-add-childPayment", localAddChildPaymentController);
+router.post("/local-success/local-add-childPayment", localPaymentsOnly, localAddChildPaymentController);
 
 router.post("/get-payments", getPaymentsForUser);
 

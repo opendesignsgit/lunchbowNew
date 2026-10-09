@@ -24,6 +24,18 @@ const Form = require("../models/Form");
 const Child = require("../models/childModel");
 const Subscription = require("../models/subscriptionModel");
 const UserPayment = require('../models/Payment');
+const {
+  getPricingConfig,
+  computePlanPrice,
+  maxWalletRedeem,
+  toDateKey,
+  todayKeyIST,
+} = require("../lib/pricing");
+
+// Plan prices are recomputed on the server; a client total further off than this is rejected.
+// Set ENFORCE_SERVER_PRICING=false to switch the check off in an emergency.
+const PRICE_TOLERANCE = 2;
+const enforceServerPricing = () => process.env.ENFORCE_SERVER_PRICING !== "false";
 const { Types: { ObjectId } } = mongoose;
 
 const verifyEmailAddress = async (req, res) => {
@@ -702,7 +714,9 @@ const sendOtp = async (req, res) => {
         return res.status(200).json({
           success: true,
           message: "OTP sent successfully via SMS",
-          smsLogId: smsLog,
+          // Never return the SMS log here: it contains the OTP itself, which would
+          // let anyone request a code for someone else's number and read it back.
+          smsLogId: smsLog._id,
           expiresAt,
         });
       } else {
@@ -892,9 +906,13 @@ const stepFormRegister = async (req, res) => {
     }
 
     if (path === "step-Form-ParentDetails") {
+      // Only touch `step` when the caller sends one: editing parent details later
+      // (e.g. from the app's dashboard) must not reset a subscribed user's step.
+      const parentUpdate = { parentDetails: formData };
+      if (step != null) parentUpdate.step = step;
       const form = await Form.findOneAndUpdate(
         { user: _id },
-        { parentDetails: formData, step },
+        parentUpdate,
         { new: true, upsert: true }
       );
       return res.json({ success: true, data: form });
@@ -964,6 +982,15 @@ const stepFormRegister = async (req, res) => {
         return res
           .status(400)
           .json({ success: false, message: "Missing subscription fields" });
+      }
+
+      const expectedPrice = computePlanPrice(Number(payload.workingDays), payload.children.length);
+      if (enforceServerPricing() && Math.abs(Number(payload.totalPrice) - expectedPrice) > PRICE_TOLERANCE) {
+        return res.status(400).json({
+          success: false,
+          message: "The plan price has changed. Please refresh and choose your plan again.",
+          expectedPrice,
+        });
       }
 
       // Find form with populated subscriptions
@@ -1043,7 +1070,26 @@ const stepFormRegister = async (req, res) => {
         return res.status(404).json({ success: false, message: "Form not found" });
       }
 
-
+      // Recompute the price and the wallet redemption on the server.
+      const grossPrice = computePlanPrice(Number(payload.workingDays), payload.children.length);
+      const walletUsed = Math.max(0, Number(payload.walletUsed || 0));
+      const walletPoints = (form.wallet && form.wallet.points) || 0;
+      if (enforceServerPricing()) {
+        if (walletUsed > maxWalletRedeem(grossPrice, walletPoints) + 0.01) {
+          return res.status(400).json({
+            success: false,
+            message: "You can redeem at most the available wallet points, up to "
+              + getPricingConfig().walletMaxRedeemPercent + "% of the plan price.",
+          });
+        }
+        if (Math.abs(Number(payload.totalPrice) - (grossPrice - walletUsed)) > PRICE_TOLERANCE) {
+          return res.status(400).json({
+            success: false,
+            message: "The plan price has changed. Please refresh and choose your plan again.",
+            expectedPrice: grossPrice - walletUsed,
+          });
+        }
+      }
 
       // Create new subscription document
       const newSubscription = new Subscription({
@@ -1053,6 +1099,7 @@ const stepFormRegister = async (req, res) => {
         endDate: payload.endDate,
         workingDays: payload.workingDays,
         price: payload.totalPrice,
+        walletUsed,
         status: "pending_payment",
         children: payload.children.map((id) => mongoose.Types.ObjectId(id)),
       });
@@ -1940,6 +1987,22 @@ const deleteMeal = async (req, res) => {
       });
     }
 
+    // Deleting twice used to credit the wallet twice.
+    if (meal.deleted) {
+      return res.status(409).json({
+        success: false,
+        message: "This meal is already deleted",
+      });
+    }
+
+    // Meals can only be cancelled for dates after today (India time), as on the website.
+    if (toDateKey(date) <= todayKeyIST()) {
+      return res.status(400).json({
+        success: false,
+        message: "Meals for today or past dates cannot be deleted",
+      });
+    }
+
     // Mark the meal as deleted
     meal.deleted = true;
 
@@ -1977,10 +2040,11 @@ const deleteMeal = async (req, res) => {
       parentEmail = form.parentDetails.email || "";
       parentMobile = form.parentDetails.mobile || "";
 
-      form.wallet.points += 225;
+      const mealCredit = getPricingConfig().pricePerDayPerChild;
+      form.wallet.points += mealCredit;
 
       form.wallet.history.push({
-        change: +225,
+        change: +mealCredit,
         reason: "Meal deleted",
         childName,
         mealName: meal.mealName,

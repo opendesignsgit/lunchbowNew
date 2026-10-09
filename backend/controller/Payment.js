@@ -16,8 +16,72 @@ const {
   buildInvoiceNumber,
 } = require("../lib/payment-invoice-pdf");
 
-const workingKey =
-  process.env.CCAV_WORKING_KEY || "2A561B005709D8B4BAF69D049B23546B"; // Use env vars in production
+const PaymentIntent = require("../models/PaymentIntent");
+const { getCcavConfig, getApiPublicUrl } = require("../lib/ccavenue");
+const { getPricingConfig } = require("../lib/pricing");
+
+const workingKey = getCcavConfig().workingKey;
+
+/**
+ * Looks up the server-created PaymentIntent for a CCAvenue response (app payments).
+ * Web payments have no intent and keep their existing behaviour.
+ *
+ * Returns { intent, replay, mismatch }:
+ *  - replay: the order was already settled; do not apply it again.
+ *  - mismatch: the amount charged or the user differs from what the server priced.
+ */
+async function loadPaymentIntent(responseData) {
+  const intent = await PaymentIntent.findOne({ orderId: responseData.order_id });
+  if (!intent) return { intent: null, replay: false, mismatch: false };
+  if (intent.status !== "created") return { intent, replay: true, mismatch: false };
+
+  const charged = Number(responseData.amount);
+  const userMatches = String(responseData.merchant_param1) === String(intent.user);
+  if (
+    responseData.order_status === "Success" &&
+    (!userMatches || !Number.isFinite(charged) || Math.abs(charged - intent.amount) > 0.01)
+  ) {
+    intent.status = "amount_mismatch";
+    intent.trackingId = responseData.tracking_id;
+    intent.completedAt = new Date();
+    await intent.save();
+    console.error("[PAYMENT MISMATCH] CCAvenue response does not match the priced order", {
+      order_id: responseData.order_id,
+      expected: intent.amount,
+      charged: responseData.amount,
+      userMatches,
+    });
+    await sendSubscriptionAdminEmail({
+      type: "PAYMENT MISMATCH - amount or user differs from the priced order (not applied)",
+      customerName: String(intent.user),
+      customerEmail: "",
+      amount: responseData.amount,
+      orderId: responseData.order_id,
+      trackingId: responseData.tracking_id,
+    });
+    return { intent, replay: false, mismatch: true };
+  }
+  return { intent, replay: false, mismatch: false };
+}
+
+async function settlePaymentIntent(intent, success, trackingId) {
+  if (!intent || intent.status !== "created") return;
+  intent.status = success ? "success" : "failed";
+  intent.trackingId = trackingId;
+  intent.completedAt = new Date();
+  await intent.save();
+}
+
+/** App payments return to the in-app result URL; web payments keep their website redirect. */
+function redirectAfterPayment(req, res, intent, success, webUrl) {
+  if (intent && intent.source === "app") {
+    const status = success ? "success" : "failed";
+    return res.redirect(
+      `${getApiPublicUrl(req)}/api/ccavenue/app-result?status=${status}&type=${intent.type}&orderId=${encodeURIComponent(intent.orderId)}`
+    );
+  }
+  return res.redirect(webUrl);
+}
 
 /** Receives a copy of every payment invoice PDF (override via env). */
 const INVOICE_COPY_EMAIL =
@@ -318,6 +382,18 @@ exports.ccavenueResponse = async (req, res) => {
       const decrypted = ccav.decrypt(encrypted, workingKey);
       const responseData = qs.parse(decrypted);
 
+      const { intent, replay, mismatch } = await loadPaymentIntent(responseData);
+      if (replay) {
+        return redirectAfterPayment(req, res, intent, intent.status === "success",
+          intent.status === "success"
+            ? "https://lunchbowl.co.in/user/menuCalendarPage"
+            : "https://lunchbowl.co.in/payment/subscriptionFailed");
+      }
+      if (mismatch) {
+        await processPaymentResponse(responseData, "subscription", null);
+        return redirectAfterPayment(req, res, intent, false, "https://lunchbowl.co.in/payment/subscriptionFailed");
+      }
+
       const orderId = responseData.order_id || "";
       const paidFor =
         orderId.startsWith("R")
@@ -371,8 +447,10 @@ exports.ccavenueResponse = async (req, res) => {
           const pendingCreatedAt = (s) =>
             s.createdAt ? new Date(s.createdAt).getTime() : s._id.getTimestamp().getTime();
 
+          const intentSubId = intent && intent.meta && intent.meta.subscriptionId;
           const pendingSub = form.subscriptions
             .filter((s) => s.status === "pending_payment")
+            .filter((s) => !intentSubId || String(s._id) === String(intentSubId))
             .sort((a, b) => pendingCreatedAt(b) - pendingCreatedAt(a))[0];
 
           if (!pendingSub) {
@@ -393,7 +471,8 @@ exports.ccavenueResponse = async (req, res) => {
               orderId: order_id,
               trackingId: tracking_id,
             });
-            return res.redirect("https://lunchbowl.co.in/payment/subscriptionFailed");
+            await settlePaymentIntent(intent, false, tracking_id);
+            return redirectAfterPayment(req, res, intent, false, "https://lunchbowl.co.in/payment/subscriptionFailed");
           }
 
           // 2️⃣ Determine if the user already has an active plan
@@ -414,12 +493,19 @@ exports.ccavenueResponse = async (req, res) => {
           form.step = 4;
 
           // ⭐ UPDATE WALLET POINTS
-          const walletUsed = Number(responseData.merchant_param4 || 0);
-          const remainingWallet = Number(responseData.merchant_param5 || 0);
+          // The remaining balance is computed here from the stored balance; the client's
+          // merchant_param5 is ignored so a tampered request cannot set the wallet.
+          const requestedWalletUsed = Number(
+            (intent && intent.meta && intent.meta.walletUsed) ??
+              pendingSub.walletUsed ??
+              responseData.merchant_param4 ??
+              0
+          ) || 0;
 
-          if (form.wallet) {
+          if (form.wallet && requestedWalletUsed > 0) {
             const previous = form.wallet.points || 0;
-            form.wallet.points = remainingWallet;
+            const walletUsed = Math.min(Math.max(requestedWalletUsed, 0), previous);
+            form.wallet.points = Math.round((previous - walletUsed) * 100) / 100;
 
             form.wallet.history.push({
               date: new Date(),
@@ -523,7 +609,8 @@ exports.ccavenueResponse = async (req, res) => {
             trackingId: tracking_id,
           });
 
-          return res.redirect("https://lunchbowl.co.in/user/menuCalendarPage");
+          await settlePaymentIntent(intent, true, tracking_id);
+          return redirectAfterPayment(req, res, intent, true, "https://lunchbowl.co.in/user/menuCalendarPage");
         }
 
         // -------------------- ORIGINAL SUBSCRIPTION LOGIC --------------------
@@ -614,7 +701,8 @@ exports.ccavenueResponse = async (req, res) => {
             console.error("Subscription invoice generation error:", err);
           }
 
-          return res.redirect("https://lunchbowl.co.in/user/menuCalendarPage");
+          await settlePaymentIntent(intent, true, tracking_id);
+          return redirectAfterPayment(req, res, intent, true, "https://lunchbowl.co.in/user/menuCalendarPage");
         }
       } else {
         logInvoiceDebug("ccavenueResponse:not Success — no invoice branch", {
@@ -624,7 +712,8 @@ exports.ccavenueResponse = async (req, res) => {
       }
 
       // 🟥 Payment failed case
-      return res.redirect("https://lunchbowl.co.in/payment/subscriptionFailed");
+      await settlePaymentIntent(intent, false, tracking_id);
+      return redirectAfterPayment(req, res, intent, false, "https://lunchbowl.co.in/payment/subscriptionFailed");
 
     } catch (error) {
       console.error("CCAvenue subscription response error:", error);
@@ -636,39 +725,27 @@ exports.ccavenueResponse = async (req, res) => {
 
 // Holiday Payment Response Handler
 exports.holiydayPayment = async (req, res) => {
-  console.log("🔔 Holiday payment API triggered");
-
   let encResponse = "";
   req.on("data", (data) => {
-    console.log("📩 Received data chunk:", data.toString());
     encResponse += data;
   });
 
   req.on("end", async () => {
-    console.log("📥 Full encResponse:", encResponse);
-
     try {
       const parsed = qs.parse(encResponse);
-      console.log("📦 Parsed response:", parsed);
-
       const encrypted = parsed.encResp;
-      console.log("🔐 Encrypted data:", encrypted);
 
       if (!encrypted) {
-        console.error("❌ Missing encrypted response");
+        console.error("Holiday payment: missing encrypted response");
         return res.status(400).send("Missing encrypted response");
       }
 
       // --- Decrypt the response
-      let decrypted, responseData;
+      let responseData;
       try {
-        decrypted = ccav.decrypt(encrypted, workingKey);
-        console.log("🔓 Decrypted response:", decrypted);
-
-        responseData = qs.parse(decrypted);
-        console.log("📑 Final parsed decrypted data:", responseData);
+        responseData = qs.parse(ccav.decrypt(encrypted, workingKey));
       } catch (err) {
-        console.error("❌ Decryption failed:", err);
+        console.error("Holiday payment: decryption failed:", err.message);
         return res.status(400).send("Failed to decrypt payment response");
       }
 
@@ -677,154 +754,121 @@ exports.holiydayPayment = async (req, res) => {
         tracking_id,
         order_status,
         merchant_param1: userId,
-        merchant_param2: mealDate,
         merchant_param3,
       } = responseData;
 
-      console.log("📌 Extracted values:", {
-        order_id,
-        tracking_id,
-        order_status,
-        userId,
-        mealDate,
-        merchant_param3,
-      });
-
       if (!userId) {
-        console.log("❌ Missing userId");
         return res.status(400).send("Missing userId");
       }
 
       if (!mongoose.Types.ObjectId.isValid(userId)) {
-        console.log("❌ Invalid userId format");
         return res.status(400).send("Invalid userId");
       }
 
-      console.log("⚙️ Calling processPaymentResponse...");
+      const { intent, replay, mismatch } = await loadPaymentIntent(responseData);
+      if (replay) {
+        return redirectAfterPayment(req, res, intent, intent.status === "success",
+          intent.status === "success" ? "https://lunchbowl.co.in/payment/success" : "https://lunchbowl.co.in/payment/failed");
+      }
+
       await processPaymentResponse(responseData, "holiday", "HOLIDAY_PAY");
-      console.log("✔️ processPaymentResponse completed");
 
-      // --- Parse merchant_param3 (children)
+      // Only a successful payment books the meal. Aborted / failed / cancelled
+      // responses used to fall through and be recorded as "Paid".
+      if (mismatch || order_status !== "Success") {
+        console.warn("Holiday payment not successful", { order_id, order_status, mismatch });
+        await settlePaymentIntent(intent, false, tracking_id);
+        return redirectAfterPayment(req, res, intent, false, "https://lunchbowl.co.in/payment/failed");
+      }
+
+      // --- Children: from the server-side intent (app) or merchant_param3 (web)
       let childrenData = [];
-      try {
-        console.log("📦 Decoding merchant_param3:", merchant_param3);
-
-        const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
-        console.log("📤 Decoded merchant_param3:", decoded);
-
-        childrenData = JSON.parse(decoded);
-        console.log("🧒 Children Data Array:", childrenData);
-      } catch (err) {
-        console.error("⚠️ Failed to parse merchant_param3:", err);
-        return res.status(400).send("Invalid children data");
+      if (intent && Array.isArray(intent.meta && intent.meta.childrenData)) {
+        childrenData = intent.meta.childrenData;
+      } else {
+        try {
+          const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
+          childrenData = JSON.parse(decoded);
+        } catch (err) {
+          console.error("Holiday payment: failed to parse merchant_param3:", err.message);
+          return res.status(400).send("Invalid children data");
+        }
       }
 
       if (!Array.isArray(childrenData) || childrenData.length === 0) {
-        console.warn("⚠️ No children data found, redirecting to failed");
-        return res.redirect("https://lunchbowl.co.in/payment/failed");
+        console.warn("Holiday payment: no children data", { order_id });
+        await settlePaymentIntent(intent, false, tracking_id);
+        return redirectAfterPayment(req, res, intent, false, "https://lunchbowl.co.in/payment/failed");
       }
 
-      // --- Process each child's holiday meal
-      console.log("🔍 Checking existing userMeal for user:", userId);
+      const perChildAmount = getPricingConfig().holidayMealPricePerChild;
 
       let userMeal = await UserMeal.findOne({ userId });
-      console.log("📥 Found userMeal:", userMeal);
-
       if (!userMeal) {
-        console.log("🆕 Creating new userMeal...");
         userMeal = new UserMeal({ userId, plans: [] });
       }
 
       for (const child of childrenData) {
-        console.log("👶 Processing child:", child);
-
         const { childId, dish, mealDate, planId } = child;
-
-        // FIX: Extract mealName properly
         const mealName = dish?.mealName || "";
-        console.log("🍽 Extracted mealName:", mealName);
 
         if (!childId || !mealName || !mealDate || !planId) {
-          console.log("⚠️ Missing child fields, skipping child:", child);
+          console.warn("Holiday payment: missing child fields, skipping", { order_id, childId });
           continue;
         }
 
         // --- Record HolidayPayment
-        console.log("💾 Creating HolidayPayment entry...");
         try {
           await HolidayPayment.create({
             userId,
             childId,
             mealDate,
-            mealName, // FIXED
-            amount: 200,
+            mealName,
+            amount: perChildAmount,
             paymentStatus: "Paid",
             transactionDetails: { tracking_id, order_id, ...responseData },
           });
-
-          console.log("✔️ HolidayPayment created");
         } catch (err) {
-          console.error("⚠️ Failed to create HolidayPayment:", err.message);
+          console.error("Failed to create HolidayPayment:", err.message);
         }
 
         // --- Find or create plan
-        console.log("🔍 Searching plan:", planId);
         let plan = userMeal.plans.find((p) => p.planId === planId);
-
         if (!plan) {
-          console.log("🆕 Creating new plan:", planId);
           plan = { planId, children: [] };
           userMeal.plans.push(plan);
         }
 
         // --- Find or create child under plan
-        console.log("🔍 Searching child entry:", childId);
         let childEntry = plan.children.find((c) => c.childId.equals(childId));
-
         if (!childEntry) {
-          console.log("🆕 Adding new child entry");
           plan.children.push({
             childId,
-            meals: [{ mealDate: new Date(mealDate), mealName }], // FIXED
+            meals: [{ mealDate: new Date(mealDate), mealName }],
           });
         } else {
-          console.log("📌 Child found, checking existing meals...");
-
           const existingMeal = childEntry.meals.find(
             (m) =>
               new Date(m.mealDate).toISOString().slice(0, 10) ===
               new Date(mealDate).toISOString().slice(0, 10)
           );
-
           if (existingMeal) {
-            console.log("♻️ Updating existing meal");
-            existingMeal.mealName = mealName; // FIXED
+            existingMeal.mealName = mealName;
           } else {
-            console.log("➕ Adding new meal entry");
-            childEntry.meals.push({
-              mealDate: new Date(mealDate),
-              mealName, // FIXED
-            });
+            childEntry.meals.push({ mealDate: new Date(mealDate), mealName });
           }
         }
       }
 
-      console.log("💾 Saving userMeal document...");
       await userMeal.save();
-      console.log("✔️ userMeal saved successfully");
 
       // --- Optional: send confirmation email
-      console.log("📧 Preparing to send confirmation email...");
-
       try {
         const userForm = await Form.findOne({ user: userId });
-        console.log("📄 userForm fetched:", userForm);
 
         if (userForm && userForm.parentDetails) {
           const parentName = `${userForm.parentDetails.fatherFirstName} ${userForm.parentDetails.fatherLastName}`;
           const email = userForm.parentDetails.email;
-
-          console.log("📧 Sending email to:", email);
 
           const transporter = nodemailer.createTransport({
             service: "gmail",
@@ -854,7 +898,7 @@ exports.holiydayPayment = async (req, res) => {
           });
 
           const holidayAmount =
-            Number(responseData.amount || 0) || childrenData.length * 200;
+            Number(responseData.amount || 0) || childrenData.length * perChildAmount;
           logInvoiceDebug("holidayPayment:beforeInvoice", {
             order_id,
             tracking_id,
@@ -887,8 +931,8 @@ exports.holiydayPayment = async (req, res) => {
         console.error("📧 Email sending failed:", mailErr);
       }
 
-      console.log("🎉 Holiday payment completed successfully — redirecting...");
-      return res.redirect("https://lunchbowl.co.in/payment/success");
+      await settlePaymentIntent(intent, true, tracking_id);
+      return redirectAfterPayment(req, res, intent, true, "https://lunchbowl.co.in/payment/success");
     } catch (err) {
       console.error("💥 Holiday payment handler error:", err);
       return res.status(500).send("Internal Server Error");
@@ -956,14 +1000,24 @@ exports.addChildPaymentController = async (req, res) => {
       const decrypted = ccav.decrypt(encrypted, workingKey);
       const responseData = qs.parse(decrypted);
 
+      const { intent, replay, mismatch } = await loadPaymentIntent(responseData);
+      if (replay) {
+        return redirectAfterPayment(req, res, intent, intent.status === "success",
+          intent.status === "success"
+            ? "https://lunchbowl.co.in/user/menuCalendarPage"
+            : "https://lunchbowl.co.in/payment/subscriptionFailed");
+      }
+
       const {
         order_id,
         tracking_id,
         order_status,
         merchant_param1: userId,
-        merchant_param2: subscriptionId,
         merchant_param3,
       } = responseData;
+      // App payments carry the order details in the server-side intent.
+      const subscriptionId =
+        (intent && intent.meta && intent.meta.subscriptionId) || responseData.merchant_param2;
 
       // Validate base data
       if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -979,7 +1033,9 @@ exports.addChildPaymentController = async (req, res) => {
       // 🔸 Parse childrenData (merchant_param3)
       let childrenData = [];
       try {
-       if (merchant_param3) {
+       if (intent && Array.isArray(intent.meta && intent.meta.children)) {
+         childrenData = intent.meta.children.map((c) => ({ ...c }));
+       } else if (merchant_param3) {
          const decoded = Buffer.from(merchant_param3, "base64").toString("utf-8");
          childrenData = JSON.parse(decoded);
        } else {
@@ -993,8 +1049,9 @@ exports.addChildPaymentController = async (req, res) => {
       // 🔸 Process payment and save in UserPayment
       await processPaymentResponse(responseData, "subscription", "ADD_CHILD");
 
-      if (order_status !== "Success") {
-        return res.redirect("https://lunchbowl.co.in/payment/subscriptionFailed");
+      if (mismatch || order_status !== "Success") {
+        await settlePaymentIntent(intent, false, tracking_id);
+        return redirectAfterPayment(req, res, intent, false, "https://lunchbowl.co.in/payment/subscriptionFailed");
       }
 
       // 🔹 Fetch form and subscription
@@ -1071,7 +1128,8 @@ exports.addChildPaymentController = async (req, res) => {
       try {
         const parentName = `${form.parentDetails.fatherFirstName} ${form.parentDetails.fatherLastName}`;
         const email = form.parentDetails.email;
-        const amount = subscription.price || 0;
+        // The amount charged for adding the child(ren), not the original plan price.
+        const amount = Number(responseData.amount || 0) || (intent && intent.amount) || 0;
 
         const transporter = nodemailer.createTransport({
           service: "gmail",
@@ -1124,7 +1182,8 @@ exports.addChildPaymentController = async (req, res) => {
       }
 
       // 🔹 Redirect to success page
-      return res.redirect("https://lunchbowl.co.in/user/menuCalendarPage");
+      await settlePaymentIntent(intent, true, tracking_id);
+      return redirectAfterPayment(req, res, intent, true, "https://lunchbowl.co.in/user/menuCalendarPage");
     } catch (err) {
       console.error("Add Child live payment handler error:", err);
       return res.status(500).send("Internal Server Error");
@@ -1140,7 +1199,7 @@ exports.addChildPaymentController = async (req, res) => {
 
 exports.localPaymentSuccess = async (req, res) => {
   try {
-    const { userId, orderId, transactionId, walletUsed, remainingWallet } = req.body;
+    const { userId, orderId, transactionId, walletUsed } = req.body;
 
     logInvoiceDebug("localPaymentSuccess:enter", {
       userId,
@@ -1200,13 +1259,16 @@ exports.localPaymentSuccess = async (req, res) => {
       form.step = 4;
       form.subscriptionCount = (form.subscriptionCount || 0) + 1;
 
-      // ⭐ UPDATE WALLET POINTS FOR LOCAL PAYMENT
-      if (form.wallet) {
-        form.wallet.points = remainingWallet;
+      // ⭐ UPDATE WALLET POINTS FOR LOCAL PAYMENT (computed from the stored balance)
+      const requestedWalletUsed = Number(subscriptionToUpdate.walletUsed ?? walletUsed ?? 0) || 0;
+      if (form.wallet && requestedWalletUsed > 0) {
+        const previous = form.wallet.points || 0;
+        const used = Math.min(Math.max(requestedWalletUsed, 0), previous);
+        form.wallet.points = Math.round((previous - used) * 100) / 100;
 
         form.wallet.history.push({
           date: new Date(),
-          change: -walletUsed,
+          change: -used,
           reason: "Subscription Renewal Redeemed",
           childName: "",
           mealName: ""

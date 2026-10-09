@@ -13,6 +13,8 @@ const SubscriptionSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   orderId: { type: String },
   paymentAmount: { type: Number },
+  // Wallet points redeemed against this plan (renewals); the server deducts them on payment.
+  walletUsed: { type: Number, default: 0 },
   paymentDate: { type: Date },
   paymentMethod: { type: String, default: "CCAvenue" },
   transactionId: { type: String },

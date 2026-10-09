@@ -9,58 +9,32 @@
  * env vars are not set.
  */
 
-/**
- * Safely parse an environment variable as a number with a default fallback.
- * Uses a null/empty check + explicit Number() conversion so that valid env
- * values of '0' are honoured (Number('0') === 0 is falsy, which a simple
- * `||` default would incorrectly override).
- */
-const envNumber = (key, defaultValue) => {
-  const val = process.env[key];
-  if (val == null || val === '') return defaultValue;
-  const parsed = Number(val);
-  return isNaN(parsed) ? defaultValue : parsed;
-};
+const { getPricingConfig, envNumber } = require("../lib/pricing");
 
 const getAppSettings = (req, res) => {
   try {
     const settings = {
-      // ── Pricing ────────────────────────────────────────────────────────────
-      pricePerDayPerChild: envNumber('PRICE_PER_DAY_PER_CHILD', 225),
+      ...getPricingConfig(),
 
-      // ── Plan durations (working days) ───────────────────────────────────────
-      planDurations: {
-        oneMonth:    envNumber('PLAN_DAYS_1_MONTH', 22),
-        threeMonths: envNumber('PLAN_DAYS_3_MONTHS', 66),
-        sixMonths:   envNumber('PLAN_DAYS_6_MONTHS', 132),
-      },
+      // ── Ordering rules (mirrors the website) ─────────────────────────────────
+      // Meals can be changed or deleted only for dates after today (IST).
+      mealLockDaysAhead: envNumber("MEAL_LOCK_DAYS_AHEAD", 1),
+      lunchTimeSlots: ["11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM"],
 
-      // ── Single-child discount tiers (%) ────────────────────────────────────
-      singleChildDiscounts: {
-        oneMonth:    envNumber('DISCOUNT_SINGLE_1M', 0),
-        threeMonths: envNumber('DISCOUNT_SINGLE_3M', 5),
-        sixMonths:   envNumber('DISCOUNT_SINGLE_6M', 10),
-      },
+      // ── Trial @ 99 (an enquiry only; the team collects payment offline) ─────
+      trialEnabled: process.env.ENABLE_TRIAL === "true",
+      trialPrice: envNumber("TRIAL_PRICE", 99),
 
-      // ── Multi-child (≥ 2) discount tiers (%) ───────────────────────────────
-      multiChildDiscounts: {
-        oneMonth:    envNumber('DISCOUNT_MULTI_1M', 5),
-        threeMonths: envNumber('DISCOUNT_MULTI_3M', 15),
-        sixMonths:   envNumber('DISCOUNT_MULTI_6M', 20),
-      },
-
-      // ── Misc ────────────────────────────────────────────────────────────────
-      // Minimum children required to qualify for multi-child pricing
-      multiChildThreshold: envNumber('MULTI_CHILD_THRESHOLD', 2),
-
-      // Price per child for a single holiday meal booking
-      holidayMealPricePerChild: envNumber('HOLIDAY_MEAL_PRICE_PER_CHILD', 225),
+      // ── Support ───────────────────────────────────────────────────────────────
+      supportPhone: process.env.SUPPORT_PHONE || "+91 91769 17602",
+      supportEmail: process.env.SUPPORT_EMAIL || "contactus@lunchbowl.co.in",
+      whatsappNumber: process.env.WHATSAPP_NUMBER || "919345407191",
     };
 
     return res.status(200).json({ success: true, data: settings });
   } catch (err) {
-    console.error('getAppSettings error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to load app settings' });
+    console.error("getAppSettings error:", err);
+    return res.status(500).json({ success: false, message: "Failed to load app settings" });
   }
 };
 

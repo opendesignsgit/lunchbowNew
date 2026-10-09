@@ -26,6 +26,9 @@ import AddChildPayment from "./AddChildPayment";
 import { useRouter } from 'next/router';
 import stepTwo from "../../../public/profileStepImages/stepTwo.png";
 
+// Daily rate per child; keep in sync with BASE_PRICE_PER_DAY in the plan steps.
+const PRICE_PER_DAY = 225;
+
 const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
 const schema = yup.object().shape({
@@ -450,8 +453,9 @@ const AddChild = ({ _id, onComplete }) => {
     return count;
   }, 0);
 
-  // Total amount = 200 ₹ * remaining days * new selected children count
-  const totalToPay = newSelectedChildrenCount * remainingWorkingDays * 200;
+  // Total amount = per-meal price × remaining days × new selected children count
+  // (same ₹225 daily rate as the subscription plans)
+  const totalToPay = newSelectedChildrenCount * remainingWorkingDays * PRICE_PER_DAY;
 
   // Selected children for payment and guard using Yup's synchronous validateSync
   const selectedChildrenForPayment = useMemo(
@@ -521,7 +525,7 @@ const AddChild = ({ _id, onComplete }) => {
             </Grid>
             <Grid className="curplanItem">
               <Typography variant="h5"><strong>Amount per Day per Child</strong></Typography>
-              <Typography>₹ 200</Typography>
+              <Typography>₹ {PRICE_PER_DAY}</Typography>
             </Grid>
             <Grid className="curplanItem totalamountItem">
               <Typography variant="h5" color="primary" fontWeight="bold">
