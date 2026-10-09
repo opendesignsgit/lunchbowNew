@@ -91,6 +91,10 @@ async function priceSubscription(form) {
 }
 
 async function priceRenewal(form) {
+  // Same rule as the website's Renew button: no second renewal while one is waiting to start.
+  if ((form.subscriptions || []).some((s) => s.status === "upcoming")) {
+    throw new PaymentError(409, "You already have an upcoming plan.");
+  }
   const sub = [...(form.subscriptions || [])]
     .filter((s) => s.status === "pending_payment")
     .sort((a, b) => createdAtOf(b) - createdAtOf(a))[0];
