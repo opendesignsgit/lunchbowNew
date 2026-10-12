@@ -29,6 +29,12 @@ const getAppSettings = (req, res) => {
       supportPhone: process.env.SUPPORT_PHONE || "+91 91769 17602",
       supportEmail: process.env.SUPPORT_EMAIL || "contactus@lunchbowl.co.in",
       whatsappNumber: process.env.WHATSAPP_NUMBER || "919345407191",
+
+      // ── Test payments (dev/local only) ──────────────────────────────────────
+      // When the test-only payment endpoints are enabled (see middleware/localPaymentsOnly.js),
+      // the app shows a "TEST PAYMENT" button that skips CCAvenue. Never set on the live API.
+      testPaymentsEnabled:
+        process.env.ALLOW_LOCAL_PAYMENTS === "true" || process.env.CCAV_MODE === "test",
     };
 
     return res.status(200).json({ success: true, data: settings });
