@@ -1506,6 +1506,7 @@ const getAllChildrenForUser = async (req, res) => {
         const now = new Date();
         activeSubscription = await Subscription.findOne({
           _id: { $in: validIds },
+          status: { $ne: "pending_payment" }, // an unpaid checkout is never the parent's plan
           $or: [
             { status: "active" },
             { startDate: { $lte: now }, endDate: { $gte: now } },
@@ -1526,11 +1527,27 @@ const getAllChildrenForUser = async (req, res) => {
     ) {
       console.log("Falling back to last valid subscription ID");
 
+      // Skip pending_payment rows. One survives for PENDING_SUBSCRIPTION_GRACE_MINUTES
+      // after a checkout is abandoned; if the renew screen reads it as the "previous
+      // plan" it starts the paid renewal the day after that unpaid plan ends.
+      // (Oct 2026: two parents abandoned a checkout, retried within minutes, and their
+      // paid renewals were dated 20 Nov / 23 Nov instead of the next day.)
+      const validIds = form.subscriptions.filter(isValidObjectIdStrict);
+      const realIds = new Set(
+        (
+          await Subscription.find({
+            _id: { $in: validIds },
+            status: { $ne: "pending_payment" },
+          })
+            .select("_id")
+            .lean()
+        ).map((s) => String(s._id))
+      );
+
       let lastValidId = null;
-      for (let i = form.subscriptions.length - 1; i >= 0; i--) {
-        const candidate = form.subscriptions[i];
-        if (isValidObjectIdStrict(candidate)) {
-          lastValidId = candidate;
+      for (let i = validIds.length - 1; i >= 0; i--) {
+        if (realIds.has(String(validIds[i]))) {
+          lastValidId = validIds[i];
           break;
         }
       }
