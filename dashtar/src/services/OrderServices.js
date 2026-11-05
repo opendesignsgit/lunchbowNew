@@ -1,4 +1,5 @@
-import requests from "./httpService";
+import requests, { authFetch, saveBlob } from "./httpService";
+import { toQuery } from "./AdminOpsServices";
 
 const OrderServices = {
   getAllOrders: async ({
@@ -41,6 +42,9 @@ const OrderServices = {
   searchOrders: async ({
     childName = "",
     date = "",
+    school = "",
+    lunchTime = "",
+    location = "",
     page = 1,
     limit = 10,
     headers,
@@ -51,8 +55,50 @@ const OrderServices = {
     params.append("limit", limit);
     if (childName) params.append("childName", childName);
     if (date) params.append("date", date);
+    if (school) params.append("school", school);
+    if (lunchTime) params.append("lunchTime", lunchTime);
+    if (location) params.append("location", location);
 
     return requests.get(`/orders/search?${params.toString()}`, null, headers);
+  },
+
+  /**
+   * Kitchen / dispatch sheet for one day, grouped school → lunch slot.
+   * GET /orders/kitchen-sheet?date=YYYY-MM-DD&school=&lunchTime=
+   * → { date, total, cancelled, dishSummary[], schools[{ school, total, cancelled, dishSummary, slots[{ lunchTime, rows, total, cancelled, dishSummary }] }] }
+   */
+  getKitchenSheet: async ({ date, school = "", lunchTime = "" } = {}) => {
+    return requests.get(`/orders/kitchen-sheet${toQuery({ date, school, lunchTime })}`);
+  },
+
+  /** Server-side CSV of every row for the date (not just the current page). */
+  downloadKitchenSheetCsv: async ({ date, school = "", lunchTime = "" } = {}) => {
+    const res = await authFetch(`/orders/kitchen-sheet${toQuery({ date, school, lunchTime, format: "csv" })}`);
+    if (!res.ok) {
+      let message = `Download failed (${res.status})`;
+      try {
+        const body = await res.json();
+        message = body?.message || message;
+      } catch (err) {
+        // not JSON
+      }
+      throw new Error(message);
+    }
+    const text = await res.text();
+    // BOM so Excel opens UTF-8 correctly.
+    const blob = new Blob(["\uFEFF" + text], { type: "text/csv;charset=utf-8;" });
+    saveBlob(blob, `kitchen-${date || "today"}${school ? `-${school}` : ""}.csv`);
+  },
+
+  /** Subscription Table page (formerly called with bare axios). */
+  getUserSubscriptions: async ({ page = 1, limit = 10 } = {}) => {
+    return requests.get(`/orders/get-All/user-Subscription${toQuery({ page, limit })}`);
+  },
+
+  searchUserSubscriptions: async ({ page = 1, limit = 10, fatherName = "", mobile = "", email = "" } = {}) => {
+    return requests.get(
+      `/orders/get-All/user-Subscription/search${toQuery({ page, limit, fatherName, mobile, email })}`
+    );
   },
 
   getAllOrdersTwo: async ({ invoice, body, headers }) => {
