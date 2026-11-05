@@ -79,7 +79,7 @@ app.use("/api/app-config/", appSettingsRoutes);
 app.use("/api/", schoolRequestRoutes);
 
 // Test SMS endpoint without database dependency
-app.post("/api/test-sms", testSMSNotification);
+app.post("/api/test-sms", isAuth, require("../middleware/isAdminUser"), testSMSNotification);
 
 //if you not use admin dashboard then these two route will not needed.
 app.use("/api/admin/", adminRoutes);

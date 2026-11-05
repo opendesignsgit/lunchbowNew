@@ -668,244 +668,91 @@ const getDashboardOrders = async (req, res) => {
   }
 };
 
+const { buildKitchenRows, dishSummary, groupForDispatch, toCsv } = require("../lib/kitchen");
+const { todayKeyIST, toDateKey } = require("../lib/pricing");
+
+// Meals from today onward for paid, live plans (see lib/kitchen.js for the rules).
 const getAllFoodOrders = async (req, res) => {
   try {
-    // Pagination parameters
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // ✅ Fetch all user meals
-    const userMeals = await UserMeal.find({}).lean();
-
-    // ✅ Collect all userIds and childIds across plans
-    const userChildPairs = [];
-    userMeals.forEach((userMeal) => {
-      if (!userMeal.plans) return;
-      userMeal.plans.forEach((plan) => {
-        if (!plan.children) return;
-        plan.children.forEach((childEntry) => {
-          if (!childEntry.childId) return;
-          userChildPairs.push({
-            userId: userMeal.userId.toString(),
-            childId: childEntry.childId.toString(),
-          });
-        });
-      });
-    });
-
-    // ✅ Get all unique child IDs
-    const childIds = [...new Set(userChildPairs.map((p) => p.childId))];
-
-    // ✅ Fetch all relevant child details
-    const children = await Child.find({ _id: { $in: childIds } }).lean();
-
-    // ✅ Map childId → childDetails
-    const childDetailsMap = {};
-    children.forEach((child) => {
-      childDetailsMap[child._id.toString()] = child;
-    });
-
-    // ✅ Today's date at midnight
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // ✅ Flatten and enrich all orders
-    let orders = [];
-    userMeals.forEach((userMeal) => {
-      const userId = userMeal.userId?.toString();
-      if (!userMeal.plans) return;
-
-      userMeal.plans.forEach((plan) => {
-        if (!plan.children) return;
-
-        plan.children.forEach((childEntry) => {
-          const childId = childEntry.childId?.toString();
-          if (!childEntry.meals || !childId) return;
-
-          const childDetails = childDetailsMap[childId];
-          childEntry.meals.forEach((meal) => {
-            if (!meal.mealDate || !meal.mealName) return;
-
-            // Include only meals from today onwards
-            if (new Date(meal.mealDate) >= today) {
-              orders.push({
-                userId,
-                planId: plan.planId,
-                childId,
-                date: meal.mealDate,
-                food: meal.mealName,
-                deleted: !!meal.deleted,
-                // Enriched details
-                childFirstName: childDetails?.childFirstName || "",
-                childLastName: childDetails?.childLastName || "",
-                school: childDetails?.school || "",
-                lunchTime: childDetails?.lunchTime || "",
-                location: childDetails?.location || "",
-                childClass: childDetails?.childClass || "",
-                section: childDetails?.section || "",
-              });
-            }
-          });
-        });
-      });
-    });
-
-    // ✅ Sort by date ascending
-    orders.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    // ✅ Pagination
-    const paginatedOrders = orders.slice(skip, skip + limit);
-
-    // ✅ Send response
+    const rows = await buildKitchenRows({ fromKey: todayKeyIST() });
     res.status(200).json({
-      orders: paginatedOrders,
-      total: orders.length,
+      orders: rows.slice(skip, skip + limit),
+      total: rows.length,
       page,
       limit,
+      dishSummary: dishSummary(rows.filter((r) => r.dateKey === todayKeyIST())),
     });
   } catch (err) {
-    console.error("❌ Error in getAllFoodOrders:", err);
-    res.status(500).send({
-      message: err.message,
-    });
+    console.error("Error in getAllFoodOrders:", err);
+    res.status(500).send({ message: err.message });
   }
 };
 
-// ADD THIS FUNCTION TO THIS FILE
+// Kitchen list for one date (or all dates) with optional filters.
 const searchOrders = async (req, res) => {
   try {
-    const { childName = "", date = "", page = 1, limit = 10 } = req.query;
+    const { childName = "", date = "", school = "", lunchTime = "", location = "", page = 1, limit = 10 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    // Fetch all user meals
-    const userMeals = await UserMeal.find({}).lean();
-
-    // Collect all unique userIds and childIds
-    const userChildPairs = [];
-    userMeals.forEach((userMeal) => {
-      if (!userMeal.plans) return;
-      userMeal.plans.forEach((plan) => {
-        if (!plan.children) return;
-        plan.children.forEach((childEntry) => {
-          if (!childEntry.childId) return;
-          userChildPairs.push({
-            userId: userMeal.userId.toString(),
-            childId: childEntry.childId.toString(),
-          });
-        });
-      });
-    });
-
-    const userIds = [...new Set(userChildPairs.map((p) => p.userId))];
-    const childIds = [...new Set(userChildPairs.map((p) => p.childId))];
-
-    // Fetch all relevant child details in one go
-    const children = await Child.find({ _id: { $in: childIds } }).lean();
-
-    // Map for quick access
-    const childDetailsMap = {};
-    children.forEach((child) => {
-      childDetailsMap[child._id.toString()] = child;
-    });
-
-    // Today's date at midnight (for filtering)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Flatten and enrich all orders
-    let orders = [];
-    userMeals.forEach((userMeal) => {
-      const userId = userMeal.userId?.toString();
-      if (!userMeal.plans) return;
-
-      userMeal.plans.forEach((plan) => {
-        if (!plan.children) return;
-
-        plan.children.forEach((childEntry) => {
-          const childId = childEntry.childId?.toString();
-          if (!childEntry.meals || !childId) return;
-
-          const childDetails = childDetailsMap[childId];
-          childEntry.meals.forEach((meal) => {
-            if (!meal.mealDate || !meal.mealName) return;
-
-            // Deleted (cancelled) meals are STILL returned — flagged as `deleted`
-            // so the kitchen can see the cancellation and not dispatch them.
-            // They are excluded from the dish-summary counts below.
-              orders.push({
-                userId,
-                planId: plan.planId,
-                childId,
-                date: meal.mealDate,
-                food: meal.mealName,
-                deleted: !!meal.deleted,
-                childFirstName: childDetails?.childFirstName || "",
-                childLastName: childDetails?.childLastName || "",
-                school: childDetails?.school || "",
-                lunchTime: childDetails?.lunchTime || "",
-                location: childDetails?.location || "",
-                childClass: childDetails?.childClass || "",
-                section: childDetails?.section || "",
-              });
-          });
-        });
-      });
-    });
-
-    // Filter by child name (case-insensitive)
-    if (childName) {
-      const lowerChildName = childName.toLowerCase();
-      orders = orders.filter((order) =>
-        (order.childFirstName + " " + order.childLastName)
-          .toLowerCase()
-          .includes(lowerChildName)
-      );
+    const dateKey = date ? toDateKey(date) : null;
+    if (date && !dateKey) {
+      return res.status(400).json({ message: "Invalid date" });
     }
 
-    // Filter by date (exact match)
-    let dishSummary = [];
-    if (date) {
-      const dateStr = new Date(date).toLocaleDateString();
-      orders = orders.filter(
-        (order) => new Date(order.date).toLocaleDateString() === dateStr
-      );
-
-      // Dish summary for this date
-      const dishCountMap = {};
-      orders.forEach((order) => {
-        // Do not count cancelled/deleted meals toward the kitchen prep totals
-        if (order.deleted) return;
-        dishCountMap[order.food] = (dishCountMap[order.food] || 0) + 1;
-      });
-
-      dishSummary = Object.entries(dishCountMap).map(([dish, count]) => ({
-        dish,
-        count,
-      }));
-    }
-
-    // Sort by date ascending
-    orders.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    // Pagination
-    const paginatedOrders = orders.slice(skip, skip + parseInt(limit));
+    const rows = await buildKitchenRows({
+      fromKey: dateKey || undefined,
+      toKey: dateKey || undefined,
+      childName,
+      school,
+      lunchTime,
+      location,
+    });
 
     res.status(200).json({
-      orders: paginatedOrders,
-      total: orders.length,
+      orders: rows.slice(skip, skip + parseInt(limit)),
+      total: rows.length,
       page: parseInt(page),
       limit: parseInt(limit),
-      dishSummary,
+      dishSummary: dateKey ? dishSummary(rows) : [],
     });
   } catch (err) {
     console.error("Error in searchOrders:", err);
-    res.status(500).send({
-      message: err.message,
-    });
+    res.status(500).send({ message: err.message });
   }
 };
 
+// Dispatch sheet grouped by school → lunch slot, with per-group dish counts.
+// GET /orders/kitchen-sheet?date=YYYY-MM-DD[&school=][&format=csv]
+const getKitchenSheet = async (req, res) => {
+  try {
+    const dateKey = toDateKey(req.query.date || todayKeyIST());
+    if (!dateKey) return res.status(400).json({ message: "Invalid date" });
+    const rows = await buildKitchenRows({
+      fromKey: dateKey,
+      toKey: dateKey,
+      school: req.query.school || "",
+      lunchTime: req.query.lunchTime || "",
+    });
+    if (req.query.format === "csv") {
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="kitchen-${dateKey}.csv"`);
+      return res.send(toCsv(rows));
+    }
+    res.json({
+      date: dateKey,
+      total: rows.filter((r) => !r.deleted).length,
+      cancelled: rows.filter((r) => r.deleted).length,
+      dishSummary: dishSummary(rows),
+      schools: groupForDispatch(rows),
+    });
+  } catch (err) {
+    console.error("Error in getKitchenSheet:", err);
+    res.status(500).send({ message: err.message });
+  }
+};
 
 const userSubscription = async (req, res) => {
   try {
@@ -1193,6 +1040,7 @@ const searchUserSubscriptions = async (req, res) => {
 
 
 module.exports = {
+  getKitchenSheet,
   getAllOrders,
   getOrderById,
   getOrderCustomer,

@@ -1,5 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const { isAuth } = require("../config/auth");
+const isAdminUser = require("../middleware/isAdminUser");
+const admin = [isAuth, isAdminUser];
+
 const {
   addSchool,
   getAllSchools,
@@ -9,7 +13,7 @@ const {
 } = require("../controller/adminController");
 
 // Add a school
-router.post("/add-school", addSchool);
+router.post("/add-school", admin, addSchool);
 
 // Get all schools
 router.get("/get-all-schools", getAllSchools);
@@ -18,9 +22,9 @@ router.get("/get-all-schools", getAllSchools);
 router.get("/get-school/:id", getSchoolById);
 
 // Update a school
-router.put("/update-school/:id", updateSchool);
+router.put("/update-school/:id", admin, updateSchool);
 
 // Delete a school
-router.delete("/delete-school/:id", deleteSchool);
+router.delete("/delete-school/:id", admin, deleteSchool);
 
 module.exports = router;

@@ -4,6 +4,9 @@ const rateLimit = require("express-rate-limit");
 const { isAuth } = require("../config/auth");
 const localPaymentsOnly = require("../middleware/localPaymentsOnly");
 const isAdminUser = require("../middleware/isAdminUser");
+const requireOwner = require("../middleware/requireOwner");
+// Customer data: the caller must be logged in and may only touch their own records.
+const own = [isAuth, requireOwner];
 const {
   loginCustomer,
   registerCustomer,
@@ -74,16 +77,16 @@ router.post("/verify-email", emailVerificationLimit, verifyEmailAddress);
 router.post("/verify-phone", phoneVerificationLimit, verifyPhoneNumber);
 
 // shipping address send to array
-router.post("/shipping/address/:id", addShippingAddress);
+router.post("/shipping/address/:id", own, addShippingAddress);
 
 // get all shipping address
-router.get("/shipping/address/:id", getShippingAddress);
+router.get("/shipping/address/:id", own, getShippingAddress);
 
 // shipping address update
-router.put("/shipping/address/:userId/:shippingId", updateShippingAddress);
+router.put("/shipping/address/:userId/:shippingId", own, updateShippingAddress);
 
 // shipping address delete
-router.delete("/shipping/address/:userId/:shippingId", deleteShippingAddress);
+router.delete("/shipping/address/:userId/:shippingId", own, deleteShippingAddress);
 
 //register a user
 router.post("/register/:token", registerCustomer);
@@ -104,7 +107,7 @@ router.put("/forget-password", passwordVerificationLimit, forgetPassword);
 router.put("/reset-password", resetPassword);
 
 //change password
-router.post("/change-password", changePassword);
+router.post("/change-password", isAuth, changePassword);
 
 //add all users
 router.post("/add/all", isAuth, isAdminUser, addAllCustomers);
@@ -116,7 +119,7 @@ router.get("/", isAuth, isAdminUser, getAllCustomers);
 router.get("/:id", isAuth, isAdminUser, getCustomerById);
 
 // Get form data by user ID
-router.get("/form/:userId", getFormData);
+router.get("/form/:userId", own, getFormData);
 
 //update a user
 router.put("/:id", isAuth, isAdminUser.orSelf("id"), updateCustomer);
@@ -131,37 +134,37 @@ router.post("/sendOtp", sendOtp);
 router.post("/verifyOtp", verifyOtp);
 
 //step-Form ParentDetails
-router.post("/stepForm-Register", stepFormRegister);
+router.post("/stepForm-Register", own, stepFormRegister);
 
-router.post("/get-Menu-Calendar", getMenuCalendarDate);
+router.post("/get-Menu-Calendar", own, getMenuCalendarDate);
 
-router.post("/save-Menu-Calendar", saveMealPlans);
+router.post("/save-Menu-Calendar", own, saveMealPlans);
 
 // Add to your routes
-router.post("/get-saved-meals", getSavedMeals);
+router.post("/get-saved-meals", own, getSavedMeals);
 
-router.post("/Step-Check", stepCheck);
+router.post("/Step-Check", own, stepCheck);
 
-router.post("/account-details", accountDetails);
+router.post("/account-details", own, accountDetails);
 
 // CCAvenue Payment Verification
-router.post("/payment/verify", verifyCCAvenuePayment);
+router.post("/payment/verify", own, verifyCCAvenuePayment);
 
 // CCAvenue Response Handler
 router.post("/payment/response", handleCCAvenueResponse);
 
-router.post("/get-paid-holidays", paidHolidaysLimit, getPaidHolidays);
+router.post("/get-paid-holidays", paidHolidaysLimit, own, getPaidHolidays);
 
-router.post("/get-all-children", getAllChildrenForUser);
+router.post("/get-all-children", own, getAllChildrenForUser);
 
 // Test-only endpoints (no CCAvenue). Disabled on the live API; see middleware/localPaymentsOnly.js.
 router.post("/local-success", localPaymentsOnly, localPaymentSuccess);
 
 router.post("/local-success/local-add-childPayment", localPaymentsOnly, localAddChildPaymentController);
 
-router.post("/get-payments", getPaymentsForUser);
+router.post("/get-payments", own, getPaymentsForUser);
 
-router.post("/delete-meal", deleteMeal);
+router.post("/delete-meal", own, deleteMeal);
 
 // Delete account and all associated user data
 router.delete("/delete-account/:userId", deleteAccountLimit, isAuth, deleteAccount);

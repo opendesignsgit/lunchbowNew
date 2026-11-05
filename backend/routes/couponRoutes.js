@@ -1,5 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const { isAuth } = require("../config/auth");
+const isAdminUser = require("../middleware/isAdminUser");
+const admin = [isAuth, isAdminUser];
+
 const {
   addCoupon,
   addAllCoupon,
@@ -14,10 +18,10 @@ const {
 } = require('../controller/couponController');
 
 //add a coupon
-router.post('/add', addCoupon);
+router.post('/add', admin, addCoupon);
 
 //add multiple coupon
-router.post('/add/all', addAllCoupon);
+router.post('/add/all', admin, addAllCoupon);
 
 //get all coupon
 router.get('/', getAllCoupons);
@@ -29,18 +33,18 @@ router.get('/show', getShowingCoupons);
 router.get('/:id', getCouponById);
 
 //update a coupon
-router.put('/:id', updateCoupon);
+router.put('/:id', admin, updateCoupon);
 
 //update many coupon
-router.patch('/update/many', updateManyCoupons);
+router.patch('/update/many', admin, updateManyCoupons);
 
 //show/hide a coupon
-router.put('/status/:id', updateStatus);
+router.put('/status/:id', admin, updateStatus);
 
 //delete a coupon
-router.delete('/:id', deleteCoupon);
+router.delete('/:id', admin, deleteCoupon);
 
 //delete many coupon
-router.patch('/delete/many', deleteManyCoupons);
+router.patch('/delete/many', admin, deleteManyCoupons);
 
 module.exports = router;

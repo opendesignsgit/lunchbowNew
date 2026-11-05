@@ -1,5 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const { isAuth } = require("../config/auth");
+const isAdminUser = require("../middleware/isAdminUser");
+const admin = [isAuth, isAdminUser];
+
 const {
   multiUpload,
   handleUploadErrors,
@@ -27,10 +31,10 @@ const {
 } = require("../controller/productController");
 
 //add a product
-router.post("/add", addProduct);
+router.post("/add", admin, addProduct);
 
 //add multiple products
-router.post("/all", addAllProducts);
+router.post("/all", admin, addAllProducts);
 
 //get a product
 //router.post("/:id", getProductById);
@@ -44,31 +48,31 @@ router.get("/store", getShowingStoreProducts);
 //get all products
 router.get("/", getAllProducts);
 
-router.get("/get-all-menu", getAllDishes);
+router.get("/get-all-menu", admin, getAllDishes);
 
 router.get("/get-all-menu-dishes", getAllMenuDishes);
 
 // Dish routes with upload middleware
-router.post("/add-dish", multiUpload, handleUploadErrors, addDish);
-router.put("/update-dish/:id", multiUpload, handleUploadErrors, updateDish);
+router.post("/add-dish", admin, multiUpload, handleUploadErrors, addDish);
+router.put("/update-dish/:id", admin, multiUpload, handleUploadErrors, updateDish);
 
 
 //get a product by slug
 router.get("/product/:slug", getProductBySlug);
 
 //update a product
-router.patch("/:id", updateProduct);
+router.patch("/:id", admin, updateProduct);
 
 //update many products
-router.patch("/update/many", updateManyProducts);
+router.patch("/update/many", admin, updateManyProducts);
 
 //update a product status
-router.put("/status/:id", updateStatus);
+router.put("/status/:id", admin, updateStatus);
 
 //delete a product
-router.delete("/:id", deleteProduct);
+router.delete("/:id", admin, deleteProduct);
 
 //delete many product
-router.patch("/delete/many", deleteManyProducts);
+router.patch("/delete/many", admin, deleteManyProducts);
 
 module.exports = router;

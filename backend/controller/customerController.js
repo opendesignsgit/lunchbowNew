@@ -23,6 +23,7 @@ const Form = require("../models/Form");
 const Child = require("../models/childModel");
 const Subscription = require("../models/subscriptionModel");
 const UserPayment = require('../models/Payment');
+const PaymentIntent = require('../models/PaymentIntent');
 const {
   getPricingConfig,
   computePlanPrice,
@@ -995,11 +996,12 @@ const stepFormRegister = async (req, res) => {
       // Find form with populated subscriptions
       const form = await Form.findOne({ user: _id }).populate("subscriptions").exec();
 
-      // Look for active subscription with same planId
+      // Re-use the unpaid plan from an earlier attempt. A paid (active) plan is never
+      // touched here: a failed renewal used to land on this step and overwrite it.
       const existingSubscription = await Subscription.findOne({
         user: _id,
-        status: { $in: ["active", "pending_payment"] }
-      });
+        status: "pending_payment",
+      }).sort({ _id: -1 });
 
 
       if (existingSubscription) {
@@ -1021,7 +1023,8 @@ const stepFormRegister = async (req, res) => {
           endDate: payload.endDate,
           workingDays: payload.workingDays,
           price: payload.totalPrice,
-          status: "active",
+          // Becomes active (or upcoming) only when the payment is settled.
+          status: "pending_payment",
           children: payload.children.map(id =>
             mongoose.Types.ObjectId(id)
           ),
@@ -1126,34 +1129,8 @@ const stepFormRegister = async (req, res) => {
 
 
 
-    if (path === "step-Form-Payment") {
-      if (typeof payload.paymentStatus !== "boolean") {
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid payment status" });
-      }
-      const updateObj = { paymentStatus: payload.paymentStatus };
-      if (payload.paymentStatus) {
-        updateObj.subscriptionCount = 1;
-        await Form.updateOne(
-          { user: _id, "subscriptions.status": "active" },
-          {
-            $set: {
-              "subscriptions.$.paymentDate": new Date(),
-              "subscriptions.$.paymentMethod": "CCAvenue",
-              "subscriptions.$.transactionId": payload.transactionId || null,
-            },
-          }
-        );
-      }
-
-      const form = await Form.findOneAndUpdate(
-        { user: _id },
-        updateObj,
-        { new: true }
-      );
-      return res.json({ success: true, data: form });
-    }
+    // "step-Form-Payment" (client marks itself paid) was removed: payment status is
+    // only ever set by the CCAvenue settlement code.
 
     return res.status(400).json({ success: false, message: "Invalid path" });
   } catch (err) {
@@ -1391,8 +1368,11 @@ const localAddChildPaymentController = async (req, res) => {
 // Only rows older than the grace window below are abandoned checkouts. Age is
 // read from the ObjectId timestamp so no migration/backfill is needed.
 // ─────────────────────────────────────────────────────────────────────────────
+// Pending rows are harmless (every read filters them out) so the window is long; a
+// row with a payment still in flight (a PaymentIntent that is not settled) is never
+// removed, and settlement recreates the plan from the intent snapshot if it is gone.
 const PENDING_SUBSCRIPTION_GRACE_MINUTES = Number(
-  process.env.PENDING_SUBSCRIPTION_GRACE_MINUTES || 180
+  process.env.PENDING_SUBSCRIPTION_GRACE_MINUTES || 7 * 24 * 60
 );
 
 const cleanupStalePendingSubscriptions = async (userObjectId) => {
@@ -1409,7 +1389,19 @@ const cleanupStalePendingSubscriptions = async (userObjectId) => {
 
   if (staleSubs.length === 0) return 0;
 
-  const staleIds = staleSubs.map((s) => s._id);
+  const inFlight = new Set(
+    (
+      await PaymentIntent.find({
+        user: userObjectId,
+        status: { $in: ["created", "processing"] },
+        "meta.subscriptionId": { $in: staleSubs.map((s) => String(s._id)) },
+      })
+        .select("meta.subscriptionId")
+        .lean()
+    ).map((i) => String(i.meta.subscriptionId))
+  );
+  const staleIds = staleSubs.map((s) => s._id).filter((id) => !inFlight.has(String(id)));
+  if (staleIds.length === 0) return 0;
   await Subscription.deleteMany({ _id: { $in: staleIds } });
   await Form.updateOne(
     { user: userObjectId },

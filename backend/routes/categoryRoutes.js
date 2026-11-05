@@ -1,5 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const { isAuth } = require("../config/auth");
+const isAdminUser = require("../middleware/isAdminUser");
+const admin = [isAuth, isAdminUser];
+
 const {
   addCategory,
   addAllCategory,
@@ -16,10 +20,10 @@ const {
 } = require('../controller/categoryController');
 
 //add a category
-router.post('/add', addCategory);
+router.post('/add', admin, addCategory);
 
 //add all category
-router.post('/add/all', addAllCategory);
+router.post('/add/all', admin, addAllCategory);
 
 //get only showing category
 router.get('/show', getShowingCategory);
@@ -33,18 +37,18 @@ router.get('/all', getAllCategories);
 router.get('/:id', getCategoryById);
 
 //update a category
-router.put('/:id', updateCategory);
+router.put('/:id', admin, updateCategory);
 
 //show/hide a category
-router.put('/status/:id', updateStatus);
+router.put('/status/:id', admin, updateStatus);
 
 //delete a category
-router.delete('/:id', deleteCategory);
+router.delete('/:id', admin, deleteCategory);
 
 // delete many category
-router.patch('/delete/many', deleteManyCategory);
+router.patch('/delete/many', admin, deleteManyCategory);
 
 // update many category
-router.patch('/update/many', updateManyCategory);
+router.patch('/update/many', admin, updateManyCategory);
 
 module.exports = router;

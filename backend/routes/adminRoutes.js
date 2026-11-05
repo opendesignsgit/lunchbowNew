@@ -1,5 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const { isAuth } = require("../config/auth");
+const isAdminUser = require("../middleware/isAdminUser");
+const admin = [isAuth, isAdminUser];
+
 const {
   registerAdmin,
   loginAdmin,
@@ -47,26 +51,26 @@ router.post("/get-school-enquiry", schoolServiceEnquiry);
 
 
 // SMS utilities for trial customers
-router.post("/send-trial-feedback-sms", sendTrialFeedbackSMS);
-router.get("/trial-customers", getTrialCustomers);
+router.post("/send-trial-feedback-sms", admin, sendTrialFeedbackSMS);
+router.get("/trial-customers", admin, getTrialCustomers);
 
 //add a staff
-router.post("/add", addStaff);
+router.post("/add", admin, addStaff);
 
 //get all staff
-router.get("/", getAllStaff);
+router.get("/", admin, getAllStaff);
 
 //get a staff
-router.post("/:id", getStaffById);
+router.post("/:id", admin, getStaffById);
 
 //update a staff
-router.put("/:id", updateStaff);
+router.put("/:id", admin, updateStaff);
 
 //update staf status
-router.put("/update-status/:id", updatedStatus);
+router.put("/update-status/:id", admin, updatedStatus);
 
 //delete a staff
-router.delete("/:id", deleteStaff);
+router.delete("/:id", admin, deleteStaff);
 
 
 
