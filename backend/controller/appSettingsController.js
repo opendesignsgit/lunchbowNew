@@ -23,6 +23,12 @@ const getAppSettings = (req, res) => {
     const settings = {
       ...cfg,
       lunchTimeSlots: ["11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM"],
+
+      // ── Test payments (dev/local only) ──────────────────────────────────────
+      // When the test-only payment endpoints are enabled (see middleware/localPaymentsOnly.js),
+      // the app shows a "TEST PAYMENT" button that skips CCAvenue. Never set on the live API.
+      testPaymentsEnabled:
+        process.env.ALLOW_LOCAL_PAYMENTS === "true" || process.env.CCAV_MODE === "test",
     };
 
     return res.status(200).json({ success: true, data: settings });
