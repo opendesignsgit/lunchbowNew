@@ -1,6 +1,26 @@
 import { AdminContext } from "@/context/AdminContext";
 import { useLocation } from "react-router-dom";
 import { useContext, useEffect, useState } from "react";
+import { routeAccessList } from "@/routes";
+
+// Admins created before the operations pages existed have no "payments", "kitchen", ...
+// in their stored access_list. Full-access roles get every route; other staff get the
+// ops pages that belong with a section they already have.
+const FULL_ACCESS_ROLES = ["Admin", "Super Admin"];
+const IMPLIED_ACCESS = {
+  customers: ["payments", "renewals", "requests", "notifications"],
+  orders: ["kitchen"],
+};
+
+export const expandAccessList = (list, role) => {
+  const base = Array.isArray(list) ? list.map(String) : [];
+  if (FULL_ACCESS_ROLES.includes(role)) {
+    return Array.from(new Set([...base, ...routeAccessList.map((r) => r.value)]));
+  }
+  const out = new Set(base);
+  base.forEach((key) => (IMPLIED_ACCESS[key] || []).forEach((k) => out.add(k)));
+  return Array.from(out);
+};
 
 const useGetCData = () => {
   const { state } = useContext(AdminContext);
@@ -74,7 +94,7 @@ const useGetCData = () => {
           // Set state: accessList is all except last element, role is last element
           const lastElement = decryptedArray.pop(); // Remove and get the last element
           setRole(lastElement);
-          setAccessList(decryptedArray);
+          setAccessList(expandAccessList(decryptedArray, lastElement));
 
           //   console.log("Decrypted Data:", decryptedArray, "Role:", lastElement);
           //   const isAuthorized =

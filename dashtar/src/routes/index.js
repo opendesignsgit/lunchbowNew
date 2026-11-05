@@ -24,6 +24,12 @@ const Setting = lazy(() => import("@/pages/Setting"));
 const StoreHome = lazy(() => import("@/pages/StoreHome"));
 const StoreSetting = lazy(() => import("@/pages/StoreSetting"));
 const Notifications = lazy(() => import("@/pages/Notifications"));
+const Payments = lazy(() => import("@/pages/Payments"));
+const CustomerDetail = lazy(() => import("@/pages/CustomerDetail"));
+const Kitchen = lazy(() => import("@/pages/Kitchen"));
+const Renewals = lazy(() => import("@/pages/Renewals"));
+const Requests = lazy(() => import("@/pages/Requests"));
+const BusinessSettings = lazy(() => import("@/pages/BusinessSettings"));
 /*
 //  * ⚠ These are internal routes!
 //  * They will be rendered inside the app, using the default `containers/Layout`.
@@ -76,6 +82,30 @@ const routes = [
   {
     path: "/customers",
     component: Customers,
+  },
+  {
+    path: "/customers/:id",
+    component: CustomerDetail,
+  },
+  {
+    path: "/payments",
+    component: Payments,
+  },
+  {
+    path: "/kitchen",
+    component: Kitchen,
+  },
+  {
+    path: "/renewals",
+    component: Renewals,
+  },
+  {
+    path: "/requests",
+    component: Requests,
+  },
+  {
+    path: "/business-settings",
+    component: BusinessSettings,
   },
   {
     path: "/customer-order/:id",
@@ -151,6 +181,11 @@ const routeAccessList = [
     value: "customer-order",
   },
   { label: "Notification", value: "notifications" },
+  { label: "Payments", value: "payments" },
+  { label: "Kitchen", value: "kitchen" },
+  { label: "Renewals", value: "renewals" },
+  { label: "Requests & Enquiries", value: "requests" },
+  { label: "Business Settings", value: "business-settings" },
   { label: "Coming Soon", value: "coming-soon" },
 ];
 

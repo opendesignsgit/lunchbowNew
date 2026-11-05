@@ -13,9 +13,9 @@ const ACTIONS = [
 
 /**
  * POST /admin-ops/meals/override.
- * Props: open, onClose, userId, subscriptions, children, initial { subscriptionId, childId, date, action, mealName }, onSaved()
+ * Props: open, onClose, userId, subscriptions, childList, initial { subscriptionId, childId, date, action, mealName }, onSaved()
  */
-const MealOverrideModal = ({ open, onClose, userId, subscriptions = [], children = [], initial, onSaved }) => {
+const MealOverrideModal = ({ open, onClose, userId, subscriptions = [], childList = [], initial, onSaved }) => {
   const [form, setForm] = useState({ subscriptionId: "", childId: "", date: todayKey(), action: "set", mealName: "", creditWallet: false, reason: "" });
   const [saving, setSaving] = useState(false);
 
@@ -24,14 +24,14 @@ const MealOverrideModal = ({ open, onClose, userId, subscriptions = [], children
     const firstSub = subscriptions.find((s) => s.status === "active") || subscriptions[0];
     setForm({
       subscriptionId: initial?.subscriptionId || (firstSub ? String(firstSub._id) : ""),
-      childId: initial?.childId || (children[0] ? String(children[0]._id) : ""),
+      childId: initial?.childId || (childList[0] ? String(childList[0]._id) : ""),
       date: initial?.date || todayKey(),
       action: initial?.action || "set",
       mealName: initial?.mealName || "",
       creditWallet: false,
       reason: "",
     });
-  }, [open, initial, subscriptions, children]);
+  }, [open, initial, subscriptions, childList]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
 
@@ -79,7 +79,7 @@ const MealOverrideModal = ({ open, onClose, userId, subscriptions = [], children
           <Label>
             <span>Child</span>
             <Select className="mt-1" value={form.childId} onChange={set("childId")}>
-              {children.map((c) => (
+              {childList.map((c) => (
                 <option key={c._id} value={String(c._id)}>
                   {childName(c)}
                 </option>

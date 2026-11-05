@@ -5,7 +5,6 @@ import {
   Button,
   Badge,
   Select,
-  Input,
   Pagination,
   Table,
   TableBody,

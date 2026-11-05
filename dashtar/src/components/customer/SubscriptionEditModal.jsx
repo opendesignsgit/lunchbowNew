@@ -9,9 +9,9 @@ const STATUSES = ["active", "upcoming", "deactivated"];
 
 /**
  * Edit startDate / endDate / status / workingDays / children of one subscription.
- * Props: open, onClose, subscription, children (all of the customer), onSaved()
+ * Props: open, onClose, subscription, childList (all of the customer), onSaved()
  */
-const SubscriptionEditModal = ({ open, onClose, subscription, children = [], onSaved }) => {
+const SubscriptionEditModal = ({ open, onClose, subscription, childList = [], onSaved }) => {
   const [form, setForm] = useState({ startDate: "", endDate: "", status: "active", workingDays: "", children: [], reason: "" });
   const [saving, setSaving] = useState(false);
 
@@ -36,7 +36,7 @@ const SubscriptionEditModal = ({ open, onClose, subscription, children = [], onS
 
   const save = async () => {
     if (!form.reason.trim()) return notifyError("A reason is required");
-    if (!form.children.length) return notifyError("Select at least one child");
+    if (!form.childList.length) return notifyError("Select at least one child");
     setSaving(true);
     try {
       const body = {
@@ -94,8 +94,8 @@ const SubscriptionEditModal = ({ open, onClose, subscription, children = [], onS
             <div>
               <span className="text-sm text-gray-700 dark:text-gray-300">Children on this plan</span>
               <div className="mt-1 space-y-1">
-                {children.length === 0 && <p className="text-xs text-gray-400">This customer has no children saved.</p>}
-                {children.map((c) => {
+                {childList.length === 0 && <p className="text-xs text-gray-400">This customer has no children saved.</p>}
+                {childList.map((c) => {
                   const id = String(c._id);
                   return (
                     <label key={id} className="flex items-center text-sm gap-2">

@@ -575,14 +575,14 @@ const CustomerDetail = () => {
         </Section>
       </div>
 
-      <SubscriptionEditModal open={Boolean(editSub)} subscription={editSub} children={children} onClose={() => setEditSub(null)} onSaved={load} />
-      <CreateSubscriptionModal open={createOpen} userId={id} children={children} onClose={() => setCreateOpen(false)} onSaved={load} />
+      <SubscriptionEditModal open={Boolean(editSub)} subscription={editSub} childList={children} onClose={() => setEditSub(null)} onSaved={load} />
+      <CreateSubscriptionModal open={createOpen} userId={id} childList={children} onClose={() => setCreateOpen(false)} onSaved={load} />
       <MealOverrideModal
         open={Boolean(mealOverride?.open)}
         initial={mealOverride?.initial}
         userId={id}
         subscriptions={subscriptions}
-        children={children}
+        childList={children}
         onClose={() => setMealOverride(null)}
         onSaved={load}
       />

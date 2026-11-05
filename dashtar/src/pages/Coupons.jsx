@@ -15,7 +15,7 @@ import PageTitle from "@/components/Typography/PageTitle";
 import { FiZoomIn } from "react-icons/fi";
 import Tooltip from "@/components/tooltip/Tooltip";
 import SubscriptionViewModal from "@/components/coupon/SubscriptionViewModal";
-import axios from "axios";
+import OrderServices from "@/services/OrderServices";
 
 const PAGE_SIZE = 10;
 
@@ -58,21 +58,12 @@ const SubscriptionTable = () => {
     try {
       const hasFilter =
         fatherNameVal.trim() || mobileVal.trim() || emailVal.trim();
-      const url = hasFilter
-        ? "https://api.lunchbowl.co.in/api/orders/get-All/user-Subscription/search"
-        : "https://api.lunchbowl.co.in/api/orders/get-All/user-Subscription";
-
-      const res = await axios.get(url, {
-        params: {
-          page: pageNumber,
-          limit: PAGE_SIZE,
-          fatherName: fatherNameVal,
-          mobile: mobileVal,
-          email: emailVal,
-        },
-      });
-      setSubscriptions(res.data.subscriptions || []);
-      setTotal(res.data.total || 0);
+      const params = { page: pageNumber, limit: PAGE_SIZE };
+      const res = hasFilter
+        ? await OrderServices.searchUserSubscriptions({ ...params, fatherName: fatherNameVal, mobile: mobileVal, email: emailVal })
+        : await OrderServices.getUserSubscriptions(params);
+      setSubscriptions(res?.subscriptions || []);
+      setTotal(res?.total || 0);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
       setSubscriptions([]);

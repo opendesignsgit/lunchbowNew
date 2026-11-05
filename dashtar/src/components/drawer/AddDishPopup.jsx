@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Popup from "./Popup";
 import ProductServices from "@/services/ProductServices";
+import { apiFileUrl } from "@/services/httpService";
 import { FiPlus, FiX } from "react-icons/fi";
 import config from "@/config";
 
@@ -60,21 +61,11 @@ const AddDishPopup = ({
       });
 
       if (productData.image) {
-        const imageUrl = productData.image.startsWith("http")
-          ? productData.image
-          : productData.image.startsWith("/")
-            ? `https://api.lunchbowl.co.in/${productData.image}`
-          : productData.image;
-        setImagePreview(imageUrl);
+        setImagePreview(apiFileUrl(productData.image));
       }
 
       if (productData.dishImage2) {
-        const imageUrl2 = productData.dishImage2.startsWith("http")
-          ? productData.dishImage2
-          : productData.dishImage2.startsWith("/")
-            ? `https://api.lunchbowl.co.in/${productData.dishImage2}`
-          : productData.dishImage2;
-        setDishImage2Preview(imageUrl2);
+        setDishImage2Preview(apiFileUrl(productData.dishImage2));
       }
     } else {
       setForm(initialState);

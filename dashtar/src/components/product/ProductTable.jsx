@@ -1,13 +1,9 @@
 import { TableBody, TableCell, TableRow } from "@windmill/react-ui";
 import { FiEdit } from "react-icons/fi";
+import { apiFileUrl } from "@/services/httpService";
 
 const ProductTable = ({ products = [], setIsCheck, onEdit }) => {
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return "";
-    return imagePath.startsWith("http")
-      ? imagePath
-      : `https://api.lunchbowl.co.in/${imagePath}`;
-  };
+  const getImageUrl = (imagePath) => apiFileUrl(imagePath);
 
   console.log("====================================");
   console.log("ProductTable products:", products);

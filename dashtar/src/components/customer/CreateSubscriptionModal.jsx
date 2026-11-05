@@ -28,9 +28,9 @@ const empty = () => ({
 
 /**
  * Manual subscription for repairs (customer paid but no plan exists).
- * Props: open, onClose, userId, children, onSaved()
+ * Props: open, onClose, userId, childList, onSaved()
  */
-const CreateSubscriptionModal = ({ open, onClose, userId, children = [], onSaved }) => {
+const CreateSubscriptionModal = ({ open, onClose, userId, childList = [], onSaved }) => {
   const [form, setForm] = useState(empty());
   const [saving, setSaving] = useState(false);
 
@@ -45,7 +45,7 @@ const CreateSubscriptionModal = ({ open, onClose, userId, children = [], onSaved
     }));
 
   const save = async () => {
-    if (!form.children.length) return notifyError("Select at least one child");
+    if (!form.childList.length) return notifyError("Select at least one child");
     if (!form.workingDays || !form.price) return notifyError("Working days and price are required");
     setSaving(true);
     try {
@@ -137,8 +137,8 @@ const CreateSubscriptionModal = ({ open, onClose, userId, children = [], onSaved
         <div className="mt-4">
           <span className="text-sm text-gray-700 dark:text-gray-300">Children *</span>
           <div className="mt-1 space-y-1">
-            {children.length === 0 && <p className="text-xs text-gray-400">This customer has no children saved.</p>}
-            {children.map((c) => {
+            {childList.length === 0 && <p className="text-xs text-gray-400">This customer has no children saved.</p>}
+            {childList.map((c) => {
               const id = String(c._id);
               return (
                 <label key={id} className="flex items-center text-sm gap-2">
