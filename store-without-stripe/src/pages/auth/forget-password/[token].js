@@ -3,7 +3,6 @@ import React, { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { FiLock, FiMail } from "react-icons/fi";
-import { ToastContainer } from "react-toastify";
 
 //internal import
 import Error from "@components/form/Error";
@@ -69,7 +68,6 @@ const ForgetPassword = () => {
 
   return (
     <>
-      <ToastContainer />
       <div className="h-screen flex items-center justify-center bg-gray-100">
         <div className="bg-white rounded-lg shadow max-w-md w-full space-y-8 py-12 px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-6">

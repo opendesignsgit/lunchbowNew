@@ -65,12 +65,16 @@ const UserDashboard = () => {
         const response = await AccountServices.getAccountDetails(userId);
         const userData = response.data;
 
-        const activeSubscription = userData.subscriptions?.find(sub => sub.status === "active") || null;
-        const hasUpcomingPlans = userData.subscriptions?.some(sub => sub.status === "upcoming");
+        // A plan is "pending_payment" until CCAvenue confirms it; never show it as a plan.
+        const paidSubscriptions = (userData.subscriptions || []).filter(
+          (sub) => sub.status !== "pending_payment"
+        );
+        const activeSubscription = paidSubscriptions.find(sub => sub.status === "active") || null;
+        const hasUpcomingPlans = paidSubscriptions.some(sub => sub.status === "upcoming");
 
         setDashboardData({
-          parentName: `${userData.parentDetails.fatherFirstName} ${userData.parentDetails.fatherLastName}`,
-          subscriptionCount: userData.subscriptions?.length || 0,
+          parentName: `${userData.parentDetails?.fatherFirstName || ""} ${userData.parentDetails?.fatherLastName || ""}`.trim(),
+          subscriptionCount: paidSubscriptions.length,
           subscriptionActive: userData.paymentStatus === "Success" && !!activeSubscription,
           subscriptionDates: {
             start: activeSubscription?.startDate || null,
@@ -113,10 +117,13 @@ const UserDashboard = () => {
       try {
         const response = await AccountServices.getAccountDetails(userId);
         const userData = response.data;
-        const activeSubscription = userData.subscriptions?.find(sub => sub.status === "active") || null;
+        const paidSubscriptions = (userData.subscriptions || []).filter(
+          (sub) => sub.status !== "pending_payment"
+        );
+        const activeSubscription = paidSubscriptions.find(sub => sub.status === "active") || null;
         setDashboardData((prev) => ({
           ...prev,
-          subscriptionCount: userData.subscriptionCount || 0,
+          subscriptionCount: paidSubscriptions.length,
           subscriptionActive: userData.paymentStatus === "Success" && !!activeSubscription,
           subscriptionDates: {
             start: activeSubscription?.startDate || null,

@@ -19,7 +19,7 @@ import { UserProvider } from "@context/UserContext";
 import DefaultSeo from "@components/common/DefaultSeo";
 import { SidebarProvider } from "@context/SidebarContext";
 import SettingServices from "@services/SettingServices";
-import Link from "next/link";
+import { ToastContainer } from "@utils/toast";
 
 let persistor = persistStore(store);
 
@@ -78,6 +78,8 @@ function MyApp({ Component, pageProps }) {
           widgetId={storeSetting?.tawk_chat_widget_id || ""}
         />
       )}
+      {/* One global toast container (session-expiry and payment toasts use it) */}
+      <ToastContainer />
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
           <UserProvider>

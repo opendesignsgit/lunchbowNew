@@ -1,5 +1,4 @@
 import Head from "next/head";
-import { ToastContainer } from "react-toastify";
 
 //internal import
 
@@ -14,8 +13,6 @@ import Link from "next/link";
 const Layout = ({ title, description, children }) => {
   return (
     <>
-      <ToastContainer />
-
       <div className="font-sans">
         <Head>
           <title>{title ? `Lunchbowl | ${title}` : "Lunchbowl "}</title>

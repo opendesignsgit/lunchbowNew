@@ -1,11 +1,10 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Box, Typography, Button } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useRouter } from "next/router";
-import useRegistration from "@hooks/useRegistration";
-import Image from "next/image";
 import Mainheader from "@layout/header/Mainheader";
 import Mainfooter from "@layout/footer/Mainfooter";
+import { successMessage, paymentTypeLabel } from "@lib/paymentResult";
 
 // Confetti component as before...
 const Confetti = () => (
@@ -47,55 +46,16 @@ const Confetti = () => (
   </div>
 );
 
+/**
+ * Landing page after a successful payment. The backend sends holiday-meal
+ * payments here (`/payment/success?type=holiday&orderId=…`); plan payments land
+ * on the menu calendar. Nothing is saved from this page: the server already
+ * applied the payment when CCAvenue confirmed it.
+ */
 const PaymentSuccess = () => {
   const router = useRouter();
-  const { submitHandler } = useRegistration();
-
-  useEffect(() => {
-    const savePaidMeals = async () => {
-      try {
-        const paidMeals = JSON.parse(localStorage.getItem("paidHolidayMeal"));
-        if (!Array.isArray(paidMeals) || paidMeals.length === 0) return;
-
-        const grouped = {};
-        paidMeals.forEach(({ userId, childId, mealDate, mealName }) => {
-          if (!grouped[userId]) grouped[userId] = {};
-          if (!grouped[userId][childId]) grouped[userId][childId] = [];
-          grouped[userId][childId].push({ mealDate, mealName });
-        });
-
-        for (const userId in grouped) {
-          const children = Object.entries(grouped[userId]).map(([childId, meals]) => ({
-            childId,
-            meals,
-          }));
-
-          const payload = {
-            userId,
-            children,
-          };
-
-          const res = await submitHandler({
-            _id: userId,
-            path: "save-meals",
-            data: payload,
-          });
-
-          if (res.success) {
-            console.log("Holiday meals saved for user", userId);
-          } else {
-            console.error("Failed to save holiday meals:", res.message);
-          }
-        }
-
-        localStorage.removeItem("paidHolidayMeal");
-      } catch (err) {
-        console.error("Error saving holiday meals on payment success:", err);
-      }
-    };
-
-    savePaidMeals();
-  }, [submitHandler]);
+  const type = typeof router.query.type === "string" ? router.query.type : "holiday";
+  const orderId = typeof router.query.orderId === "string" ? router.query.orderId : "";
 
   return (
     <div
@@ -170,9 +130,15 @@ const PaymentSuccess = () => {
               fontWeight: 500
             }}
           >
-            !Yayy! Your holiday payment is successful <br/>
-Enjoy your requested meal bowl happily
+            Yayy! Your {paymentTypeLabel(type)} is successful.
+            <br />
+            {successMessage(type)}
           </Typography>
+          {orderId && (
+            <Typography sx={{ color: "#555", fontSize: 14, mt: 1 }}>
+              Order ID: <strong>{orderId}</strong>
+            </Typography>
+          )}
         </Box>
         <Typography
           sx={{

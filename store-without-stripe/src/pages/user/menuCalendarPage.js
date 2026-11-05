@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Image from "next/image";
+import { useRouter } from "next/router";
+import { notifySuccess } from "@utils/toast";
+import { successMessage } from "@lib/paymentResult";
 import Mainheader from "@layout/header/Mainheader";
 import Mainfooter from "@layout/footer/Mainfooter";
 import Accordion from '@components/faq/Accordion';
@@ -14,6 +17,21 @@ import abbanicon7 from "../../../public/enterrequireddetails/redlittleflower.svg
 import abbanicon8 from "../../../public/enterrequireddetails/layerflower.svg";
 
 const MenuCalendarPage = () => {
+  const router = useRouter();
+
+  // After a successful plan / renewal / add-child payment the backend redirects to
+  // /user/menuCalendarPage?payment=success&type=<type>&orderId=<id>. Show the toast
+  // once and strip the query so a refresh does not repeat it.
+  useEffect(() => {
+    if (!router.isReady || router.query.payment !== "success") return;
+    const { type, orderId } = router.query;
+    const label = typeof type === "string" ? type : "subscription";
+    notifySuccess(
+      `${successMessage(label)}${orderId ? ` (Order ${orderId})` : ""}`
+    );
+    router.replace(router.pathname, undefined, { shallow: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.payment]);
 
   const faqItems = [
     {

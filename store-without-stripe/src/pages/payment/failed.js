@@ -1,37 +1,8 @@
 import React from "react";
-import { Box, Typography, Button } from "@mui/material";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import { useRouter } from "next/router";
+import PaymentFailedView from "@components/payment/PaymentFailedView";
 
-const PaymentFailed = () => {
-  const router = useRouter();
-
-  return (
-    <Box
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      minHeight="100vh"
-      textAlign="center"
-      px={2}
-    >
-      <ErrorOutlineIcon sx={{ fontSize: 80, color: "red", mb: 2 }} />
-      <Typography variant="h4" gutterBottom>
-        Payment Failed
-      </Typography>
-      <Typography sx={{ mb: 3 }}>
-        Unfortunately, your payment could not be processed. Please try again or contact support.
-      </Typography>
-      <Button
-        variant="contained"
-        color="error"
-        onClick={() => router.push("/user/menuCalendarPage")} // Replace with retry or form page
-      >
-        Menu Calendar  
-      </Button>
-    </Box>
-  );
-};
+// Holiday-meal payments that did not go through land here:
+// /payment/failed?type=holiday&orderId=<id>&reason=<failed|amount_mismatch|processing|expired>
+const PaymentFailed = () => <PaymentFailedView defaultType="holiday" />;
 
 export default PaymentFailed;

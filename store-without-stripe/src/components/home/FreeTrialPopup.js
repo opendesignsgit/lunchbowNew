@@ -20,7 +20,7 @@ import dayjs from "dayjs";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import axios from "axios";
+import EmailService from "@services/EmailService";
 
 const timeOptions = ["1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM"];
 
@@ -128,7 +128,7 @@ export default function FreeTrialPopup({ open, onClose }) {
     const lastName = lastNameParts.join(" ");
 
     try {
-      await axios.post("http://localhost:5055/api/admin/school-enquiry", {
+      await EmailService.sendFreeTrialEmail({
         firstName,
         lastName,
         email: formData.email,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -8,166 +8,104 @@ import {
   Button,
   LinearProgress,
 } from "@mui/material";
-import CryptoJS from "crypto-js";
 import { useSession } from "next-auth/react";
-import useRegistration from "@hooks/useRegistration";
+import { useRouter } from "next/router";
+import PaymentServices from "@services/PaymentServices";
+import { getApiErrorMessage } from "@services/httpServices";
+import { postToGateway, isDevLikeHost, successPath } from "@lib/ccavenueCheckout";
 
+// Display only; the server prices the holiday meal (lib/pricing holidayMealPricePerChild).
+const HOLIDAY_MEAL_PRICE = 225;
+
+const mealNameOf = (child) => {
+  if (!child) return "";
+  if (typeof child.dish === "string") return child.dish;
+  return child.dish?.mealName || child.mealName || "";
+};
+
+/**
+ * Confirms and starts a holiday-meal payment. The server validates the date,
+ * the plan and the children, prices the meals and encrypts the CCAvenue request.
+ *
+ * childrenData: [{ childId, dish: string | { mealName } , mealDate }]
+ * currentPlanId: the subscription (_id) the children belong to
+ */
 const HolidayPayment = ({
   open,
   onClose,
   selectedDate,
   childrenData = [],
-  currentPlanId, // ✅ Current active planId from MenuCalendar
+  currentPlanId,
   onSuccess,
 }) => {
   const { data: session } = useSession();
+  const router = useRouter();
   const _id = session?.user?.id;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { submitHandler } = useRegistration();
+  const [isLocalhost, setIsLocalhost] = useState(false);
 
-  // ✅ Always attach current planId to each child entry
-  const childrenDataWithPlan = childrenData.map((child) => ({
-    ...child,
-    planId: currentPlanId || child.planId || "UNKNOWN_PLAN",
-    mealDate: selectedDate,
+  useEffect(() => {
+    setIsLocalhost(isDevLikeHost());
+  }, []);
+
+  const children = childrenData.map((child) => ({
+    childId: child.childId,
+    mealName: mealNameOf(child),
   }));
+  const totalAmount = childrenData.length * HOLIDAY_MEAL_PRICE;
 
-  const totalAmount = childrenData.length * 225;
-  const orderId = `LB-HOLIDAY-${Date.now()}`;
+  const createIntent = async () => {
+    if (!_id) throw new Error("User not logged in. Please login to continue.");
+    if (!currentPlanId) throw new Error("No subscription plan selected.");
+    if (children.some((c) => !c.mealName)) throw new Error("Select a dish first.");
 
-  // ✅ CCAvenue Config
-  const ccavenueConfig = {
-    merchant_id: "4381442",
-    access_code: "AVRM80MF59BY86MRYB",
-    working_key: "2A561B005709D8B4BAF69D049B23546B",
-    redirect_url:
-      "https://api.lunchbowl.co.in/api/ccavenue/response/holiydayPayment",
-    cancel_url: "https://api.lunchbowl.co.in/api/ccavenue/response",
-    currency: "INR",
-    language: "EN",
-    endpoint:
-      "https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction",
-  };
-
-  // ✅ AES-128-CBC Encryption (same as Node.js backend)
-  const encrypt = (plainText, workingKey) => {
-    const md5Hash = CryptoJS.MD5(CryptoJS.enc.Utf8.parse(workingKey));
-    const key = CryptoJS.enc.Hex.parse(md5Hash.toString(CryptoJS.enc.Hex));
-    const iv = CryptoJS.enc.Hex.parse("000102030405060708090a0b0c0d0e0f");
-
-    const encrypted = CryptoJS.AES.encrypt(
-      CryptoJS.enc.Utf8.parse(plainText),
-      key,
-      {
-        iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7,
-      }
-    );
-
-    return encrypted.ciphertext.toString();
-  };
-
-  // ✅ UTF-8 Safe Base64 Encode
-  const encodeBase64 = (str) => {
-    try {
-      return btoa(unescape(encodeURIComponent(str)));
-    } catch (err) {
-      console.error("Base64 encoding failed:", err);
-      return "";
+    const res = await PaymentServices.initiate({
+      type: "holiday",
+      subscriptionId: currentPlanId,
+      date: selectedDate,
+      children,
+    });
+    if (!res?.success || !res?.data) {
+      throw new Error(res?.message || "Payment could not be started.");
     }
+    return res.data;
   };
 
   const initiatePayment = async () => {
-    if (!_id) {
-      setError("User not logged in. Please login to continue.");
-      return;
-    }
-
     try {
       setLoading(true);
       setError("");
-
-      // ✅ Fetch billing details
-      const response = await submitHandler({
-        path: "get-customer-form",
-        _id,
-      });
-
-      if (!response?.success) {
-        throw new Error(response?.message || "Failed to fetch user data");
-      }
-
-      const { user, parentDetails } = response.data || {};
-      if (!user) throw new Error("User data missing in API response");
-
-      console.log("🧾 Sending holiday payment data:", {
-        userId: _id,
-        currentPlanId,
-        childrenDataWithPlan,
-      });
-
-      // ✅ Prepare Payment Payload
-      const paymentData = {
-        merchant_id: ccavenueConfig.merchant_id,
-        order_id: orderId,
-        // DEV ONLY: NEXT_PUBLIC_DEV_RE1_PAYMENT=true charges ₹1 (test gateway). NEVER in prod.
-        amount: (process.env.NEXT_PUBLIC_DEV_RE1_PAYMENT === "true" ? 1 : totalAmount).toFixed(2),
-        currency: ccavenueConfig.currency,
-        redirect_url: ccavenueConfig.redirect_url,
-        cancel_url: ccavenueConfig.cancel_url,
-        language: ccavenueConfig.language,
-
-        billing_name: (user?.name || "Holiday Meal").substring(0, 50),
-        billing_email: (user?.email || "no-email@lunchbowl.in").substring(0, 50),
-        billing_tel: (user?.phone || "0000000000").substring(0, 20),
-        billing_address: (parentDetails?.address || "Holiday Meal Booking").substring(0, 100),
-        billing_city: (parentDetails?.city || "Chennai").substring(0, 50),
-        billing_state: (parentDetails?.state || "Tamil Nadu").substring(0, 50),
-        billing_zip: (parentDetails?.pincode || "600001").substring(0, 10),
-        billing_country: (parentDetails?.country || "India").substring(0, 50),
-
-        // ✅ Custom parameters for backend processing
-        merchant_param1: _id, // userId
-        merchant_param2: selectedDate, // selected date
-        merchant_param3: encodeBase64(JSON.stringify(childrenDataWithPlan)), // includes planId
-        merchant_param4: "HOLIDAY_PAYMENT",
-      };
-
-      // ✅ Convert to query string
-      const plainText = Object.entries(paymentData)
-        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-        .join("&");
-
-      // ✅ Encrypt using AES (matches backend)
-      const encryptedData = encrypt(plainText, ccavenueConfig.working_key);
-
-      // ✅ Submit to CCAvenue
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = ccavenueConfig.endpoint;
-      form.style.display = "none";
-
-      const inputEnc = document.createElement("input");
-      inputEnc.type = "hidden";
-      inputEnc.name = "encRequest";
-      inputEnc.value = encryptedData;
-      form.appendChild(inputEnc);
-
-      const inputAccess = document.createElement("input");
-      inputAccess.type = "hidden";
-      inputAccess.name = "access_code";
-      inputAccess.value = ccavenueConfig.access_code;
-      form.appendChild(inputAccess);
-
-      document.body.appendChild(form);
-      form.submit();
+      const intent = await createIntent();
+      postToGateway(intent);
     } catch (err) {
-      console.error("💥 Payment error:", err);
-      setError(err.message || "Payment failed. Please try again.");
-    } finally {
+      console.error("Holiday payment error:", err);
+      setError(getApiErrorMessage(err, "Payment failed. Please try again."));
+      setLoading(false);
+    }
+  };
+
+  const simulatePaymentSuccess = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const intent = await createIntent();
+      const result = await PaymentServices.localHolidaySuccess({
+        userId: _id,
+        orderId: intent.orderId,
+        transactionId: "LOCAL_TXN",
+        childrenData: children,
+        selectedDate,
+        planId: currentPlanId,
+      });
+      if (!result?.success) {
+        throw new Error(result?.message || "Local payment simulation failed");
+      }
+      if (typeof onSuccess === "function") onSuccess(result);
+      router.push(successPath("holiday", intent.orderId));
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Local payment simulation failed"));
       setLoading(false);
     }
   };
@@ -175,7 +113,7 @@ const HolidayPayment = ({
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={loading ? undefined : onClose}
       maxWidth="xs"
       fullWidth
       className="holidaypaysec"
@@ -184,22 +122,35 @@ const HolidayPayment = ({
       <DialogContent dividers>
         {loading && <LinearProgress sx={{ mb: 2 }} />}
         <Typography gutterBottom>
-          You're booking <b>{childrenData.length}</b> meal
+          You&apos;re booking <b>{childrenData.length}</b> meal
           {childrenData.length > 1 ? "s" : ""} for <b>{selectedDate}</b>.
         </Typography>
         <Typography fontWeight="bold" sx={{ mb: 1 }}>
           Total: ₹{totalAmount}
         </Typography>
+        <Typography fontSize="0.8rem" color="text.secondary">
+          Secure payment via CCAvenue.
+        </Typography>
         {error && (
-          <Typography color="error" fontSize="0.85rem">
+          <Typography color="error" fontSize="0.85rem" sx={{ mt: 1 }}>
             {error}
           </Typography>
         )}
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ flexWrap: "wrap", gap: 1 }}>
         <Button onClick={onClose} disabled={loading}>
           Cancel
         </Button>
+        {isLocalhost && (
+          <Button
+            variant="outlined"
+            onClick={simulatePaymentSuccess}
+            disabled={loading}
+            sx={{ color: "#1976d2", borderColor: "#1976d2" }}
+          >
+            Simulate Payment Success (Local)
+          </Button>
+        )}
         <Button
           variant="contained"
           onClick={initiatePayment}
