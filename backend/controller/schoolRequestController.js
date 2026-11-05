@@ -1,5 +1,6 @@
 const SchoolRequest = require("../models/SchoolRequest");
 const { sendEmailAsync } = require("../lib/email-sender/sender");
+const { notifyAdmin } = require("../lib/notify");
 
 const schoolRequestAdminEmails =
   process.env.SCHOOL_REQUEST_ADMIN_EMAILS ||
@@ -75,6 +76,21 @@ const requestSchool = async (req, res) => {
         .map((result) => result.reason?.message || "Unknown email error");
       console.error("School request communication failed:", errors);
     }
+
+    notifyAdmin({
+      type: "school.requested",
+      title: `School requested: ${schoolRequest.schoolName}`,
+      message: `${schoolRequest.parentName || "A parent"}${schoolRequest.phone ? " (" + schoolRequest.phone + ")" : ""} asked for ${
+        schoolRequest.schoolName
+      }, ${schoolRequest.location}`,
+      meta: {
+        schoolRequestId: String(schoolRequest._id),
+        schoolName: schoolRequest.schoolName,
+        location: schoolRequest.location,
+        phone: schoolRequest.phone,
+        email: schoolRequest.email,
+      },
+    });
 
     return res.status(201).send({
       success: true,

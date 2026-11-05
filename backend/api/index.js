@@ -1,7 +1,6 @@
 require("dotenv").config();
 // Local overrides: .env.local wins over .env (gitignored, dev only)
 require("dotenv").config({ path: `${__dirname}/../.env.local`, override: true });
-require("./../jobs/renewalReminder");
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -10,6 +9,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 
 const { connectDB } = require("../config/db");
+const settingsStore = require("../lib/settingsStore");
 const productRoutes = require("../routes/productRoutes");
 const schoolRoutes = require("../routes/schoolRoutes");
 const holidays = require("../routes/holidayRoutes");
@@ -29,6 +29,9 @@ const notificationRoutes = require("../routes/notificationRoutes");
 const smsRoutes = require("../routes/smsRoutes");
 const appSettingsRoutes = require("../routes/appSettingsRoutes");
 const schoolRequestRoutes = require("../routes/schoolRequestRoutes");
+const adminOpsRoutes = require("../routes/adminOpsRoutes");
+const jobsRoutes = require("../routes/jobsRoutes");
+const isAdminUser = require("../middleware/isAdminUser");
 const { testSMSNotification } = require("../controller/testSmsController");
 const { isAuth, isAdmin } = require("../config/auth");
 const {
@@ -36,7 +39,21 @@ const {
   getStoreCustomizationSetting,
 } = require("../lib/notification/setting");
 
-connectDB();
+// Startup: DB → cached business settings (admin overrides) → background jobs.
+// Neither step may take the API down; each failure is logged and the server still serves.
+connectDB().then(async () => {
+  try {
+    await settingsStore.load();
+    console.log("business settings loaded");
+  } catch (err) {
+    console.error("business settings load failed (using .env defaults):", err && err.message);
+  }
+  try {
+    require("../jobs/scheduler").start();
+  } catch (err) {
+    console.error("job scheduler failed to start:", err && err.message);
+  }
+});
 const app = express();
 
 // We are using this for the express-rate-limit middleware
@@ -77,6 +94,10 @@ app.use("/api/sms/", smsRoutes);
 app.use("/api/ccavenue/", ccavenueRoutes);
 app.use("/api/app-config/", appSettingsRoutes);
 app.use("/api/", schoolRequestRoutes);
+// Admin operations (customer 360, settings, notifications, overrides) — admin accounts only.
+app.use("/api/admin-ops/", isAuth, isAdminUser, adminOpsRoutes);
+// Background jobs for an external cron (header x-jobs-secret = JOBS_SECRET).
+app.use("/api/jobs/", jobsRoutes);
 
 // Test SMS endpoint without database dependency
 app.post("/api/test-sms", isAuth, require("../middleware/isAdminUser"), testSMSNotification);

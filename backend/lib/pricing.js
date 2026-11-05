@@ -6,6 +6,8 @@
  * server never has to trust a price sent by a client.
  */
 
+const settingsStore = require("./settingsStore");
+
 const envNumber = (key, defaultValue) => {
   const val = process.env[key];
   if (val == null || val === "") return defaultValue;
@@ -13,7 +15,27 @@ const envNumber = (key, defaultValue) => {
   return Number.isNaN(parsed) ? defaultValue : parsed;
 };
 
-const getPricingConfig = () => ({
+const envBool = (key, defaultValue) => {
+  const val = process.env[key];
+  if (val == null || val === "") return defaultValue;
+  return val === "true" || val === "1";
+};
+
+const envList = (key, defaultValue) => {
+  const val = process.env[key];
+  if (val == null || val.trim() === "") return defaultValue;
+  return val.split(",").map((s) => s.trim()).filter(Boolean);
+};
+
+const envNumberList = (key, defaultValue) => {
+  const list = envList(key, null);
+  if (!list) return defaultValue;
+  const nums = list.map(Number).filter((n) => !Number.isNaN(n));
+  return nums.length ? nums : defaultValue;
+};
+
+/** Hard-coded defaults overridden by .env — before the database overrides are applied. */
+const getEnvPricingConfig = () => ({
   pricePerDayPerChild: envNumber("PRICE_PER_DAY_PER_CHILD", 225),
   planDurations: {
     oneMonth: envNumber("PLAN_DAYS_1_MONTH", 22),
@@ -34,7 +56,33 @@ const getPricingConfig = () => ({
   holidayMealPricePerChild: envNumber("HOLIDAY_MEAL_PRICE_PER_CHILD", 225),
   maxChildren: envNumber("MAX_CHILDREN", 3),
   walletMaxRedeemPercent: envNumber("WALLET_MAX_REDEEM_PERCENT", 80),
+
+  // ── Ordering rules ───────────────────────────────────────────────────────────
+  // Meals can be changed or deleted only for dates after today (IST).
+  mealLockDaysAhead: envNumber("MEAL_LOCK_DAYS_AHEAD", 1),
+  // Informational for now: last time of day (IST, "HH:MM") to add/change tomorrow's meal.
+  mealCutoffTime: process.env.MEAL_CUTOFF_TIME || "21:00",
+
+  // ── Reminders & admin alerts ─────────────────────────────────────────────────
+  renewalReminderDays: envNumberList("RENEWAL_REMINDER_DAYS", [7, 3, 1]),
+  adminNotifyEmails: envList("ADMIN_NOTIFY_EMAILS", ["kavirajan@opendesignsin.com"]),
+
+  // ── Trial / try-our-meal switches ────────────────────────────────────────────
+  trialEnabled: envBool("ENABLE_TRIAL", false),
+  trialPrice: envNumber("TRIAL_PRICE", 99),
+  tryOurMealEnabled: envBool("TRY_OUR_MEAL_ENABLED", false),
+
+  // ── Support ──────────────────────────────────────────────────────────────────
+  supportPhone: process.env.SUPPORT_PHONE || "+91 91769 17602",
+  supportEmail: process.env.SUPPORT_EMAIL || "contactus@lunchbowl.co.in",
+  whatsappNumber: process.env.WHATSAPP_NUMBER || "919345407191",
 });
+
+/**
+ * Effective config: hard-coded defaults ← .env ← database overrides (admin dashboard).
+ * Synchronous: the overrides come from the settingsStore cache.
+ */
+const getPricingConfig = () => settingsStore.deepMerge(getEnvPricingConfig(), settingsStore.getAll());
 
 /** Discount (%) for a plan of `workingDays` days and `childCount` children; 0 for non-standard lengths. */
 const discountPercentFor = (workingDays, childCount, cfg = getPricingConfig()) => {
@@ -116,6 +164,9 @@ const holidayKeySet = (holidays) =>
 
 module.exports = {
   envNumber,
+  envBool,
+  envList,
+  getEnvPricingConfig,
   getPricingConfig,
   discountPercentFor,
   computePlanPrice,

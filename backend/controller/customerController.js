@@ -31,6 +31,10 @@ const {
   toDateKey,
   todayKeyIST,
 } = require("../lib/pricing");
+// Admin notification bus (fire-and-forget, never throws — see lib/notify).
+const { notifyAdmin } = require("../lib/notify");
+const { shouldNotify } = require("../lib/notify/throttle");
+const MEAL_UPDATE_NOTIFY_WINDOW_MS = 10 * 60 * 1000;
 
 // Plan prices are recomputed on the server; a client total further off than this is rejected.
 // Set ENFORCE_SERVER_PRICING=false to switch the check off in an emergency.
@@ -817,6 +821,14 @@ const verifyOtp = async (req, res) => {
         });
       }
 
+      notifyAdmin({
+        type: "user.signup",
+        title: "New signup",
+        message: `${firstName || ""} ${lastName || ""}`.trim() + ` (${mobile}${email ? ", " + email : ""}) created an account`,
+        userId: result._id,
+        meta: { mobile, email: email || "", freeTrialCheck: Boolean(freeTrialCheck) },
+      });
+
       return res.status(200).json(result);
     }
 
@@ -915,6 +927,15 @@ const stepFormRegister = async (req, res) => {
         parentUpdate,
         { new: true, upsert: true }
       );
+      notifyAdmin({
+        type: "registration.step",
+        title: "Registration: parent details saved",
+        message: `${formData && formData.fatherFirstName ? formData.fatherFirstName + " " + (formData.fatherLastName || "") : "A parent"} (${
+          (formData && formData.mobile) || ""
+        }) saved parent details${step != null ? ` (step ${step})` : ""}`,
+        userId: _id,
+        meta: { step: step != null ? step : 1, stepName: "parent", city: formData && formData.city, pincode: formData && formData.pincode },
+      });
       return res.json({ success: true, data: form });
     }
 
@@ -962,6 +983,20 @@ const stepFormRegister = async (req, res) => {
         );
       }
 
+      notifyAdmin({
+        type: "registration.step",
+        title: "Registration: children saved",
+        message: `${formData.length} child${formData.length === 1 ? "" : "ren"} saved (${formData
+          .map((c) => `${c.childFirstName || ""} ${c.childLastName || ""}`.trim())
+          .filter(Boolean)
+          .join(", ")})${step != null ? ` (step ${step})` : ""}`,
+        userId: _id,
+        meta: {
+          step: step != null ? step : 2,
+          stepName: "children",
+          children: formData.map((c) => ({ name: `${c.childFirstName || ""} ${c.childLastName || ""}`.trim(), school: c.school, class: c.childClass })),
+        },
+      });
       return res.json({ success: true, data: savedChildrenIds });
     }
 
@@ -1047,6 +1082,27 @@ const stepFormRegister = async (req, res) => {
         })
         .exec();
 
+      notifyAdmin({
+        type: "registration.step",
+        title: "Registration: plan selected",
+        message: `Plan ${payload.selectedPlan}: ${payload.workingDays} days, ${payload.children.length} child${
+          payload.children.length === 1 ? "" : "ren"
+        }, ₹${payload.totalPrice} (${toDateKey(payload.startDate)} → ${toDateKey(payload.endDate)}) — awaiting payment`,
+        userId: _id,
+        meta: {
+          step: step != null ? step : 3,
+          stepName: "plan",
+          plan: {
+            planId: payload.selectedPlan,
+            workingDays: payload.workingDays,
+            children: payload.children.length,
+            totalPrice: payload.totalPrice,
+            startDate: toDateKey(payload.startDate),
+            endDate: toDateKey(payload.endDate),
+          },
+        },
+      });
+
       return res.json({ success: true, data: updatedForm });
     }
 
@@ -1121,6 +1177,30 @@ const stepFormRegister = async (req, res) => {
           populate: { path: "children" },
         })
         .exec();
+
+      notifyAdmin({
+        type: "plan.selected",
+        title: "Renewal plan selected",
+        message: `Renewal plan ${payload.selectedPlan}: ${payload.workingDays} days, ${payload.children.length} child${
+          payload.children.length === 1 ? "" : "ren"
+        }, ₹${payload.totalPrice}${walletUsed ? ` (wallet ₹${walletUsed})` : ""} (${toDateKey(payload.startDate)} → ${toDateKey(
+          payload.endDate
+        )}) — awaiting payment`,
+        userId: _id,
+        meta: {
+          renewal: true,
+          subscriptionId: String(newSubscription._id),
+          plan: {
+            planId: payload.selectedPlan,
+            workingDays: payload.workingDays,
+            children: payload.children.length,
+            totalPrice: payload.totalPrice,
+            walletUsed,
+            startDate: toDateKey(payload.startDate),
+            endDate: toDateKey(payload.endDate),
+          },
+        },
+      });
 
       return res.json({ success: true, data: updatedForm });
     }
@@ -1927,6 +2007,22 @@ const saveMealPlans = async (req, res) => {
 
     await userMeal.save();
 
+    // At most one admin notification per user per 10 minutes (the calendar saves often).
+    if (shouldNotify(`meal.updated:${data.userId}`, MEAL_UPDATE_NOTIFY_WINDOW_MS)) {
+      const dateCount = new Set(
+        processedChildren.flatMap((c) => c.meals.map((m) => toDateKey(m.mealDate))).filter(Boolean)
+      ).size;
+      notifyAdmin({
+        type: "meal.updated",
+        title: "Meals updated",
+        message: `${dateCount} date${dateCount === 1 ? "" : "s"} saved for ${processedChildren.length} child${
+          processedChildren.length === 1 ? "" : "ren"
+        } on plan ${planId}`,
+        userId,
+        meta: { planId, dates: dateCount, children: processedChildren.length },
+      });
+    }
+
     return res.status(200).json({ success: true, message: "Meal plans saved successfully", data: userMeal });
   } catch (error) {
     console.error("Error in saveMealPlans:", error);
@@ -2158,6 +2254,16 @@ const deleteMeal = async (req, res) => {
 
 
 
+
+    notifyAdmin({
+      type: "meal.deleted",
+      title: "Meal deleted",
+      message: `${parentName || "Parent"} deleted ${childName}'s meal (${meal.mealName}) on ${toDateKey(date)}${
+        form ? ` — wallet +${getPricingConfig().pricePerDayPerChild}` : ""
+      }`,
+      userId,
+      meta: { subscriptionId: String(subscriptionId), childId: String(childId), date: toDateKey(date), mealName: meal.mealName, school: schoolName },
+    });
 
     return res.status(200).json({
       success: true,
@@ -2482,6 +2588,9 @@ const deleteAccount = async (req, res) => {
   }
 
   try {
+    // Snapshot for the admin alert: the record is gone after this.
+    const snapshot = await Customer.findById(objectId).select('name phone email').lean();
+
     // Delete all related data in parallel for efficiency
     const deletionTasks = [
       Form.deleteMany({ user: objectId }),
@@ -2500,6 +2609,15 @@ const deleteAccount = async (req, res) => {
     ];
 
     await Promise.all(deletionTasks);
+
+    notifyAdmin({
+      type: "account.deleted",
+      title: "Account deleted",
+      message: `${(snapshot && snapshot.name) || "Unknown"} (${(snapshot && snapshot.phone) || "no phone"}${
+        snapshot && snapshot.email ? ", " + snapshot.email : ""
+      }) deleted their account and all data`,
+      meta: { userId: String(userId), name: snapshot && snapshot.name, phone: snapshot && snapshot.phone, email: snapshot && snapshot.email },
+    });
 
     return res.status(200).json({
       success: true,

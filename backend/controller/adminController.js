@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 dayjs.extend(utc);
@@ -16,6 +17,47 @@ const nodemailer = require("nodemailer");
 const Customer = require("../models/Customer");
 const { sendSMS } = require("../lib/sms-sender/smsService");
 const SmsLog = require("../models/SmsLog");
+const Enquiry = require("../models/Enquiry");
+const { notifyAdmin } = require("../lib/notify");
+
+const ENQUIRY_LABEL = {
+  "contact-us": "Contact us",
+  "get-in-touch": "Get in touch",
+  "talk-nutrition": "Nutrition enquiry",
+  "school-service": "School service enquiry",
+  "free-trial": "Trial meal @ 99",
+};
+
+// Persists a website enquiry so the dashboard can list it. Never throws.
+const saveEnquiry = async (kind, { name, email, phone, school, message, userId }, payload) => {
+  try {
+    return await Enquiry.create({
+      kind,
+      name: (name || "").trim(),
+      email: (email || "").trim(),
+      phone: (phone || "").trim(),
+      school: (school || "").trim(),
+      message: (message || "").trim(),
+      userId: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : undefined,
+      payload: payload || {},
+    });
+  } catch (err) {
+    console.error(`[enquiry] failed to save ${kind}:`, err && err.message);
+    return null;
+  }
+};
+
+// Admin alert for an enquiry (after the emails went out).
+const notifyEnquiry = (kind, enquiry, { name, email, phone, school, message, userId }) =>
+  notifyAdmin({
+    type: kind === "free-trial" ? "trial.enquiry" : "enquiry.contact",
+    title: `${ENQUIRY_LABEL[kind] || "Enquiry"}: ${(name || "").trim() || phone || email || "unknown"}`,
+    message: `${(name || "").trim()}${phone ? " · " + phone : ""}${email ? " · " + email : ""}${school ? " · " + school : ""}${
+      message ? " — " + String(message).slice(0, 200) : ""
+    }`,
+    userId: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : undefined,
+    meta: { kind, enquiryId: enquiry ? String(enquiry._id) : undefined, school: school || "", phone: phone || "", email: email || "" },
+  });
 
 const registerAdmin = async (req, res) => {
   try {
@@ -638,6 +680,9 @@ const talkNutrition = async (req, res) => {
     `,
   };
 
+  const enquiryFields = { name: `${firstName || ""} ${lastName || ""}`, email, phone: mobileNumber, school: schoolName, message };
+  const enquiry = await saveEnquiry("talk-nutrition", enquiryFields, req.body);
+
   try {
     // Send admin/team email
     const adminResult = await transporter.sendMail(mailOptions);
@@ -647,6 +692,7 @@ const talkNutrition = async (req, res) => {
     const thankYouResult = await transporter.sendMail(thankYouMailOptions);
     console.log("Thank you mail sent to user:", thankYouResult);
 
+    notifyEnquiry("talk-nutrition", enquiry, enquiryFields);
     res.status(200).json({ success: true, message: "Enquiry sent successfully." });
   } catch (error) {
     console.error("Email send error:", error);
@@ -746,6 +792,16 @@ const freeTrialEnquiry = async (req, res) => {
   `,
 };
 
+  const enquiryFields = {
+    name: parentName,
+    email,
+    phone: mobileNumber,
+    school: schoolName,
+    message: `${childName ? "Child: " + childName + ". " : ""}${className ? "Class: " + className + ". " : ""}${message || ""}`,
+    userId: _id,
+  };
+  const enquiry = await saveEnquiry("free-trial", enquiryFields, { ...req.body, fullAddress });
+
   try {
     await transporter.sendMail(mailOptions); // Admin mail
 
@@ -781,6 +837,7 @@ const freeTrialEnquiry = async (req, res) => {
     await transporter.sendMail(feedbackMailOptions);
     console.log("Thank you/feedback email sent to user:", email);
 
+    notifyEnquiry("free-trial", enquiry, enquiryFields);
     res.status(200).json({
       success: true,
       message: "Trial meal request submitted successfully. We will contact you soon to collect payment manually (Rs 99).",
@@ -832,6 +889,9 @@ const getInTouch = async (req, res) => {
     `,
   };
 
+  const enquiryFields = { name: `${firstName || ""} ${lastName || ""}`, email, phone: mobileNumber, school: schoolName, message };
+  const enquiry = await saveEnquiry("get-in-touch", enquiryFields, req.body);
+
   try {
     await transporter.sendMail(mailOptions);
     console.log("General enquiry email sent successfully --------->", mailOptions);
@@ -839,6 +899,7 @@ const getInTouch = async (req, res) => {
     await transporter.sendMail(thankYouMailOptions);
     console.log("Thank you email sent successfully --------->", thankYouMailOptions);
 
+    notifyEnquiry("get-in-touch", enquiry, enquiryFields);
     res.status(200).json({ success: true, message: "Enquiry sent successfully." });
   } catch (error) {
     console.error("Email send error:", error);
@@ -889,9 +950,13 @@ const contactUs = async (req, res) => {
     `,
   };
 
+  const enquiryFields = { name: `${firstname || ""} ${Lastname || ""}`, email, phone, message };
+  const enquiry = await saveEnquiry("contact-us", enquiryFields, { ...req.body, consent: Boolean(consent) });
+
   try {
     await transporter.sendMail(mailOptions);
     await transporter.sendMail(userMailOptions);
+    notifyEnquiry("contact-us", enquiry, enquiryFields);
     res.status(200).json({ success: true, message: "Enquiry sent successfully." });
   } catch (error) {
     console.error("Email send error:", error);
@@ -969,6 +1034,9 @@ const schoolServiceEnquiry = async (req, res) => {
       }
     : null;
 
+  const enquiryFields = { name: `${cleanFirstName} ${cleanLastName}`, email: cleanEmail, phone: cleanMobileNumber, school: cleanSchoolName, message: cleanMessage };
+  const enquiry = await saveEnquiry("school-service", enquiryFields, { ...req.body, pincode: cleanPincode });
+
   try {
     await transporter.sendMail(mailOptions);
     console.log("School service enquiry email sent successfully", mailOptions);
@@ -978,6 +1046,7 @@ const schoolServiceEnquiry = async (req, res) => {
       console.log("Thank you email sent successfully", userMailOptions);
     }
 
+    notifyEnquiry("school-service", enquiry, enquiryFields);
     res.status(200).json({ success: true, message: "Enquiry sent successfully." });
   } catch (error) {
     console.error("Email send error:", error);
