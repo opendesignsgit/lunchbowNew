@@ -10,6 +10,7 @@ const settingsStore = require("../settingsStore");
 const { EVENTS, normalizeSeverity, channelsFor, adminEmails } = require("./events");
 const { sendMail, escapeHtml, detailsTable } = require("./email");
 const push = require("./push");
+const { safeKeys } = require("../audit");
 
 const SEVERITY_LABEL = { info: "Info", warning: "Warning", critical: "CRITICAL" };
 
@@ -43,7 +44,7 @@ const notifyAdmin = async (event) => {
     title: event.title || def.title || event.type,
     message: event.message || "",
     userId: event.userId || undefined,
-    meta: event.meta && typeof event.meta === "object" ? event.meta : {},
+    meta: event.meta && typeof event.meta === "object" ? safeKeys(JSON.parse(JSON.stringify(event.meta))) : {},
     channels,
   });
 

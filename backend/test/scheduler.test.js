@@ -8,7 +8,7 @@ test("every registered job has a valid cron expression", () => {
     assert.ok(cron.validate(job.cron), `${job.name}: ${job.cron}`);
   }
   const names = scheduler.listJobs().map((j) => j.name);
-  assert.deepEqual(names, ["renewalReminders", "mealReminders", "rollSubscriptionStatuses", "adminDigest"]);
+  assert.deepEqual(names, ["renewalReminders", "mealReminders", "rollSubscriptionStatuses", "adminDigest", "reconcilePayments"]);
   assert.equal(scheduler.listJobs().find((j) => j.name === "mealReminders").enabled, false, "meal reminders are off by default");
 });
 

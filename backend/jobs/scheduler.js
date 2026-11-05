@@ -7,6 +7,7 @@
  *   MEAL_REMINDER_ENABLED=true  turn the meal reminder on; MEAL_REMINDER_CRON default "0 18 * * *"
  *   ADMIN_DIGEST_CRON           default "0 19 * * *"  (19:00 IST)
  *   ROLL_SUBSCRIPTIONS_CRON     default "15 0 * * *"  (00:15 IST)
+ *   RECONCILE_PAYMENTS_CRON     default every 10 minutes
  *
  * Every run is wrapped: a failing job logs, raises a job.error admin notification and
  * never takes the server down.
@@ -47,13 +48,12 @@ const JOBS = {
     enabled: () => true,
     run: () => require("./adminDigest").runAdminDigest(),
   },
-  // LEAD: reconcilePayments registered here
-  // reconcilePayments: {
-  //   description: "Reconcile CCAvenue payments against PaymentIntent",
-  //   cron: () => process.env.RECONCILE_PAYMENTS_CRON || "*/30 * * * *",
-  //   enabled: () => true,
-  //   run: () => require("./reconcilePayments").runReconcilePayments(),
-  // },
+  reconcilePayments: {
+    description: "Settle payments whose gateway callback never arrived (CCAvenue status API), expire old intents, alert unreconciled",
+    cron: () => process.env.RECONCILE_PAYMENTS_CRON || "*/10 * * * *",
+    enabled: () => true,
+    run: () => require("./reconcilePayments").runReconcilePayments(),
+  },
 };
 
 const lastRuns = {};

@@ -95,6 +95,8 @@ app.use("/api/ccavenue/", ccavenueRoutes);
 app.use("/api/app-config/", appSettingsRoutes);
 app.use("/api/", schoolRequestRoutes);
 // Admin operations (customer 360, settings, notifications, overrides) — admin accounts only.
+// Payments tooling first: it has its own admin guard and must win over the generic router.
+app.use("/api/admin-ops/payments", require("../routes/adminPaymentsRoutes"));
 app.use("/api/admin-ops/", isAuth, isAdminUser, adminOpsRoutes);
 // Background jobs for an external cron (header x-jobs-secret = JOBS_SECRET).
 app.use("/api/jobs/", jobsRoutes);
