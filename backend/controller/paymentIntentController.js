@@ -5,7 +5,7 @@
  * working key or decide the amount. Used by the mobile app; the website can move
  * to it as well.
  *
- * Body: { type, ...typeSpecificFields }
+ * Body: { type, source?: "web" | "app", ...typeSpecificFields }
  *  - subscription: {}                           → first plan (registration step 4)
  *  - renewal:      {}                           → latest pending_payment renewal
  *  - addChild:     { subscriptionId, children } → children = full child objects
@@ -68,40 +68,41 @@ const REQUIRED_CHILD_FIELDS = [
   "section",
 ];
 
-async function priceSubscription(form) {
-  if (form.paymentStatus === "Success") {
-    throw new PaymentError(409, "Your subscription is already paid.");
-  }
-  const sub = [...(form.subscriptions || [])]
-    .filter((s) => ["active", "pending_payment"].includes(s.status))
-    .sort((a, b) => createdAtOf(b) - createdAtOf(a))[0];
-  if (!sub) throw new PaymentError(404, "No subscription plan found. Please choose a plan first.");
+/** Plan snapshot stored on the intent so a late payment can recreate a cleaned-up row. */
+const planSnapshot = (sub) => ({
+  planId: sub.planId,
+  startDate: toDateKey(sub.startDate),
+  endDate: toDateKey(sub.endDate),
+  workingDays: sub.workingDays,
+  price: Number(sub.price),
+  walletUsed: Number(sub.walletUsed || 0),
+  children: (sub.children || []).map((c) => String(c._id || c)),
+});
 
-  const expected = computePlanPrice(sub.workingDays, (sub.children || []).length);
-  if (Math.abs(Number(sub.price) - expected) > PRICE_TOLERANCE) {
-    throw new PaymentError(409, "Your plan price is out of date. Please choose your plan again.");
-  }
-  return {
-    orderId: `LB${Date.now()}${randomSuffix()}`,
-    amount: Number(sub.price),
-    path: "/api/ccavenue/response",
-    params: { merchant_param2: sub.planId },
-    meta: { subscriptionId: String(sub._id) },
-  };
-}
-
-async function priceRenewal(form) {
-  // Same rule as the website's Renew button: no second renewal while one is waiting to start.
-  if ((form.subscriptions || []).some((s) => s.status === "upcoming")) {
-    throw new PaymentError(409, "You already have an upcoming plan.");
-  }
-  const sub = [...(form.subscriptions || [])]
+/**
+ * First plan and renewals share one rule: pay the newest plan that is waiting for
+ * payment. Renewals additionally carry a wallet redemption and are refused while an
+ * upcoming (already paid) plan exists.
+ */
+async function pricePlan(form, type) {
+  const subs = form.subscriptions || [];
+  const sub = subs
     .filter((s) => s.status === "pending_payment")
     .sort((a, b) => createdAtOf(b) - createdAtOf(a))[0];
-  if (!sub) throw new PaymentError(404, "No renewal plan found. Please choose a plan first.");
+  if (!sub) {
+    if (form.paymentStatus === "Success") {
+      throw new PaymentError(409, "Your subscription is already paid. Use Renew to add a new plan.");
+    }
+    throw new PaymentError(404, "No subscription plan found. Please choose a plan first.");
+  }
+  const isRenewal = type === "renewal" || form.paymentStatus === "Success" || Number(sub.walletUsed || 0) > 0;
+  if (isRenewal && subs.some((s) => s.status === "upcoming")) {
+    // Same rule as the website's Renew button: no second renewal while one is waiting to start.
+    throw new PaymentError(409, "You already have an upcoming plan.");
+  }
 
   const gross = computePlanPrice(sub.workingDays, (sub.children || []).length);
-  const walletUsed = Number(sub.walletUsed || 0);
+  const walletUsed = isRenewal ? Number(sub.walletUsed || 0) : 0;
   const walletPoints = (form.wallet && form.wallet.points) || 0;
   if (walletUsed > maxWalletRedeem(gross, walletPoints) + 0.01) {
     throw new PaymentError(409, "Wallet points have changed. Please choose your plan again.");
@@ -110,15 +111,14 @@ async function priceRenewal(form) {
     throw new PaymentError(409, "Your plan price is out of date. Please choose your plan again.");
   }
   return {
-    orderId: `RENEW${Date.now()}${randomSuffix()}`,
+    type: isRenewal ? "renewal" : "subscription",
+    orderId: `${isRenewal ? "RENEW" : "LB"}${Date.now()}${randomSuffix()}`,
     amount: Number(sub.price),
     path: "/api/ccavenue/response",
-    params: {
-      merchant_param2: sub.planId,
-      merchant_param4: walletUsed,
-      merchant_param5: Math.max(0, walletPoints - walletUsed),
-    },
-    meta: { subscriptionId: String(sub._id), walletUsed },
+    params: isRenewal
+      ? { merchant_param2: sub.planId, merchant_param4: walletUsed, merchant_param5: Math.max(0, walletPoints - walletUsed) }
+      : { merchant_param2: sub.planId },
+    meta: { subscriptionId: String(sub._id), walletUsed, plan: planSnapshot(sub) },
   };
 }
 
@@ -244,8 +244,7 @@ exports.initiatePayment = async (req, res) => {
     }
 
     let priced;
-    if (type === "subscription") priced = await priceSubscription(form);
-    else if (type === "renewal") priced = await priceRenewal(form);
+    if (type === "subscription" || type === "renewal") priced = await pricePlan(form, type);
     else if (type === "addChild") priced = await priceAddChild(form, userId, req.body);
     else if (type === "holiday") priced = await priceHoliday(userId, req.body);
     else return res.status(400).json({ success: false, message: "Unknown payment type." });
@@ -271,12 +270,15 @@ exports.initiatePayment = async (req, res) => {
       ...priced.params,
     });
 
+    // "web" = the website's checkout (result pages on STORE_URL); anything else = the app.
+    const source = req.body && req.body.source === "web" ? "web" : "app";
+    const intentType = priced.type || type;
     await PaymentIntent.create({
       orderId: priced.orderId,
       user: userId,
-      type,
+      type: intentType,
       amount,
-      source: "app",
+      source,
       meta: priced.meta,
     });
 
@@ -287,6 +289,7 @@ exports.initiatePayment = async (req, res) => {
         encRequest,
         accessCode: cfg.accessCode,
         orderId: priced.orderId,
+        type: intentType,
         amount,
         resultUrl: `${base}/api/ccavenue/app-result`,
       },

@@ -15,6 +15,17 @@ const SubscriptionSchema = new mongoose.Schema({
   paymentAmount: { type: Number },
   // Wallet points redeemed against this plan (renewals); the server deducts them on payment.
   walletUsed: { type: Number, default: 0 },
+  // Every payment applied to this plan (its own payment, then add-child payments), so
+  // adding a child never overwrites the plan's original order/transaction ids.
+  payments: [
+    {
+      orderId: String,
+      trackingId: String,
+      amount: Number,
+      type: { type: String }, // subscription | renewal | addChild
+      paidAt: Date,
+    },
+  ],
   paymentDate: { type: Date },
   paymentMethod: { type: String, default: "CCAvenue" },
   transactionId: { type: String },

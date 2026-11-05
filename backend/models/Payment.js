@@ -14,11 +14,13 @@ const paymentTransactionSchema = new mongoose.Schema({
     type: String,
     default: 'INR'
   },
+  // Gateway status as reported (Success, Failure, Aborted, Invalid, Timeout, ...).
+  // Not an enum: an unexpected gateway value must still be recorded, never rejected.
   order_status: {
     type: String,
-    enum: ['Success', 'Failure', 'Aborted', 'Invalid', 'Timeout'],
     required: true
   },
+  payment_type: String,
   payment_mode: String,
   card_name: String,
   status_code: String,

@@ -40,8 +40,6 @@ const {
   getFormData, // Add this new controller method
   getPaidHolidays,
   getAllChildrenForUser,
-  localPaymentSuccess,
-  localAddChildPaymentController,
   getPaymentsForUser,
   deleteMeal,
 } = require("../controller/customerController");
@@ -53,6 +51,8 @@ const {
 
 // Import CCAvenue routes
 const ccavenueRoutes = require("./ccavenue");
+// Test-only settlement shares the real settlement code (controller/Payment.js)
+const { localPaymentSuccess, localAddChildPaymentController } = require("../controller/Payment");
 router.use("/ccavenue", ccavenueRoutes);
 
 // Rate limiter for sensitive destructive operations (max 5 attempts per 15 min per IP)
