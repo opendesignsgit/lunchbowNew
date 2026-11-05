@@ -16,6 +16,7 @@ import { FiZoomIn } from "react-icons/fi";
 import Tooltip from "@/components/tooltip/Tooltip";
 import OrderViewModal from "@/components/order/OrderViewModal";
 import OrderServices from "@/services/OrderServices";
+import { notifyError } from "@/utils/toast";
 
 const PAGE_SIZE = 50;
 
@@ -134,8 +135,21 @@ const Orders = () => {
     fetchOrders(1, "", "");
   };
 
-  // CSV download function
-  const downloadCSV = () => {
+  // CSV download: for a selected date the server kitchen-sheet CSV has every row
+  // for that day (not just this page); without a date fall back to the current page.
+  const downloadCSV = async () => {
+    if (date) {
+      try {
+        await OrderServices.downloadKitchenSheetCsv({ date });
+      } catch (err) {
+        notifyError(err?.response?.data?.message || err.message);
+      }
+      return;
+    }
+    downloadPageCSV();
+  };
+
+  const downloadPageCSV = () => {
     // Dish Summary Section
     let dishSummarySection = "";
     if (date && dishSummary.length > 0) {

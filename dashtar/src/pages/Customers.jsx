@@ -1,156 +1,208 @@
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Card,
-  Button,
   CardBody,
+  Button,
   Input,
+  Badge,
   Pagination,
   Table,
+  TableBody,
   TableCell,
   TableContainer,
   TableFooter,
   TableHeader,
+  TableRow,
 } from "@windmill/react-ui";
-import React from "react";
-import { useTranslation } from "react-i18next";
+import { Link, useHistory } from "react-router-dom";
+import { FiZoomIn } from "react-icons/fi";
 
-//internal import
-import UploadMany from "@/components/common/UploadMany";
-import CustomerTable from "@/components/customer/CustomerTable";
-import TableLoading from "@/components/preloader/TableLoading";
-import NotFound from "@/components/table/NotFound";
 import PageTitle from "@/components/Typography/PageTitle";
-import useAsync from "@/hooks/useAsync";
-import useFilter from "@/hooks/useFilter";
-import CustomerServices from "@/services/CustomerServices";
-import AnimatedContent from "@/components/common/AnimatedContent";
+import TableLoading from "@/components/preloader/TableLoading";
+import AdminOpsServices from "@/services/AdminOpsServices";
+import { notifyError } from "@/utils/toast";
+import { fmtDate, inr, subscriptionBadgeType, stepLabel, errMessage } from "@/utils/adminOps";
+
+const PAGE_SIZE = 20;
+
+const PlanCell = ({ plan, label }) => {
+  if (!plan) return null;
+  return (
+    <div className="text-xs">
+      <Badge type={subscriptionBadgeType(plan.status)}>{label || plan.status}</Badge>
+      <span className="ml-1 text-gray-600 dark:text-gray-300">
+        {fmtDate(plan.startDateKey)} → {fmtDate(plan.endDateKey)}
+      </span>
+    </div>
+  );
+};
 
 const Customers = () => {
-  const { data, loading, error } = useAsync(CustomerServices.getAllCustomers);
+  const history = useHistory();
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [qInput, setQInput] = useState("");
 
-  // console.log('customer',data)
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await AdminOpsServices.searchCustomers({ q, page, limit: PAGE_SIZE });
+      setRows(res?.data || []);
+      setTotal(res?.total || 0);
+    } catch (err) {
+      notifyError(errMessage(err));
+      setRows([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [q, page]);
 
-  const {
-    userRef,
-    dataTable,
-    serviceData,
-    filename,
-    isDisabled,
-    setSearchUser,
-    totalResults,
-    resultsPerPage,
-    handleSubmitUser,
-    handleSelectFile,
-    handleChangePage,
-    handleUploadMultiple,
-    handleRemoveSelectFile,
-  } = useFilter(data);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const { t } = useTranslation();
-  const handleResetField = () => {
-    setSearchUser("");
-    userRef.current.value = "";
+  const submit = (e) => {
+    e.preventDefault();
+    setPage(1);
+    setQ(qInput.trim());
+  };
+
+  const reset = () => {
+    setQInput("");
+    setQ("");
+    setPage(1);
   };
 
   return (
     <>
-      <PageTitle>{t("CustomersPage")}</PageTitle>
+      <PageTitle>Customers</PageTitle>
 
-      <AnimatedContent>
-        {/* <Card className="min-w-0 shadow-xs overflow-hidden bg-white dark:bg-gray-800 mb-5">
-          <CardBody>
-            <form
-              onSubmit={handleSubmitUser}
-              className="py-3 grid gap-4 lg:gap-6 xl:gap-6 md:flex xl:flex"
-            >
-              <div className="items-center">
-                <UploadMany
-                  title="Customers"
-                  exportData={data}
-                  filename={filename}
-                  isDisabled={isDisabled}
-                  handleSelectFile={handleSelectFile}
-                  handleUploadMultiple={handleUploadMultiple}
-                  handleRemoveSelectFile={handleRemoveSelectFile}
-                />
-              </div>
-            </form>
-          </CardBody>
-        </Card> */}
-
-        <Card className="min-w-0 shadow-xs overflow-hidden bg-white dark:bg-gray-800 mb-5">
-          <CardBody>
-            <form
-              onSubmit={handleSubmitUser}
-              className="py-3 grid gap-4 lg:gap-6 xl:gap-6 md:flex xl:flex"
-            >
-              <div className="flex-grow-0 md:flex-grow lg:flex-grow xl:flex-grow">
-                <Input
-                  ref={userRef}
-                  type="search"
-                  name="search"
-                  placeholder={t("CustomersPageSearchPlaceholder")}
-                />
-                <button
-                  type="submit"
-                  className="absolute right-0 top-0 mt-5 mr-1"
-                ></button>
-              </div>
-              <div className="flex items-center gap-2 flex-grow-0 md:flex-grow lg:flex-grow xl:flex-grow">
-                <div className="w-full mx-1">
-                  <Button type="submit" className="h-12 w-full bg-emerald-700">
-                    Filter
-                  </Button>
-                </div>
-
-                <div className="w-full mx-1">
-                  <Button
-                    layout="outline"
-                    onClick={handleResetField}
-                    type="reset"
-                    className="px-4 md:py-1 py-2 h-12 text-sm dark:bg-gray-700"
-                  >
-                    <span className="text-black dark:text-gray-200">Reset</span>
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </CardBody>
-        </Card>
-      </AnimatedContent>
+      <Card className="min-w-0 shadow-xs overflow-hidden bg-white dark:bg-gray-800 mb-5">
+        <CardBody>
+          <form onSubmit={submit} className="py-3 grid gap-4 md:flex">
+            <div className="flex-grow">
+              <Input
+                type="search"
+                value={qInput}
+                onChange={(e) => setQInput(e.target.value)}
+                placeholder="Search by parent name, phone or email"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button type="submit" className="h-12 bg-emerald-700 px-6">
+                Search
+              </Button>
+              <Button layout="outline" type="button" onClick={reset} className="h-12 px-4 dark:bg-gray-700">
+                <span className="text-black dark:text-gray-200">Reset</span>
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
 
       {loading ? (
-        // <Loading loading={loading} />
-        <TableLoading row={12} col={6} width={190} height={20} />
-      ) : error ? (
-        <span className="text-center mx-auto text-red-500">{error}</span>
-      ) : serviceData?.length !== 0 ? (
+        <TableLoading row={12} col={7} width={150} height={20} />
+      ) : (
         <TableContainer className="mb-8">
           <Table>
             <TableHeader>
               <tr>
-                {/* <TableCell>{t("CustomersId")}</TableCell> */}
-                <TableCell>{t("CustomersJoiningDate")}</TableCell>
-                <TableCell>{t("CustomersName")}</TableCell>
-                <TableCell>{t("CustomersEmail")}</TableCell>
-                <TableCell>{t("CustomersPhone")}</TableCell>
-                <TableCell className="text-right">
-                  {t("CustomersActions")}
-                </TableCell>
+                <TableCell>Joined</TableCell>
+                <TableCell>Parent</TableCell>
+                <TableCell>Contact</TableCell>
+                <TableCell>Step</TableCell>
+                <TableCell>Payment</TableCell>
+                <TableCell>Plan</TableCell>
+                <TableCell>Children</TableCell>
+                <TableCell>Wallet</TableCell>
+                <TableCell className="text-right">Actions</TableCell>
               </tr>
             </TableHeader>
-            <CustomerTable customers={dataTable} />
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9}>
+                    <p className="text-center py-6 text-gray-500">No customers found.</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((u) => (
+                  <TableRow
+                    key={u._id}
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                    onClick={() => history.push(`/customers/${u._id}`)}
+                  >
+                    <TableCell>
+                      <span className="text-sm whitespace-nowrap">{fmtDate(u.createdAt)}</span>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        to={`/customers/${u._id}`}
+                        className="text-sm font-medium text-emerald-600 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {u.name || "(no name)"}
+                      </Link>
+                      {u.freeTrial && (
+                        <Badge type="primary" className="ml-2">
+                          trial
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{u.phone || "-"}</div>
+                      <div className="text-xs text-gray-500">{u.email || ""}</div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{stepLabel(u.step)}</span>
+                    </TableCell>
+                    <TableCell>
+                      {u.paymentStatus ? (
+                        <Badge type={u.paymentStatus === "Success" ? "success" : "warning"}>{u.paymentStatus}</Badge>
+                      ) : (
+                        <span className="text-xs text-gray-400">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <PlanCell plan={u.activePlan} label="active" />
+                        <PlanCell plan={u.upcomingPlan} label="upcoming" />
+                        <PlanCell plan={u.pendingPlan} label="pending" />
+                        {!u.activePlan && !u.upcomingPlan && !u.pendingPlan && (
+                          <span className="text-xs text-gray-400">no plan</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{u.childrenCount}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{inr(u.walletPoints)}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end text-xl text-gray-500 hover:text-emerald-600">
+                        <FiZoomIn />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
           </Table>
           <TableFooter>
             <Pagination
-              totalResults={totalResults}
-              resultsPerPage={resultsPerPage}
-              onChange={handleChangePage}
-              label="Table navigation"
+              key={q}
+              totalResults={total}
+              resultsPerPage={PAGE_SIZE}
+              onChange={(p) => setPage(p)}
+              label="Customers navigation"
             />
           </TableFooter>
         </TableContainer>
-      ) : (
-        <NotFound title="Sorry, There are no customers right now." />
       )}
     </>
   );
